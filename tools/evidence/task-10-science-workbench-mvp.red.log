@@ -1,0 +1,4 @@
+RED: test_scan_stream_uses_the_task_10_file_limit
+EXPECTED=52428800
+ACTUAL=8388608
+RESULT=FAILED before Task 10 implementation

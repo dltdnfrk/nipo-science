@@ -1,0 +1,19 @@
+TASK=8
+PHASE=RED
+STACK=PostgreSQL 18.4 / SQLAlchemy 2 / Alembic
+
+COMMAND=PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest services/api/tests/persistence/test_schema_artifacts.py -q
+RESULT=1 failed
+EXPECTED_FAILURE=services/api/alembic.ini, migrations/env.py, revision, and schema_manifest.json were absent
+
+COMMAND=PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest services/api/tests/persistence/test_schema_artifacts.py -q
+RESULT=1 failed, 2 passed
+EXPECTED_FAILURE=initial revision did not call upgrade_schema(), apply_rls(), or drop_schema()
+
+COMMAND=PYTHONPATH=packages/contracts/python:. PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest services/api/tests/persistence/test_principal.py -q
+RESULT=4 failed
+EXPECTED_FAILURE=test-principal encode/decode raised not_implemented and production mode was not disabled
+
+COMMAND=PYTHONPATH=packages/contracts/python:. PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest services/api/tests/persistence/test_principal.py -q
+RESULT=1 failed, 4 passed
+EXPECTED_FAILURE=short HMAC signing key was accepted

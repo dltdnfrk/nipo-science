@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "goalId": "G004",
+  "blockerStoryId": "G009",
+  "adapterId": "openai_codex",
+  "attemptedAt": "2026-07-14T01:43:53.272756Z",
+  "runtime": {
+    "version": "codex-cli 0.144.1",
+    "officialSubscriptionLogin": true,
+    "loginMode": "ChatGPT"
+  },
+  "command": ".venv/bin/python -m services.api.provider_live_capture --cases tests/g004/fixtures/golden_session_cases.json --output artifacts/ulw-g004/openai-codex-live-profile.json",
+  "exitCode": 2,
+  "elapsedSeconds": 90.481,
+  "result": "blocked",
+  "stableError": "codex qualification attempt failed",
+  "network": {
+    "chatgptDnsResolved": true,
+    "addresses": [
+      "104.18.32.47",
+      "172.64.155.209"
+    ],
+    "outboundDnsBlockerResolved": true
+  },
+  "directProtocolProbe": {
+    "result": "timed_out",
+    "timeoutSeconds": 90,
+    "outputPublished": false,
+    "sensitivePatternDetected": false,
+    "observedCause": "The official logged-in Codex runtime did not complete the first pinned qualification attempt before the fixed 90-second fail-closed deadline."
+  },
+  "dockerRuntime": {
+    "available": false,
+    "exitCode": 1,
+    "observedCause": "Docker API socket /Users/hyunjun/.docker/run/docker.sock is absent."
+  },
+  "profilePublished": false,
+  "fabricatedEvidence": false,
+  "requiredHumanAction": "Start an authorized Docker daemon and restore a responsive official Codex subscription runtime, then rerun the pinned live profile and forced-RLS lifecycle without weakening either gate."
+}

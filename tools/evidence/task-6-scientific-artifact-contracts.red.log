@@ -1,0 +1,11 @@
+task: 6
+phase: RED
+python_command: .venv/bin/pytest -q packages/contracts/python/tests/test_scientific_artifact_contracts.py
+python_exit_code: 1
+python_result: 1 failed
+python_failure: DryLabRunContract task-6 module did not exist
+typescript_command: pnpm exec vitest run packages/contracts/tests/scientific-artifact-contracts.test.ts
+typescript_exit_code: 1
+typescript_result: module-existence assertion failed
+typescript_failure: packages/contracts/src/dry-lab-contract.ts did not exist
+failure_shape: assertions on absent implementation, not incidental import errors

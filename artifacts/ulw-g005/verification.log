@@ -1,0 +1,35 @@
+revision: 877e5f33a1b8ed54d8446f0e93e124d30a105c7e
+captured-at-utc: 2026-07-13T22:23:50.368889Z
+g005-source-files: 17
+g005-source-sha256: 1dbcd9431d903c841d26aba3f510f733ab367e95b010fea4aec2ee968bb04f1b
+
+$ .venv/bin/python -m pytest -q packages/contracts/python/tests/test_artifact_version_review_transitions.py packages/contracts/python/tests/test_export_manifest_attacks.py tests/platform/test_retention.py tests/platform/test_deployment_contract.py tests/platform/test_g005_recovery_contract.py tests/platform/test_ci_contract.py tests/platform/test_ci_runner.py
+327 passed in 1.24s
+exit: 0
+
+$ .venv/bin/python -m pytest -q packages/contracts/python/tests
+332 passed in 0.34s
+exit: 0
+
+$ .venv/bin/python -m pytest -q tests/platform
+321 passed in 1.03s
+exit: 0
+
+$ .venv/bin/ruff check <17 G005 implementation/test paths>
+All checks passed!
+exit: 0
+
+$ .venv/bin/basedpyright <17 G005 implementation/test paths>
+0 errors, 0 warnings, 0 notes
+exit: 0
+
+$ .venv/bin/python -m pytest -q
+996 passed, 2 errors, 218 subtests passed in 37.67s
+exit: 1
+classification: human_blocked; both errors require the unavailable Docker daemon for Postgres integration and are not counted as passing evidence
+
+$ .venv/bin/python -c 'from tools.platform_policy.deployment_capture import capture_live_gke; capture_live_gke()'
+ValueError: collector command could not be started
+cause: fixed collector path is unsafe or unsupported on this macOS host; no authorized GKE context is configured
+exit: 1
+classification: human_blocked; not counted as passing evidence

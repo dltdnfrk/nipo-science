@@ -1,0 +1,88 @@
+{
+  "task": 8,
+  "status": "pass",
+  "toolchain": {
+    "postgresql": "18.4",
+    "sqlalchemy": "2.0.51",
+    "alembic": "1.18.5",
+    "asyncpg": "0.31.0",
+    "uv": "0.11.28",
+    "lock_offline_verified": true
+  },
+  "migrations": {
+    "tests": 15,
+    "forward_backward_forward": "pass",
+    "seeded_upgrade": "pass",
+    "cluster_roles_retained_on_downgrade": true,
+    "cluster_roles_hardened_on_upgrade": true,
+    "tables": 41,
+    "columns": 297,
+    "catalog_sha256": "a06e5cf7cc60fab21792459366cd6f8fff28819e4ac5ec3eb4233d5c772c1713"
+  },
+  "rls": {
+    "tests": 33,
+    "tenant_tables": 39,
+    "enabled_and_forced": 39,
+    "cross_org_select_hidden": true,
+    "cross_org_insert_denied": true,
+    "global_identity_access_denied": true,
+    "active_membership_bound_to_principal": true,
+    "membership_mutation_owner_only": true,
+    "membership_soft_revocation_preserves_history": true,
+    "revoked_membership_denied_by_rls": true,
+    "one_active_membership_allows_rejoin": true,
+    "provider_connection_requester_isolated": true,
+    "composite_fk_denied": true,
+    "last_owner_preserved": true,
+    "concurrent_last_owner_preserved": true,
+    "audit_outbox_immutable": true,
+    "legal_hold_compliance_only": true,
+    "cross_tenant_legal_hold_denied": true,
+    "provider_json_secrets_denied": true,
+    "provider_unicode_secret_keys_denied": true,
+    "provider_metadata_allowlist_enforced": true,
+    "provider_runtime_home_opaque_reference": true,
+    "approval_review_revisions_enforced": true,
+    "completed_execution_result_enforced": true,
+    "finding_evidence_and_disposition_enforced": true,
+    "review_inputs_and_findings_immutable": true,
+    "review_findings_reject_late_additions": true,
+    "finding_evidence_bound_to_review_pins": true,
+    "finding_disposition_audit_immutable": true,
+    "export_selection_immutable": true,
+    "export_selection_rejects_late_additions": true,
+    "terminal_export_rewind_denied": true,
+    "empty_export_denied": true,
+    "monetary_schema_absent": true,
+    "provider_secret_columns_absent": true
+  },
+  "ci": {
+    "jobs": 16,
+    "executed": 468,
+    "aggregate_sha256": "cbc5b65fe447f4cf5850f4410408de6e75fc81171e48f8ca30f5c80b6bfe4318",
+    "raw_hashes_verified": true
+  },
+  "quality": {
+    "ruff_errors": 0,
+    "basedpyright_errors": 0,
+    "max_pure_loc": 199,
+    "full_pytest": 436,
+    "full_subtests": 217,
+    "boundary_files": 273
+  },
+  "isolation": {
+    "compose_project": "science-workbench-task8-<pid>",
+    "postgres_host": "127.0.0.1",
+    "postgres_port": "dynamic",
+    "containers_after": 0,
+    "networks_after": 0,
+    "volumes_after": 0
+  },
+  "review": {
+    "goal": "pass",
+    "code": "pass",
+    "qa": "pass",
+    "context": "pass",
+    "authorization": "pass"
+  }
+}

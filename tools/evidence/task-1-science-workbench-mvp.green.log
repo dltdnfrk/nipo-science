@@ -1,0 +1,20 @@
+command: make test-boundaries
+exit_code: 0
+result: OK
+tests_run: 22
+python_3_8_tests_run: 22
+project_scan: boundary-check: PASS (261 files checked)
+covered_boundaries:
+- generated-cache exclusion
+- dynamic Python outside writes
+- dynamic shell outside redirects
+- shell mutation commands, options, wrappers, and absolute destinations
+- Node fs module, named, destructured, promise, open-flag, and Node 24 sinks
+- sibling-import
+- sibling-path-dependency
+- workspace-reference
+- escaping-symlink
+- outside-build-input
+- sibling-write-path (drylab)
+- sibling-write-path (ontologylab)
+- clean-project acceptance

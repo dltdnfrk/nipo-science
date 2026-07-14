@@ -1,0 +1,26 @@
+test_accepts_canonical_contract (test_verify_spec.VerifySpecTests.test_accepts_canonical_contract)
+Accept the unmodified v0.4 contract with its complete ID inventory. ... ok
+test_rejects_api_key_runtime_auth (test_verify_spec.VerifySpecTests.test_rejects_api_key_runtime_auth)
+Reject API-key authentication in the OAuth-only runtime contract. ... ok
+test_rejects_incomplete_dry_lab_chain (test_verify_spec.VerifySpecTests.test_rejects_incomplete_dry_lab_chain)
+Reject omission of provenance from the deterministic dry-lab chain. ... ok
+test_rejects_literal_seccomp_requirement (test_verify_spec.VerifySpecTests.test_rejects_literal_seccomp_requirement)
+Reject literal seccomp in place of measured gVisor outcomes. ... ok
+test_rejects_missing_break_glass_contract (test_verify_spec.VerifySpecTests.test_rejects_missing_break_glass_contract)
+Reject omission of the bounded SEC14 break-glass contract. ... ok
+test_rejects_missing_exact_acceptance_id (test_verify_spec.VerifySpecTests.test_rejects_missing_exact_acceptance_id)
+Reject renaming an exact AC-F13 acceptance identifier. ... ok
+test_rejects_missing_required_runtime (test_verify_spec.VerifySpecTests.test_rejects_missing_required_runtime)
+Reject omission of the required openai_codex runtime. ... ok
+test_rejects_monetary_budget_error_token (test_verify_spec.VerifySpecTests.test_rejects_monetary_budget_error_token)
+Reject a monetary budget error code added to the manifest. ... ok
+test_rejects_renamed_skill (test_verify_spec.VerifySpecTests.test_rejects_renamed_skill)
+Reject renaming one of the three canonical Skill identifiers. ... ok
+test_rejects_review_api_drift (test_verify_spec.VerifySpecTests.test_rejects_review_api_drift)
+Reject drift from the persisted Review polling API. ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.005s
+
+OK
+spec-verification: PASS (v0.4; 81 IDs; 12 P0 features)

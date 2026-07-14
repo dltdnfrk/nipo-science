@@ -1,0 +1,31 @@
+$ .venv/bin/pytest packages/contracts/python/tests/test_protocol_red.py -q
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_______ test_protocol_contracts_exist_when_runtime_boundary_is_required ________
+
+    assert resolved is not None, "Run/runtime protocol contracts are not implemented"
+E   AssertionError: Run/runtime protocol contracts are not implemented
+E   assert None is not None
+
+packages/contracts/python/tests/test_protocol_red.py:12: AssertionError
+=========================== short test summary info ============================
+FAILED packages/contracts/python/tests/test_protocol_red.py::test_protocol_contracts_exist_when_runtime_boundary_is_required
+1 failed in 0.05s
+exit_code=1
+
+$ .venv/bin/pytest packages/contracts/python/tests/test_protocol_security_red.py -q
+FF                                                                       [100%]
+test_security_review_requires_bound_cas_and_lease_fields FAILED
+E   AssertionError: missing project_id, action_plan_id, and plan_digest
+test_security_review_rejects_cross_run_fixture_and_nested_cost_key FAILED
+E   Failed: DID NOT RAISE ValidationError
+2 failed in 0.07s
+exit_code=1
+
+$ .venv/bin/pytest packages/contracts/python/tests/test_protocol_security_red.py packages/contracts/python/tests/test_approval_security_protocol.py -q
+8 failed, 13 passed in 0.13s
+failures:
+- escaped monetary/provider-fallback keys were accepted
+- foreign RuntimeContinue org/run/message/action context was accepted
+- the same approved snapshot was consumable twice
+exit_code=1

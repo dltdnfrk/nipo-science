@@ -1,0 +1,19 @@
+task: 3
+phase: GREEN
+command: make verify-architecture
+exit_code: 0
+tests_run: 8
+result: OK
+test_accepts_complete_architecture_contract: ok
+test_rejects_literal_gvisor_seccomp_claim: ok
+test_rejects_oauth_refresh_token_exfiltration_control_omission: ok
+test_rejects_reviewer_tool_execution: ok
+test_rejects_unclassified_sensitive_field: ok
+test_rejects_unowned_trust_boundary: ok
+test_rejects_unresolved_placeholder: ok
+test_rejects_untested_high_threat: ok
+report: architecture-check: PASS (9 decisions, 11 boundaries, 13 High threats, 8 classified fields)
+architecture_json_sha256: 118151d3dc329721c2a6464079914e675cfd8c8ef60e361509899af01b8d9f4f
+threat_model_json_sha256: d8bc53e0d047412634de064915510c1c513ac5ab1bed65486e38cf76de5d8b3f
+data_classification_json_sha256: c45461eb755d719c2a4350fd8075a8b1ca61a9ed3390e4b0234f6f211b45afb1
+

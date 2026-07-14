@@ -1,0 +1,14 @@
+command: python3 -m unittest discover -s science-workbench/tests -p 'test_boundaries.py' -v
+exit_code: 1
+result: FAILED (failures=8)
+reason: /usr/local/bin/python3: can't open file '/Users/hyunjun/Documents/MUNI/science-workbench/tools/check_boundaries.py': [Errno 2] No such file or directory
+tests:
+- test_accepts_files_confined_to_target_when_project_is_clean: FAIL
+- test_rejects_build_input_when_docker_copy_escapes_root: FAIL
+- test_rejects_path_dependency_when_manifest_uses_ontologylab: FAIL
+- test_rejects_sibling_import_when_source_imports_drylab: FAIL
+- test_rejects_symlink_when_target_escapes_root: FAIL
+- test_rejects_workspace_reference_when_workspace_escapes_root: FAIL
+- test_rejects_write_path_when_python_targets_ontologylab: FAIL
+- test_rejects_write_path_when_script_targets_drylab: FAIL
+duration: 0.351s

@@ -1,0 +1,12 @@
+TDD RED evidence
+
+Command: PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/platform -q
+Observed failure: ModuleNotFoundError: No module named 'tools.platform_policy'
+Reason: CI, observability, and retention policy implementation did not exist.
+
+Runner regression RED
+
+Command: make ci-local
+Observed failure: MissingExecutedCountError: CI job unit did not report an executed count
+Raw output: 5 passed, 4 deselected in 0.06s
+Reason: pytest's comma-delimited deselection suffix was not accepted by the count parser.

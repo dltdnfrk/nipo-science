@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "kind": "package-contract-test-report",
+  "goalId": "G001",
+  "generatedAt": "2026-07-13T17:04:00+09:00",
+  "verdict": "passed",
+  "invocation": "make bootstrap && make test-boundaries && make verify-spec && make verify-architecture && make test-openapi",
+  "exitCode": 0,
+  "results": {
+    "bootstrap": {
+      "status": "passed",
+      "toolchain": "node 24.17.0, pnpm 11.12.0, python 3.12.13, uv 0.11.28"
+    },
+    "boundaries": {
+      "status": "passed",
+      "unitTests": 22,
+      "filesChecked": 336
+    },
+    "spec": {
+      "status": "passed",
+      "unitTests": 10,
+      "specVersion": "v0.4",
+      "contractIds": 81,
+      "p0Features": 12
+    },
+    "architecture": {
+      "status": "passed",
+      "unitTests": 8,
+      "decisions": 9,
+      "boundaries": 11,
+      "highThreats": 13,
+      "classifiedFields": 8
+    },
+    "typedContracts": {
+      "status": "passed",
+      "openApiTests": 13,
+      "pythonTests": 324,
+      "typescriptTests": 144,
+      "biomeErrors": 0,
+      "biomeWarnings": 0,
+      "typescriptTypecheckExitCode": 0
+    },
+    "isolationChecks": {
+      "status": "passed",
+      "rejectedCases": [
+        "sibling-import",
+        "escaping-symlink",
+        "workspace-reference",
+        "outside-build-input",
+        "sibling-write-path",
+        "outside-write-path"
+      ],
+      "cleanupBoundaryCheckExitCode": 0
+    },
+    "siblingPreservation": {
+      "status": "passed",
+      "currentGitStatusMatchesRecordedBaseline": true,
+      "drylab": {
+        "preSha256": "bcef3c0e1f4cd49d9eda1ef20144743821ae8d2779f7b5dc1f3ce74ac2c36b3a",
+        "postSha256": "bcef3c0e1f4cd49d9eda1ef20144743821ae8d2779f7b5dc1f3ce74ac2c36b3a",
+        "equal": true
+      },
+      "ontologylab": {
+        "preSha256": "b77af8b8d6a7e939a4a6eb9109c0f233857537254845bc1e37a11f5ad7b79fc8",
+        "postSha256": "b77af8b8d6a7e939a4a6eb9109c0f233857537254845bc1e37a11f5ad7b79fc8",
+        "equal": true
+      }
+    }
+  },
+  "evidenceRefs": [
+    "science-workbench/tools/evidence/ulw-g001-bootstrap.log",
+    "science-workbench/tools/evidence/ulw-g001-boundaries.log",
+    "science-workbench/tools/evidence/ulw-g001-verify-spec.log",
+    "science-workbench/tools/evidence/ulw-g001-verify-architecture.log",
+    "science-workbench/tools/evidence/ulw-g001-typed-contracts.log",
+    "science-workbench/tools/evidence/ulw-g001-sibling-probes.log",
+    "science-workbench/tools/evidence/ulw-g001-sibling-pre.log",
+    "science-workbench/tools/evidence/ulw-g001-sibling-post.log",
+    "science-workbench/tools/evidence/ulw-g001-pty-boundaries.txt"
+  ],
+  "blockers": []
+}

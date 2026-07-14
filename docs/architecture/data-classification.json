@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "classification_levels": ["public", "internal", "confidential", "restricted", "secret"],
+  "fields": [
+    {"id": "oauth_refresh_token", "category": "provider_oauth", "sensitive": true, "classification": "secret", "retention": "until-disconnect-or-revocation; encrypted home destroyed within 24h", "egress": "only provider token endpoint through runtime broker", "redaction": "drop value; emit connection_id and event code only"},
+    {"id": "oauth_access_token", "category": "provider_oauth", "sensitive": true, "classification": "secret", "retention": "provider TTL; never persisted outside encrypted per-user runtime home", "egress": "only qualified provider origins through runtime broker", "redaction": "drop value, authorization headers, cookies, and token-shaped strings"},
+    {"id": "scientific_inputs", "category": "research", "sensitive": true, "classification": "confidential", "retention": "active project; delete within 30d after archive unless legal hold", "egress": "selected qualified model input or pinned sandbox input only", "redaction": "never operational logs; minimize model context and exports to explicit selection"},
+    {"id": "artifact_outputs", "category": "research", "sensitive": true, "classification": "confidential", "retention": "immutable project versions; delete within 30d after archive unless legal hold", "egress": "authorized preview/download/export for pinned versions", "redaction": "no content in logs; identifiers and checksum permitted"},
+    {"id": "reviews", "category": "research", "sensitive": true, "classification": "confidential", "retention": "with pinned artifact lifecycle", "egress": "authorized project members and selected export", "redaction": "claim text excluded from operational logs; finding id/verdict permitted"},
+    {"id": "audit_events", "category": "security", "sensitive": true, "classification": "restricted", "retention": "append-only 1y default; approved legal policy may extend", "egress": "authorized audit viewer or scoped incident export", "redaction": "allowlisted metadata; no prompts, research content, email, secret, or token"},
+    {"id": "operational_logs", "category": "operations", "sensitive": true, "classification": "restricted", "retention": "90d default", "egress": "approved observability processors in deployment region", "redaction": "allowlist request/resource ids, status, latency, redacted error code"},
+    {"id": "exports", "category": "research", "sensitive": true, "classification": "confidential", "retention": "24h after completion", "egress": "one authorized pinned object with URL TTL at most 10m", "redaction": "exclude tokens, credentials, runtime homes, OAuth state, logs, and unselected versions"}
+  ]
+}
+

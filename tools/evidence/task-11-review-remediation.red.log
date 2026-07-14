@@ -1,0 +1,23 @@
+TASK=11-review-remediation
+PHASE=RED
+DATE=2026-07-13
+COMMAND=PYTHONPATH=$PWD PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests/artifacts -q
+EXIT=2
+FAILURE=ImportError: StoreOutcome was not yet exported for the failure-injection regression.
+COMMAND=PYTHONPATH=$PWD PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest services/api/tests/persistence/test_artifact_persistence.py services/api/tests/persistence/test_artifact_project_guards.py -q
+EXIT=2
+FAILURE=ImportError: PostgresArtifactStore did not exist before durable persistence remediation.
+ROUND=3
+COMMAND=PYTHONPATH=$PWD PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests/artifacts services/api/tests/persistence/test_artifact_persistence.py -q
+EXIT=2
+FAILURE=ImportError: ArtifactCommitError did not exist before ambiguous-commit reconciliation remediation.
+ROUND=4
+REVIEW_RED=requester-scoped direct INSERT accepted another user's execution provenance; archived Sessions accepted new Versions and associations; noncanonical lineage order released a committed watcher claim; 1ms TTL could expire after 1us; fsync failure could leave blob/claim state
+COMMAND=make test-artifacts
+EXIT=1
+FAILURE=new association scope trigger correctly rejected cross-Project Session before the older foreign-key diagnostic assertion; 30 passed, 1 diagnostic assertion failed
+ROUND=5
+REVIEW_RED=off-millisecond 10m token exceeded the hard cap; Project archive could commit between separate redemption authorization and blob read; compensation failure leaked a raw store error and stranded the watcher claim
+COMMAND=make test-artifacts
+EXIT=1
+FAILURE=new compensation regression used an out-of-range fixture ID start; 32 behavior tests passed before the fixture-construction assertion failed

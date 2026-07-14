@@ -1,0 +1,20 @@
+TASK=12 deterministic scientific normalization and dry-lab primitives
+PHASE=RED
+DATE=2026-07-13
+COMMAND=make test-science
+EXIT=2
+FAILURE=3 collection errors: science_workbench_science package and its public normalization/analysis API do not exist
+CONTRACT=table/image/spectrum/report normalization; units, missingness, calibration, lineage; deterministic statistics, baseline/peak/color/region extraction and PNG; molecular/optical/experimental_artifact hypotheses; evidence SHA; explicit insufficient_data/invalid_data; non_diagnostic only
+GREEN_CYCLE_1=8 passed, 1 failed; manual fixture luminance expectation corrected from 18.046 to the standard-coefficient result 18.044667
+STATIC_CYCLE_1=Ruff 4 constant findings; basedpyright 16 narrowing/import-path findings; all resolved without ignores or casts
+REVIEW_RED_DATE=2026-07-13
+REVIEW_RED_COMMAND=PYTHONPATH=packages/science:. .venv/bin/pytest tests/science/test_normalization.py tests/science/test_signal_analysis.py -q
+REVIEW_RED_EXIT=1
+REVIEW_RED_FAILURES=5 failed, 5 passed: table statistics OverflowError, report surrogate serialization error, lineage-order-dependent evidence hash, spectrum NaN plot error, and hard-coded nm claim/plot
+CONFIG_RED_COMMAND=.venv/bin/pytest tests/platform/test_ci_runner.py::test_default_pytest_pythonpath_includes_science_package -q
+CONFIG_RED_EXIT=1
+CONFIG_RED_FAILURE=packages/science absent from declared pytest pythonpath
+SECOND_REVIEW_RED_DATE=2026-07-13
+SECOND_REVIEW_RED_COMMAND=PYTHONPATH=packages/science:. .venv/bin/pytest four new adversarial Task 12 cases -q
+SECOND_REVIEW_RED_EXIT=1
+SECOND_REVIEW_RED_FAILURES=4 failed: nonfinite evidence hash collision, surrogate metadata serialization exception, extreme finite plot range NaN, and wavelength time-unit overclaim

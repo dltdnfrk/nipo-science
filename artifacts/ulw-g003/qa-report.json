@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "kind": "product-browser-accessibility-test-report",
+  "goalId": "G003",
+  "resolutionGoalId": "G008",
+  "generatedAt": "2026-07-14T04:26:59+09:00",
+  "verdict": "passed",
+  "commands": [
+    "pytest tests/g003/test_auth_tenancy.py tests/g003/test_product_dry_lab_http.py tests/g003/test_product_dry_lab_service.py tests/g003/test_ui_contract.py",
+    "ruff check services/api/product_app.py tests/g003",
+    "basedpyright services/api/product_app.py tests/g003",
+    "Playwright Chrome-for-Testing 149 route/action capture with pinned axe-core 4.10.3"
+  ],
+  "passingResults": {
+    "g003NonPostgresTests": 19,
+    "lastVerifiedPostgresRlsTests": 33,
+    "browserRouteCaptures": 24,
+    "browserActionJourneySteps": 9,
+    "axeSeriousOrCriticalViolations": 0,
+    "browserConsoleErrors": 0,
+    "browserPageErrors": 0,
+    "browserRequestFailures": 0,
+    "ruffErrors": 0,
+    "typeErrors": 0,
+    "typeWarnings": 0,
+    "nodeSyntaxExitCode": 0,
+    "designReferenceValidSvg": true
+  },
+  "coveredBehavior": [
+    "enumeration-safe same-origin Magic Link and opaque authenticated session",
+    "tenant-derived workspace and non-disclosing foreign-resource behavior",
+    "authenticated upload, plan, approve, execute, artifact, review, export, provider-settings and cleanup journey",
+    "served namespaced CSS/JavaScript and artifact-library API discovered and corrected by real browser QA",
+    "frozen DESIGN.md research contract and Mineral Notebook reference",
+    "Korean/CJK product screens at 375, 768 and 1280 pixels",
+    "keyboard skip link, responsive navigation and checksum wrapping",
+    "pinned axe-core WCAG 2.2 A/AA-family audit with zero serious or critical violations",
+    "zero browser console, page or request failures",
+    "navigation capture latency no greater than 15 ms on the loopback fixture"
+  ],
+  "browserAutomation": {
+    "status": "passed",
+    "browser": "Chrome for Testing 149.0.7827.55",
+    "routes": [
+      "/workspace",
+      "/upload",
+      "/runs/demo/approval",
+      "/runs/demo",
+      "/artifacts",
+      "/reviews/demo",
+      "/exports/demo",
+      "/settings/providers"
+    ],
+    "viewports": [375, 768, 1280],
+    "captureCount": 24,
+    "transcript": "artifacts/ulw-g003/browser-journey-transcript.json",
+    "transcriptSha256": "9184efda5fbe1e13dd2f1b9890a25cb1f3b9cedad32f4719f3ee6b44e88f0ee6",
+    "axe": {
+      "version": "4.10.3",
+      "scriptSha256": "880970c081707360e64f34cea25ff91892f5bc95675b0776925b9709dd8a68bb",
+      "seriousOrCritical": 0
+    },
+    "fabricatedEvidence": false
+  },
+  "independentVisualReviews": [
+    {
+      "ref": "agent://172-G003VisualArchitectureFinal",
+      "status": "CLEAR",
+      "decision": "APPROVE"
+    },
+    {
+      "ref": "agent://173-G003VisualQaFinal",
+      "status": "PASS"
+    }
+  ],
+  "currentExternalLimitations": {
+    "postgresRlsRerun": "Docker daemon is currently unavailable; the unchanged RLS layer retains the prior 33-test passing receipt."
+  },
+  "blockers": []
+}

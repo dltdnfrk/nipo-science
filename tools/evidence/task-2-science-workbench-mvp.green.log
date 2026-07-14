@@ -1,0 +1,25 @@
+command: make verify-spec
+exit_code: 0
+result: OK
+tests_run: 10
+duration: 0.005s
+verifier: spec-verification: PASS (v0.4; 81 IDs; 12 P0 features)
+mutation_coverage:
+- monetary budget error token
+- API-key runtime authentication
+- literal seccomp requirement
+- missing required openai_codex runtime
+- missing exact acceptance ID
+- renamed canonical Skill
+- Review API drift
+- incomplete dry-lab chain
+- missing SEC14 break-glass contract
+python_files_max_pure_loc: 157
+strict_checks:
+- ruff check: PASS
+- ruff format --check: PASS
+- basedpyright: 0 errors
+- no-excuse rules: no violations in 4 files
+artifact_sha256:
+- SPEC-v0.4.md: 1ab655bc174528654d17b95cae27413fae1a9b04716f779b049ec01990ebbf63
+- requirements.yaml: f753d4a906bf9de0a12336cae57355470b75790475891b4a30626faaf700d778

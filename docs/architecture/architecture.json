@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "system": "science-workbench",
+  "decisions": [
+    {"id": "isolated-monorepo-service-boundaries", "adr": "decisions/ADR-0001-isolated-monorepo.md", "status": "accepted"},
+    {"id": "same-origin-auth", "adr": "decisions/ADR-0002-same-origin-auth.md", "status": "accepted"},
+    {"id": "transactional-event-log", "adr": "decisions/ADR-0003-transactional-event-log.md", "status": "accepted"},
+    {"id": "artifact-first-immutable-provenance", "adr": "decisions/ADR-0004-artifact-first-provenance.md", "status": "accepted"},
+    {"id": "local-gke-runner-parity", "adr": "decisions/ADR-0005-runner-parity.md", "status": "accepted"},
+    {"id": "opaque-per-user-runtime-homes", "adr": "decisions/ADR-0006-runtime-homes.md", "status": "accepted"},
+    {"id": "application-sole-tool-executor", "adr": "decisions/ADR-0007-tool-execution.md", "status": "accepted"},
+    {"id": "reviewer-non-reexecution", "adr": "decisions/ADR-0008-reviewer.md", "status": "accepted"},
+    {"id": "oauth-f13-state-separation", "adr": "decisions/ADR-0009-oauth-f13-separation.md", "status": "accepted"}
+  ],
+  "trust_boundaries": [
+    {"id": "browser-to-same-origin-web", "owner": "identity-platform", "source": "browser", "target": "web", "data": ["auth_session", "csrf_token"]},
+    {"id": "web-to-application-api", "owner": "api-platform", "source": "web", "target": "application-api", "data": ["commands", "queries", "sse"]},
+    {"id": "application-to-postgresql", "owner": "data-platform", "source": "application-api", "target": "postgresql-rls", "data": ["tenant_records", "run_events"]},
+    {"id": "application-to-object-storage", "owner": "artifact-platform", "source": "application-api", "target": "private-object-storage", "data": ["uploads", "artifact_versions", "exports"]},
+    {"id": "orchestrator-to-runner-manager", "owner": "runner-platform", "source": "orchestrator", "target": "runner-manager", "data": ["execution_envelope"]},
+    {"id": "runner-manager-to-sandbox", "owner": "runner-security", "source": "runner-manager", "target": "isolated-sandbox", "data": ["code", "pinned_inputs"]},
+    {"id": "output-watcher-to-artifact-service", "owner": "artifact-platform", "source": "output-watcher", "target": "artifact-service", "data": ["registered_output_ref", "checksum"]},
+    {"id": "runtime-broker-to-provider-runtime", "owner": "runtime-platform", "source": "runtime-broker", "target": "provider-runtime", "data": ["opaque_runtime_home", "normalized_events"]},
+    {"id": "connector-broker-to-provider", "owner": "connector-platform", "source": "connector-broker", "target": "fixed-provider-host", "data": ["one_use_handle", "connector_response"]},
+    {"id": "reviewer-to-read-model", "owner": "review-platform", "source": "reviewer", "target": "immutable-read-model", "data": ["pinned_versions", "executions", "sources"]},
+    {"id": "export-worker-to-download-origin", "owner": "artifact-platform", "source": "export-worker", "target": "artifact-origin", "data": ["pinned_export"]}
+  ],
+  "contracts": {
+    "transactional_event_log": {"atomic_with_state_change": true, "ordering": "per-run-monotonic-sequence", "replay_source": "postgresql-run-events"},
+    "artifact_provenance": {"versions_immutable": true, "required_hashes": ["content", "code", "environment", "inputs", "execution"]},
+    "runner_parity": {"oracle": "scientific-output-checksum-and-denial-outcomes", "environments": ["local", "gke-gvisor"]},
+    "provider_runtime": {"home_scope": "one-requesting-user-and-provider-connection", "home_exposure": "broker-only", "silent_fallback": false},
+    "tool_execution": {"executor": "application", "provider_builtin_tools": "disabled-and-probed", "model_role": "typed-action-proposal-only"},
+    "reviewer": {
+      "allowed_capabilities": [
+        "read_pinned_evidence",
+        "submit_findings_once"
+      ],
+      "forbidden_capabilities": ["runner", "python", "bash", "connector", "artifact_write", "tool_execute"],
+      "reexecution": false
+    },
+    "credential_domains": {"provider_oauth": "requester-owned-provider-connections", "f13": "organization-owned-connector-credentials", "kms_purposes_distinct": true}
+  },
+  "claims": {
+    "gke_gvisor_enforces_workload_seccomp": false,
+    "gke_gvisor_enforces_no_new_privileges": false,
+    "isolation_acceptance": "outcome-tested-compensating-controls"
+  }
+}
+

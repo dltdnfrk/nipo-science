@@ -1,0 +1,7 @@
+command: make verify-spec
+exit_code: 2
+result: FAILED (failures=1)
+tests_run: 10
+failing_test: test_rejects_missing_break_glass_contract
+reason: canonical requirements lacked the machine-readable break_glass key before implementation
+phase: RED before SEC14 break-glass manifest and verifier assertion

@@ -1,0 +1,17 @@
+{
+  "canonical_command": "make verify-spec",
+  "canonical_exit_code": 0,
+  "test_count": 10,
+  "requirement_id_count": 81,
+  "p0_feature_count": 12,
+  "manual_happy_command": ".venv/bin/python -m tools.verify_spec docs/requirements/requirements.yaml docs/spec/SPEC-v0.4.md",
+  "manual_happy_exit_code": 0,
+  "manual_bad_input": "requirements manifest supplied as SPEC Markdown",
+  "manual_bad_exit_code": 1,
+  "manual_bad_result": "expected normative frontmatter",
+  "boundary_regression_command": "make test-boundaries",
+  "boundary_regression_exit_code": 0,
+  "boundary_regression_tests": 9,
+  "mutated_siblings": false,
+  "committed": false
+}

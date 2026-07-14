@@ -1,0 +1,7 @@
+command: PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.13 -m unittest science-workbench/tests/test_boundaries.py -v && PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.13 science-workbench/tools/check_boundaries.py science-workbench
+exit_code: 0
+result: OK
+tests_run: 9
+duration: 0.255s
+project_scan: boundary-check: PASS (17 files checked)
+cache_behavior: .cache/mise/bad.py ignored

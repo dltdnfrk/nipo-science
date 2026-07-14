@@ -1,0 +1,3 @@
+error: local tool path is a symlink: /Users/hyunjun/Documents/MUNI/science-workbench/.cache/pnpm
+make: *** [bootstrap] Error 1
+symlink_guard_exit_code=2

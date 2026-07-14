@@ -1,0 +1,55 @@
+{
+  "task": 11,
+  "status": "passed",
+  "acceptance": {
+    "archive_download_denial": "archived Project blocks issue and redemption",
+    "cas": "PostgreSQL Project and Artifact row locks serialize base_version_no; stale and concurrent losers preserve current Version",
+    "checksum": "SHA-256 is watcher-computed, object-key-bound, and reverified on every content read",
+    "commit_reconciliation": "canonical lineage IDs make ambiguous commit reconciliation by server-generated Version ID stable and non-replayable",
+    "content_addressing": "owner-private org/project-scoped SHA-256 blobs use fsync-before-atomic-publication, exact keys, dedupe, and normalized metadata/filesystem/compensation failures",
+    "downloads": "canonical unpadded HMAC claims use exact milliseconds, preserve the 1ms minimum, never exceed the ten-minute hard cap, and lock archive authorization through blob read",
+    "identity": "server-generated UUIDv7 Artifact, Version, and watcher-reference IDs",
+    "lineage": "exact same-tenant/same-Project input Version IDs; duplicate, foreign, UPDATE, and DELETE rejected",
+    "runtime_provenance": "watcher and PostgreSQL bind the current requester, execution, provider connection, adapter, and active Session to the trusted Run graph",
+    "session_association": "active-Project/active-Session same-Project unique link; archive and concurrent duplicates rejected",
+    "version_history": "V1 remains byte- and checksum-identical after monotonic V2 and later Versions",
+    "watcher": "execution/org/project/requester/runtime-bound fenced reference; committed and uncertain outcomes prevent replay"
+  },
+  "manual_qa": {
+    "artifact_uuid_version": 7,
+    "download_payload": "signal,1",
+    "archive_redemption": "blocked under the same Project lock as blob read",
+    "download_expiry": "2026-07-13T06:10:00.123000+00:00",
+    "hard_cap": "not greater than ten minutes from issuance",
+    "invalid_ttl": "1500 microseconds rejected",
+    "lineage_count": 1,
+    "restart_payload": "signal,2",
+    "session_link_revision": 1,
+    "version_numbers": [1, 2]
+  },
+  "verification": {
+    "artifact_contracts": "60 Python passed; 57 TypeScript passed",
+    "boundary": "passed, 336 final files checked; sealed CI run checked 320",
+    "ci": {
+      "aggregate_sha256": "96fe22a102cc1dbd415e8fbbdd698d88dbaa5e1b2c01f41c618935840473286a",
+      "executed": 515,
+      "jobs": 18,
+      "raw_hashes_verified": true
+    },
+    "cleanup": {
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    "focused": "33 passed",
+    "full": "532 passed, 217 subtests passed",
+    "migrations": "15 passed",
+    "no_excuse": "0 violations in 24 files",
+    "pure_loc_max": 248,
+    "rls": "33 passed",
+    "ruff": "passed",
+    "sbom": "passed, 192 locked packages checked",
+    "secret_scan": "passed, 258 checks executed",
+    "typecheck": "0 errors, 0 warnings"
+  }
+}

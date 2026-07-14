@@ -1,0 +1,45 @@
+{
+  "task": 7,
+  "status": "pass",
+  "command": "make stack-up && make smoke-local && make stack-down",
+  "services_healthy": [
+    "postgres",
+    "redis",
+    "minio",
+    "clamav",
+    "mailpit",
+    "api",
+    "worker",
+    "web"
+  ],
+  "checks": {
+    "typed_config_tests": 9,
+    "boundary_tests": 9,
+    "object_create_read_delete": "pass",
+    "mailpit_magic_link": "pass",
+    "artifact_host_received_app_cookie": false,
+    "clamav_stopped_health_status": 503,
+    "clamav_stopped_upload_status": 503,
+    "clamav_restart_healthy": true,
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "compose_config": "pass",
+    "shell_syntax": "pass"
+  },
+  "cleanup": {
+    "project_containers": 0,
+    "project_networks": 0,
+    "project_volumes": 0
+  },
+  "platform": {
+    "docker_engine": "29.5.2",
+    "compose": "5.1.0",
+    "clamav": "linux/amd64 on Apple Silicon because the official 1.4.3 image has no arm64 manifest"
+  },
+  "evidence_sha256": {
+    "red": "1964abd4adaddce907f224bec28a29cdf7dfc3acfb7523027ec95788743507e1",
+    "runtime_env_red": "00aea303b1cc65f0667da32d6ce771df8e2bbfe3027de8c3de4a337971563dc6",
+    "origin_host_red": "20be59e89bdf0154891c2b2cdca929cfb7aa1caa215ecaa993a22bc18005c123",
+    "green": "fe90d4f24912ea9d44c426ce3b138dba9c08ff5f9a415b471029361feb3dfde7"
+  }
+}

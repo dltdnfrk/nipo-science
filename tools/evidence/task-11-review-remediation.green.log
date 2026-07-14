@@ -1,0 +1,21 @@
+TASK=11-review-remediation
+PHASE=GREEN
+DATE=2026-07-13
+FOCUSED=make test-artifacts: 33 passed; Ruff passed; basedpyright 0 errors, 0 warnings
+FULL=532 passed, 217 subtests passed
+ARTIFACT_CONTRACTS=60 Python passed; 57 TypeScript passed
+MIGRATIONS=15 passed
+RLS=33 passed
+BOUNDARY=336 final files; sealed CI run checked 320 files
+SPEC=PASS; v0.4; 81 IDs; 12 P0 features
+ARCHITECTURE=PASS; 9 decisions; 11 boundaries; 13 High threats; 8 classified fields
+SCHEMA=41 tables; 300 columns; catalog sha256 78635940b290f5201c2eac2831ef72199b01325b10f50e7c4fd6932df647eafa
+CI=18 jobs; CI_EXECUTED=515; aggregate 96fe22a102cc1dbd415e8fbbdd698d88dbaa5e1b2c01f41c618935840473286a
+CI_RAW_HASHES=all 18 match; secret scan 258; SBOM 192
+NO_EXCUSE=0 violations across 24 Task 11 source and focused-test files
+PURE_LOC_MAX=248 services/api/tests/persistence/test_artifact_persistence.py
+MANUAL=V1,V2; restart read v2; lineage 1; 10m hard-cap download v1 with exact millisecond expiry; atomic archive rejection; Session link revision 1; 1.5ms TTL rejected
+RESIDUE=0 task containers; 0 task networks; 0 task volumes
+SIBLING_STATUS_BASELINE_SHA256=9faf97219cc3b398919d6d675b9f3fcd5e4aa9e96745549f3cd8b25e850d70fd
+SIBLING_STATUS_FINAL_SHA256=b4c0f2c111d3b0c8be74940041dbcd320ecbe198cfe72a0f26e047595f94b8e3
+SIBLING_SCOPE=external drift observed in drylab/ontologylab; no Task 11 write and boundary checker PASS

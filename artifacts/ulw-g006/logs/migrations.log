@@ -1,0 +1,2 @@
+error: Docker engine is unavailable
+make: *** [prepare-postgres-image] Error 1

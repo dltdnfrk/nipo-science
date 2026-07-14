@@ -1,0 +1,42 @@
+{
+  "task": 3,
+  "phase": "QA",
+  "result": "pass",
+  "verification": {
+    "command": "make verify-architecture",
+    "exit_code": 0,
+    "tests_run": 8,
+    "report": "9 decisions, 11 boundaries, 13 High threats, 8 classified fields"
+  },
+  "negative_scenarios": [
+    {"case": "oauth refresh-token exfiltration mitigation omitted", "expected": "oauth-refresh-token-exfiltration-mitigation", "result": "pass"},
+    {"case": "trust boundary owner omitted", "expected": "unowned-boundary", "result": "pass"},
+    {"case": "sensitive field classification omitted", "expected": "unclassified-sensitive-field", "result": "pass"},
+    {"case": "High threat executable test omitted", "expected": "untested-high-threat", "result": "pass"},
+    {"case": "accepted ADR contains unresolved marker", "expected": "unresolved-placeholder", "result": "pass"},
+    {"case": "Reviewer gains Python execution", "expected": "reviewer-tool-execution", "result": "pass"},
+    {"case": "gVisor literal workload seccomp claim enabled", "expected": "literal-seccomp-claim", "result": "pass"}
+  ],
+  "manual_cli": [
+    {"command": ".venv/bin/python tools/verify_architecture.py --help", "exit_code": 0},
+    {"command": ".venv/bin/python tools/verify_architecture.py docs/architecture", "exit_code": 0},
+    {"command": ".venv/bin/python tools/verify_architecture.py /tmp/architecture-does-not-exist", "exit_code": 2}
+  ],
+  "quality": {
+    "no_excuse_rules": "no violations in 4 files",
+    "ruff": "all selected strict correctness checks passed",
+    "pure_loc": {
+      "tools/architecture_contract.py": 44,
+      "tools/architecture_manifest.py": 35,
+      "tools/verify_architecture.py": 177,
+      "tests/test_architecture.py": 97
+    }
+  },
+  "sha256": {
+    "docs/architecture/architecture.json": "118151d3dc329721c2a6464079914e675cfd8c8ef60e361509899af01b8d9f4f",
+    "docs/architecture/threat-model.json": "d8bc53e0d047412634de064915510c1c513ac5ab1bed65486e38cf76de5d8b3f",
+    "docs/architecture/data-classification.json": "c45461eb755d719c2a4350fd8075a8b1ca61a9ed3390e4b0234f6f211b45afb1",
+    "tools/verify_architecture.py": "70cfa9717b3383dd4acd24900491019d299d63184644591f0950fd6370a3b1ad",
+    "tests/test_architecture.py": "ea352e6def3bee8ad864c4a4afe2842eeb7a168e5edced07a452d3f6c6aaf092"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "postgresql": "18.4",
+  "revision": "0001_tenant_spine",
+  "table_count": 41,
+  "column_count": 300,
+  "catalog_sha256": "78635940b290f5201c2eac2831ef72199b01325b10f50e7c4fd6932df647eafa",
+  "global_tables": ["organizations", "users"],
+  "tenant_tables": [
+    "memberships", "auth_sessions", "consents", "projects", "sessions",
+    "provider_connections", "runs", "messages", "run_events", "action_plans",
+    "approval_requests", "executions", "execution_leases", "uploaded_files",
+    "artifacts", "artifact_versions", "artifact_dependencies",
+    "session_artifact_versions", "skills", "run_skill_snapshots", "connectors",
+    "connector_calls", "credentials", "tool_grants", "reviews",
+    "review_artifact_versions", "review_execution_refs", "review_findings",
+    "review_finding_artifact_versions", "review_finding_execution_refs",
+    "export_jobs", "export_artifact_versions", "idempotency_records", "audit_logs",
+    "audit_outbox", "deletion_requests", "deletion_receipts",
+    "deletion_tombstones", "legal_holds"
+  ],
+  "append_only_tables": [
+    "artifact_dependencies", "audit_logs", "audit_outbox", "legal_holds"
+  ],
+  "forbidden_schema_tokens": ["budget", "cost", "price", "spend"]
+}

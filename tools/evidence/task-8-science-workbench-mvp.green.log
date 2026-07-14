@@ -1,0 +1,32 @@
+TASK=8
+PHASE=GREEN
+POSTGRESQL=18.4
+REVISION=0001_tenant_spine
+
+VERSIONS=sqlalchemy-2.0.51 alembic-1.18.5 asyncpg-0.31.0
+LOCK=uv.lock verified by uv 0.11.28 --check --offline
+
+COMMAND=make test-migrations
+RESULT=15 passed; empty/seeded forward/backward/forward and PostgreSQL 18.4 verified
+
+COMMAND=make test-rls
+RESULT=33 passed; 39/39 tenant tables enabled and forced; adversarial attacks blocked
+
+COMMAND=.venv/bin/basedpyright services/api/persistence services/api/migrations services/api/tests/persistence
+RESULT=0 errors, 0 warnings, 0 notes
+
+COMMAND=make ci-local
+RESULT=CI_EXECUTED=468 across 16 jobs
+AGGREGATE_SHA256=cbc5b65fe447f4cf5850f4410408de6e75fc81171e48f8ca30f5c80b6bfe4318
+
+MIGRATION=forward/backward/forward PASS
+SCHEMA_SNAPSHOT=41 tables / 297 columns / sha256:a06e5cf7cc60fab21792459366cd6f8fff28819e4ac5ec3eb4233d5c772c1713
+RLS=39 of 39 tenant tables ENABLED and FORCED
+ATTACKS=concurrent-last-owner/membership-mismatch/unsafe-role/provider-secret/cross-tenant-hold BLOCKED
+AUTHORIZATION=owner-only-membership/requester-owned-provider/opaque-runtime-home ENFORCED
+MEMBERSHIP=soft-revoke/history-preserved/active-only-RLS/rejoin ENFORCED
+CONTRACTS=review/finding/disposition/export immutability, nonempty selection, pin binding ENFORCED
+COMPOSE_PROJECT=science-workbench-task8-<pid>
+POSTGRES_HOST=127.0.0.1:<dynamic>
+CLEANUP=containers:0 networks:0 volumes:0
+REVIEW=PASSED goal/code/qa/context/authorization all current-snapshot lanes

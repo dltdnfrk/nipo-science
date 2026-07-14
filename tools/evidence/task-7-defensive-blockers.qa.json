@@ -1,0 +1,35 @@
+{
+  "task": 7,
+  "status": "pass",
+  "command": "make stack-up && make smoke-local && make stack-down",
+  "targeted_tests": 19,
+  "checks": {
+    "published_port_count": 8,
+    "published_host_ip": "127.0.0.1",
+    "non_loopback_host_ip_rejected": true,
+    "empty_cookie_domain_accepted_as_host_only": true,
+    "dot_localhost_cookie_domain_rejected": true,
+    "arbitrary_nonempty_cookie_domain_rejected": true,
+    "clean_instream_status": 202,
+    "clean_instream_result": "scan_accepted",
+    "eicar_instream_status": 422,
+    "eicar_instream_result": "quarantined",
+    "eicar_persisted": false,
+    "clamav_stopped_upload_status": 503,
+    "clamav_protocol_error_fail_closed": true,
+    "oversize_rejected_before_connection": true,
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "no_excuse": "pass",
+    "shell_syntax": "pass"
+  },
+  "cleanup": {
+    "project_containers": 0,
+    "project_networks": 0,
+    "project_volumes": 0
+  },
+  "evidence_sha256": {
+    "red": "ea49b8a96857949d19f8d8bc306d456ef35df427931727cf3d9740e69e2d1a4e",
+    "green": "2b472f264e1d5f21f1dc880b01b902816baf97a2d1524880796ef9991cd8c0e7"
+  }
+}

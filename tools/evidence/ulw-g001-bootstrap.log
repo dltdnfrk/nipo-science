@@ -1,0 +1,12 @@
+mise trusted /Users/hyunjun/Documents/MUNI/science-workbench
+mise all tools are installed
+Resolved 28 packages in 12ms
+Checked 26 packages in 7ms
+Scope: all 2 workspace projects
+✓ Lockfile passes supply-chain policies (verified 15h ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 175ms using pnpm v11.12.0
+toolchain: node 24.17.0, pnpm 11.12.0, python 3.12.13, uv 0.11.28
+bootstrap: ready (locked Python and pnpm dependencies installed locally)

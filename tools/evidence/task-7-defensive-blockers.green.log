@@ -1,0 +1,265 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 18 items
+
+tests/local_stack/test_compose.py::test_compose_defines_every_local_service_with_healthcheck PASSED [  5%]
+tests/local_stack/test_compose.py::test_compose_contains_no_provider_or_cloud_credentials PASSED [ 11%]
+tests/local_stack/test_compose.py::test_anonymous_docker_config_disables_global_credential_helpers PASSED [ 16%]
+tests/local_stack/test_compose.py::test_host_ports_are_isolated_and_overrideable PASSED [ 22%]
+tests/local_stack/test_config.py::test_config_parses_host_only_local_interfaces PASSED [ 27%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[OBJECT_STORE_DRIVER-filesystem] PASSED [ 33%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[MAIL_DRIVER-console] PASSED [ 38%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SERVICE_ROLE-scheduler] PASSED [ 44%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SMTP_PORT-0] PASSED [ 50%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[HOST_IP-192.0.2.1] PASSED [ 55%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[COOKIE_DOMAIN-.localhost] PASSED [ 61%]
+tests/local_stack/test_config.py::test_config_rejects_shared_application_and_artifact_origin PASSED [ 66%]
+tests/local_stack/test_config.py::test_config_ignores_container_runtime_environment PASSED [ 72%]
+tests/local_stack/test_scanner.py::test_scan_stream_accepts_only_explicit_clean_response PASSED [ 77%]
+tests/local_stack/test_scanner.py::test_scan_stream_returns_signature_when_clamd_finds_threat PASSED [ 83%]
+tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_on_protocol_error PASSED [ 88%]
+tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_when_daemon_is_unavailable PASSED [ 94%]
+tests/local_stack/test_scanner.py::test_scan_stream_rejects_oversize_before_connecting PASSED [100%]
+
+============================== 18 passed in 0.39s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes
+18.4-alpine: Pulling from library/postgres
+Digest: sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+Status: Image is up to date for postgres:18.4-alpine
+docker.io/library/postgres:18.4-alpine
+8.2.7-alpine: Pulling from library/redis
+Digest: sha256:223b183cbc49f5ff48728e1fc52ccf101f05072decad2bd9867281a3c9bf75fd
+Status: Image is up to date for redis:8.2.7-alpine
+docker.io/library/redis:8.2.7-alpine
+RELEASE.2025-09-07T16-13-09Z: Pulling from minio/minio
+Digest: sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+Status: Image is up to date for minio/minio:RELEASE.2025-09-07T16-13-09Z
+docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+RELEASE.2025-08-13T08-35-41Z: Pulling from minio/mc
+Digest: sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+Status: Image is up to date for minio/mc:RELEASE.2025-08-13T08-35-41Z
+docker.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+v1.27.8: Pulling from axllent/mailpit
+Digest: sha256:6abc8e633df15eaf785cfcf38bae48e66f64beecdc03121e249d0f9ec15f0707
+Status: Image is up to date for axllent/mailpit:v1.27.8
+docker.io/axllent/mailpit:v1.27.8
+1.29.5-alpine: Pulling from library/nginx
+Digest: sha256:1eff5a5f3fcf8431a0abb7eddf5471fec24e5e1905a2581aeacdb07a4479b92b
+Status: Image is up to date for nginx:1.29.5-alpine
+docker.io/library/nginx:1.29.5-alpine
+3.12.13-alpine3.23: Pulling from library/python
+Digest: sha256:601d3d3797e90e2534782e69c85fafb7971b43f24c7b1b079b7e48dd435e458d
+Status: Image is up to date for python:3.12.13-alpine3.23
+docker.io/library/python:3.12.13-alpine3.23
+0.11.28: Pulling from astral-sh/uv
+Digest: sha256:0f36cb9361a3346885ca3677e3767016687b5a170c1a6b88465ec14aefec90aa
+Status: Image is up to date for ghcr.io/astral-sh/uv:0.11.28
+ghcr.io/astral-sh/uv:0.11.28
+1.4.3: Pulling from clamav/clamav
+Digest: sha256:75fb5fd95fcbe1d7e6d240c369c1572b686ee2c95949d1042b5148de8eddebb4
+Status: Image is up to date for clamav/clamav:1.4.3
+docker.io/clamav/clamav:1.4.3
+ Image science-workbench-local-api Building 
+ Image science-workbench-local-worker Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.09kB done
+#1 DONE 0.0s
+
+#2 [api internal] load build definition from Dockerfile.stub
+#2 DONE 0.0s
+
+#2 [api internal] load build definition from Dockerfile.stub
+#2 transferring dockerfile: 428B done
+#2 DONE 0.0s
+
+#3 [worker internal] load metadata for ghcr.io/astral-sh/uv:0.11.28
+#3 DONE 0.0s
+
+#4 [worker internal] load metadata for docker.io/library/python:3.12.13-alpine3.23
+#4 DONE 0.0s
+
+#5 [worker internal] load .dockerignore
+#5 transferring context: 2B done
+#5 DONE 0.0s
+
+#6 [api internal] load build context
+#6 transferring context: 27.62kB done
+#6 DONE 0.0s
+
+#7 [worker stage-1 1/6] FROM docker.io/library/python:3.12.13-alpine3.23@sha256:601d3d3797e90e2534782e69c85fafb7971b43f24c7b1b079b7e48dd435e458d
+#7 resolve docker.io/library/python:3.12.13-alpine3.23@sha256:601d3d3797e90e2534782e69c85fafb7971b43f24c7b1b079b7e48dd435e458d 0.0s done
+#7 DONE 0.0s
+
+#8 [api uv 1/1] FROM ghcr.io/astral-sh/uv:0.11.28@sha256:0f36cb9361a3346885ca3677e3767016687b5a170c1a6b88465ec14aefec90aa
+#8 resolve ghcr.io/astral-sh/uv:0.11.28@sha256:0f36cb9361a3346885ca3677e3767016687b5a170c1a6b88465ec14aefec90aa 0.0s done
+#8 DONE 0.0s
+
+#9 [worker stage-1 4/6] COPY pyproject.toml uv.lock ./
+#9 CACHED
+
+#10 [worker stage-1 2/6] COPY --from=uv /uv /uvx /bin/
+#10 CACHED
+
+#11 [worker stage-1 3/6] WORKDIR /workspace
+#11 CACHED
+
+#12 [worker stage-1 5/6] RUN uv sync --locked --no-dev --no-install-project
+#12 CACHED
+
+#13 [api stage-1 6/6] COPY services ./services
+#13 DONE 0.0s
+
+#14 [api] exporting to image
+#14 exporting layers 0.0s done
+#14 exporting manifest sha256:adb7fa98d25fe266124d6083c6f876e010a49d56a6ae8658116d9373df815990
+#14 ...
+
+#15 [worker] exporting to image
+#15 exporting layers 0.0s done
+#15 exporting manifest sha256:453684215c6818ae62db90ae2a374e52bd9a344b322a1eace8db69a19029f8ae 0.0s done
+#15 exporting config sha256:972c8888e7c01197c3b73c834d4d335aa1d282692570bacc21a53d03d9aa564d 0.0s done
+#15 exporting attestation manifest sha256:8fc7b27367a2a3041fd4552b07435b8fe782df3ebf68195513b5b5031bc121cc 0.0s done
+#15 exporting manifest list sha256:d6b9e1a85799aed103a9f0ea017517b0bc889a358fcb205c0ee512d4aadda610 0.0s done
+#15 naming to docker.io/library/science-workbench-local-worker:latest done
+#15 unpacking to docker.io/library/science-workbench-local-worker:latest 0.0s done
+#15 DONE 0.2s
+
+#14 [api] exporting to image
+#14 exporting manifest sha256:adb7fa98d25fe266124d6083c6f876e010a49d56a6ae8658116d9373df815990 done
+#14 exporting config sha256:f2cef7b4ce7d502aa511a7a3dd895e4e9f16cf097c53136aaa885c183958de70 0.0s done
+#14 exporting attestation manifest sha256:c2fa15b46238159d5b6b6faea5ec7c49e38cd1a9466ba16055854c467a810e68 0.0s done
+#14 exporting manifest list sha256:9f6265c43775db737e37280278fbe860a929c6a2c30f51a197df8553f753d0e1 0.0s done
+#14 naming to docker.io/library/science-workbench-local-api:latest done
+#14 unpacking to docker.io/library/science-workbench-local-api:latest 0.0s done
+#14 DONE 0.2s
+
+#16 [worker] resolving provenance for metadata file
+#16 DONE 0.0s
+
+#17 [api] resolving provenance for metadata file
+#17 DONE 0.0s
+ Image science-workbench-local-worker Built 
+ Image science-workbench-local-api Built 
+ Network science-workbench-local_default Creating 
+ Network science-workbench-local_default Created 
+ Volume science-workbench-local_postgres-data Creating 
+ Volume science-workbench-local_postgres-data Created 
+ Volume science-workbench-local_mailpit-data Creating 
+ Volume science-workbench-local_mailpit-data Created 
+ Volume science-workbench-local_minio-data Creating 
+ Volume science-workbench-local_minio-data Created 
+ Container science-workbench-local-redis-1 Creating 
+ Container science-workbench-local-clamav-1 Creating 
+ Container science-workbench-local-web-1 Creating 
+ Container science-workbench-local-postgres-1 Creating 
+ Container science-workbench-local-minio-1 Creating 
+ Container science-workbench-local-mailpit-1 Creating 
+ Container science-workbench-local-clamav-1 Created 
+ Container science-workbench-local-minio-1 Created 
+ Container science-workbench-local-mailpit-1 Created 
+ Container science-workbench-local-api-1 Creating 
+ Container science-workbench-local-redis-1 Created 
+ Container science-workbench-local-web-1 Created 
+ Container science-workbench-local-postgres-1 Created 
+ Container science-workbench-local-worker-1 Creating 
+ Container science-workbench-local-api-1 Created 
+ Container science-workbench-local-worker-1 Created 
+ Container science-workbench-local-clamav-1 Starting 
+ Container science-workbench-local-minio-1 Starting 
+ Container science-workbench-local-redis-1 Starting 
+ Container science-workbench-local-web-1 Starting 
+ Container science-workbench-local-postgres-1 Starting 
+ Container science-workbench-local-mailpit-1 Starting 
+ Container science-workbench-local-redis-1 Started 
+ Container science-workbench-local-web-1 Started 
+ Container science-workbench-local-minio-1 Started 
+ Container science-workbench-local-clamav-1 Started 
+ Container science-workbench-local-mailpit-1 Started 
+ Container science-workbench-local-mailpit-1 Waiting 
+ Container science-workbench-local-clamav-1 Waiting 
+ Container science-workbench-local-postgres-1 Started 
+ Container science-workbench-local-redis-1 Waiting 
+ Container science-workbench-local-clamav-1 Waiting 
+ Container science-workbench-local-postgres-1 Waiting 
+ Container science-workbench-local-mailpit-1 Healthy 
+ Container science-workbench-local-redis-1 Healthy 
+ Container science-workbench-local-postgres-1 Healthy 
+ Container science-workbench-local-clamav-1 Healthy 
+ Container science-workbench-local-api-1 Starting 
+ Container science-workbench-local-clamav-1 Healthy 
+ Container science-workbench-local-worker-1 Starting 
+ Container science-workbench-local-api-1 Started 
+ Container science-workbench-local-worker-1 Started 
+ Container science-workbench-local-mailpit-1 Waiting 
+ Container science-workbench-local-redis-1 Waiting 
+ Container science-workbench-local-worker-1 Waiting 
+ Container science-workbench-local-web-1 Waiting 
+ Container science-workbench-local-minio-1 Waiting 
+ Container science-workbench-local-clamav-1 Waiting 
+ Container science-workbench-local-postgres-1 Waiting 
+ Container science-workbench-local-api-1 Waiting 
+ Container science-workbench-local-mailpit-1 Healthy 
+ Container science-workbench-local-web-1 Healthy 
+ Container science-workbench-local-clamav-1 Healthy 
+ Container science-workbench-local-redis-1 Healthy 
+ Container science-workbench-local-minio-1 Healthy 
+ Container science-workbench-local-postgres-1 Healthy 
+ Container science-workbench-local-worker-1 Healthy 
+ Container science-workbench-local-api-1 Healthy 
+ Container science-workbench-local-minio-1 Running 
+ Container science-workbench-local-minio-1 Waiting 
+ Container science-workbench-local-minio-1 Healthy 
+ Container science-workbench-local-minio-client-run-c03bd25cd61d Creating 
+ Container science-workbench-local-minio-client-run-c03bd25cd61d Created 
+ Container science-workbench-local-clamav-1 Stopping 
+ Container science-workbench-local-clamav-1 Stopped 
+ Container science-workbench-local-clamav-1 Starting 
+ Container science-workbench-local-clamav-1 Started 
+ Container science-workbench-local-clamav-1 Waiting 
+ Container science-workbench-local-clamav-1 Healthy 
+smoke-local: all service, object, mail, origin, and scanner checks passed
+ Container science-workbench-local-web-1 Stopping 
+ Container science-workbench-local-api-1 Stopping 
+ Container science-workbench-local-worker-1 Stopping 
+ Container science-workbench-local-minio-1 Stopping 
+ Container science-workbench-local-minio-1 Stopped 
+ Container science-workbench-local-minio-1 Removing 
+ Container science-workbench-local-minio-1 Removed 
+ Container science-workbench-local-web-1 Stopped 
+ Container science-workbench-local-web-1 Removing 
+ Container science-workbench-local-web-1 Removed 
+ Container science-workbench-local-worker-1 Stopped 
+ Container science-workbench-local-worker-1 Removing 
+ Container science-workbench-local-worker-1 Removed 
+ Container science-workbench-local-postgres-1 Stopping 
+ Container science-workbench-local-redis-1 Stopping 
+ Container science-workbench-local-api-1 Stopped 
+ Container science-workbench-local-api-1 Removing 
+ Container science-workbench-local-api-1 Removed 
+ Container science-workbench-local-mailpit-1 Stopping 
+ Container science-workbench-local-clamav-1 Stopping 
+ Container science-workbench-local-postgres-1 Stopped 
+ Container science-workbench-local-postgres-1 Removing 
+ Container science-workbench-local-postgres-1 Removed 
+ Container science-workbench-local-redis-1 Stopped 
+ Container science-workbench-local-redis-1 Removing 
+ Container science-workbench-local-clamav-1 Stopped 
+ Container science-workbench-local-clamav-1 Removing 
+ Container science-workbench-local-redis-1 Removed 
+ Container science-workbench-local-clamav-1 Removed 
+ Container science-workbench-local-mailpit-1 Stopped 
+ Container science-workbench-local-mailpit-1 Removing 
+ Container science-workbench-local-mailpit-1 Removed 
+ Network science-workbench-local_default Removing 
+ Volume science-workbench-local_postgres-data Removing 
+ Volume science-workbench-local_mailpit-data Removing 
+ Volume science-workbench-local_minio-data Removing 
+ Volume science-workbench-local_postgres-data Removed 
+ Volume science-workbench-local_minio-data Removed 
+ Volume science-workbench-local_mailpit-data Removed 
+ Network science-workbench-local_default Removed 

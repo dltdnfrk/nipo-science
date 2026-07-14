@@ -1,0 +1,61 @@
+{
+  "task": 13,
+  "status": "implementation_passed_browser_and_docker_blocked",
+  "acceptance": {
+    "artifacts": "tenant-scoped immutable CSV, PNG, and PDF V1/V2 histories",
+    "associations": "explicit selected-Version Session attach and detach",
+    "detail": "checksum, environment, producer Execution, predecessor diff, and lineage graph",
+    "download": "authenticated immutable bytes with X-Content-SHA256 equality",
+    "preview": "sandboxed iframe to server-declared localhost origin with passive media only",
+    "public_gate": "Artifact page and API return 401 without the opaque test-principal cookie",
+    "tenant_gate": "foreign and absent Artifact identifiers both return 404"
+  },
+  "manual_qa": {
+    "attach_then_detach": [["session-demo"], []],
+    "download_checksum_matches": true,
+    "foreign_status": 404,
+    "host_alias_status": 401,
+    "library_status": 200,
+    "listing_count": 3,
+    "preview_alias_status": 404,
+    "preview": {
+      "content_security_policy": "default-src 'none'",
+      "host": "localhost",
+      "referrer_policy": "no-referrer",
+      "set_cookie": null,
+      "status": 200,
+      "x_content_type_options": "nosniff"
+    },
+    "unauthenticated_status": 401,
+    "route_alias_status": 404,
+    "version": {
+      "changed_bytes": 0,
+      "number": 1,
+      "previous": null,
+      "selected": "artifact-spectrum-v1"
+    }
+  },
+  "verification": {
+    "boundary": "421 files checked after Playwright and debug runtime cleanup",
+    "browser": "blocked before test body: system Chrome exits with SIGABRT through Playwright and direct headless launch exits 134; codesign reports an invalid modified signature, spctl assessment fails, and no in-app browser instance is available",
+    "browser_harness": "6 Playwright project-scenarios cover real Tab flow, focus restoration, explicit V1/V2 selection, attach/detach, V1 download, preview isolation and checksum, V3 creation, screenshots, and CSV/PNG/PDF histories at 375/768/1280 widths",
+    "ci": "not regenerated: Docker daemon unavailable",
+    "docker": "blocked: Docker daemon unavailable; product RLS and provider PostgreSQL tests excluded",
+    "debug_audit": "H1 fixture readiness refuted by live HTTP and Playwright collection; H2 Playwright-specific failure refuted by direct Chrome exit 134; H3 host Chrome signature failure confirmed by codesign/spctl while an ordinary Node child exits 0",
+    "focused": "25 passed",
+    "full_non_docker": "373 passed, 218 subtests passed; two Docker-dependent tests excluded",
+    "no_excuse": "0 violations in 16 files",
+    "openapi": "15 passed",
+    "platform": "51 passed",
+    "playwright_toolchain": "declared and locked at 1.61.1; local offline cache is 1.60.0 because registry DNS is unavailable; local Node 22.17.1 differs from mise pin 24.17.0",
+    "product_regression": "99 passed with two Docker-dependent tests excluded",
+    "pure_loc_max": 248,
+    "review_work": "PASS: goal, code quality, safety, hands-on HTTP/API QA, and context/evidence; visual runtime remains explicitly inconclusive",
+    "ruff": "passed",
+    "science": "24 passed with Ruff and basedpyright clean",
+    "typescript": "noEmit passed",
+    "typecheck": "0 errors, 0 warnings",
+    "source_manifest": "tools/evidence/task-13-science-workbench-mvp.sha256",
+    "source_manifest_sha256": "2078054c8e2d56aa6d093bfece2dd0c741bc7bce830eb2b03f3e6bd1f79a01d3"
+  }
+}

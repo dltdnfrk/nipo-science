@@ -1,0 +1,33 @@
+Task 9 GREEN evidence
+
+Command: make ci-local && make test-retention && make check-generated-contracts
+Exit: 0
+CI_EXECUTED=451
+Aggregate evidence SHA-256: 99f5aa0053d7da4b356c6b2b68eea86c534ef014718f572126f42f876908a6e9
+
+Job counts:
+lint=1
+typecheck=1
+platform-tests=50
+boundaries=1
+spec=1
+architecture=1
+openapi=1
+protocol-contracts=1
+artifact-contracts=1
+local-config=1
+retention=1
+generated-drift=1
+sbom=184
+secret-scan=206
+
+Retention: 15 passed
+Ruff: All checks passed
+basedpyright: 0 errors, 0 warnings, 0 notes
+Generated-contract drift: CHECKS_EXECUTED=1
+
+Focused platform regression: 50 passed
+
+Canonical collection:
+Command: PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest -q
+Result: 436 passed, 217 subtests passed

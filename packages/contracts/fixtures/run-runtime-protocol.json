@@ -1,0 +1,149 @@
+{
+  "run": {
+    "id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+    "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+    "session_id": "018f47a0-7b9c-7abf-8def-0123456789ab",
+    "requester_id": "018f47a0-7b9c-7ac1-8def-0123456789ab",
+    "provider_connection_id": "018f47a0-7b9c-7ac0-8def-0123456789ab",
+    "retry_of_run_id": null,
+    "status": "running",
+    "created_at": "2026-07-13T10:00:00Z",
+    "updated_at": "2026-07-13T10:00:01Z"
+  },
+  "messages": [
+    {
+      "id": "018f47a0-7b9c-7ac2-8def-0123456789ab",
+      "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+      "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+      "role": "assistant",
+      "content": "Searching primary literature.",
+      "created_at": "2026-07-13T10:00:01Z"
+    }
+  ],
+  "event_window": {
+    "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+    "oldest_available_sequence": 1,
+    "retention_expires_at": "2026-07-15T10:00:00Z",
+    "events": [
+      {
+        "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+        "sequence": 1,
+        "kind": "run.status",
+        "data": {"status": "running"},
+        "created_at": "2026-07-13T10:00:00Z"
+      },
+      {
+        "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+        "sequence": 2,
+        "kind": "message.delta",
+        "data": {"message_id": "018f47a0-7b9c-7ac2-8def-0123456789ab"},
+        "created_at": "2026-07-13T10:00:01Z"
+      }
+    ]
+  },
+  "action_plan": {
+    "id": "018f47a0-7b9c-7ad0-8def-0123456789ab",
+    "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+    "project_id": "018f47a0-7b9c-7abc-8def-0123456789ab",
+    "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+    "requester_id": "018f47a0-7b9c-7ac1-8def-0123456789ab",
+    "version": 1,
+    "tool": "literature.search",
+    "arguments": {"query": "quantum dots", "limit": 10},
+    "arguments_hash": "0adfc263fe547bc4b8ecf9050877eb5ec1ef851baa41c0bac3269ae7f1867b3d",
+    "network_scope": ["pubmed.ncbi.nlm.nih.gov"],
+    "secret_scope": [],
+    "reason": "Find primary literature",
+    "plan_digest": "2ac565348be72f3e1636fa1ed110d5d50196e9e3fb2a3349b02dddbfef35a9dc",
+    "created_at": "2026-07-13T10:00:00Z"
+  },
+  "tool_grant": {
+    "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+    "project_id": "018f47a0-7b9c-7abc-8def-0123456789ab",
+    "tool": "literature.search",
+    "effect": "ask"
+  },
+  "approval": {
+    "id": "018f47a0-7b9c-7ad1-8def-0123456789ab",
+    "binding": {
+      "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+      "project_id": "018f47a0-7b9c-7abc-8def-0123456789ab",
+      "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+      "requester_id": "018f47a0-7b9c-7ac1-8def-0123456789ab",
+      "action_plan_id": "018f47a0-7b9c-7ad0-8def-0123456789ab",
+      "plan_digest": "2ac565348be72f3e1636fa1ed110d5d50196e9e3fb2a3349b02dddbfef35a9dc",
+      "tool": "literature.search",
+      "arguments_hash": "0adfc263fe547bc4b8ecf9050877eb5ec1ef851baa41c0bac3269ae7f1867b3d",
+      "network_scope": ["pubmed.ncbi.nlm.nih.gov"],
+      "secret_scope": [],
+      "expires_at": "2026-07-13T11:00:00Z"
+    },
+    "digest": "1fc11a2cf01c6c347edb74c0eff52715ba759fa6d37625b0a51b6531556130b1",
+    "revision": 1,
+    "status": "approved",
+    "decided_by": "018f47a0-7b9c-7ac1-8def-0123456789ab",
+    "created_at": "2026-07-13T10:00:00Z"
+  },
+  "execution": {
+    "id": "018f47a0-7b9c-7ad2-8def-0123456789ab",
+    "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+    "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+    "action_plan_id": "018f47a0-7b9c-7ad0-8def-0123456789ab",
+    "status": "running",
+    "attempt_token": 2,
+    "result_ref": null,
+    "created_at": "2026-07-13T10:00:01Z",
+    "updated_at": "2026-07-13T10:00:01Z"
+  },
+  "runtime_events": [
+    {
+      "kind": "text_delta",
+      "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+      "message_id": "018f47a0-7b9c-7ac2-8def-0123456789ab",
+      "delta": "Searching",
+      "created_at": "2026-07-13T10:00:01Z"
+    },
+    {
+      "kind": "action_proposal",
+      "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+      "message_id": "018f47a0-7b9c-7ac2-8def-0123456789ab",
+      "action_id": "018f47a0-7b9c-7ad3-8def-0123456789ab",
+      "action_type": "tool",
+      "tool": "literature.search",
+      "arguments": {"query": "quantum dots", "limit": 10},
+      "arguments_hash": "0adfc263fe547bc4b8ecf9050877eb5ec1ef851baa41c0bac3269ae7f1867b3d",
+      "continuation_token": "continuation-1",
+      "created_at": "2026-07-13T10:00:02Z"
+    }
+  ],
+  "runtime_action_proposal": {
+    "kind": "action_proposal",
+    "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+    "message_id": "018f47a0-7b9c-7ac2-8def-0123456789ab",
+    "action_id": "018f47a0-7b9c-7ad3-8def-0123456789ab",
+    "action_type": "tool",
+    "tool": "literature.search",
+    "arguments": {"query": "quantum dots", "limit": 10},
+    "arguments_hash": "0adfc263fe547bc4b8ecf9050877eb5ec1ef851baa41c0bac3269ae7f1867b3d",
+    "continuation_token": "continuation-1",
+    "created_at": "2026-07-13T10:00:02Z"
+  },
+  "runtime_continuation": {
+    "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+    "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+    "message_id": "018f47a0-7b9c-7ac2-8def-0123456789ab",
+    "action_id": "018f47a0-7b9c-7ad3-8def-0123456789ab",
+    "execution_id": "018f47a0-7b9c-7ad2-8def-0123456789ab",
+    "continuation_token": "continuation-1",
+    "result": {
+      "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+      "run_id": "018f47a0-7b9c-7abe-8def-0123456789ab",
+      "message_id": "018f47a0-7b9c-7ac2-8def-0123456789ab",
+      "action_id": "018f47a0-7b9c-7ad3-8def-0123456789ab",
+      "execution_id": "018f47a0-7b9c-7ad2-8def-0123456789ab",
+      "executor": "application",
+      "result_ref": "artifact-version:1",
+      "redacted_output": "search completed"
+    }
+  }
+}

@@ -1,0 +1,108 @@
+$ make bootstrap
+mise trusted /Users/hyunjun/Documents/MUNI/science-workbench
+mise all tools are installed
+Using CPython 3.12.13 interpreter at: .tools/mise/installs/python/3.12.13/bin/python
+Creating virtual environment at: .venv
+Activate with: source .venv/bin/activate
+Resolved 20 packages in 13ms
+toolchain: node 24.17.0, pnpm 11.12.0, python 3.12.13, uv 0.11.28
+bootstrap: ready (no project dependencies installed)
+bootstrap_exit_code=0
+$ make test-openapi
+test_accepts_complete_openapi_contract (tests.test_openapi_contract.OpenApiAcceptanceTests.test_accepts_complete_openapi_contract) ... FAIL
+test_rejects_cross_tenant_403_drift (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_cross_tenant_403_drift) ... FAIL
+test_rejects_insecure_cookie (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_insecure_cookie) ... FAIL
+test_rejects_missing_csrf_origin_fetch_metadata (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_csrf_origin_fetch_metadata) ... FAIL
+test_rejects_missing_idempotency_key (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_idempotency_key) ... FAIL
+test_rejects_missing_if_match (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_if_match) ... FAIL
+test_rejects_missing_tenancy_envelope (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_tenancy_envelope) ... FAIL
+test_rejects_noncanonical_error_response (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_noncanonical_error_response) ... FAIL
+
+======================================================================
+FAIL: test_accepts_complete_openapi_contract (tests.test_openapi_contract.OpenApiAcceptanceTests.test_accepts_complete_openapi_contract)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 38, in test_accepts_complete_openapi_contract
+    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+AssertionError: 1 != 0 : Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/packages/contracts/python/validate_openapi.py", line 6, in <module>
+    from pydantic import ValidationError
+ModuleNotFoundError: No module named 'pydantic'
+
+
+======================================================================
+FAIL: test_rejects_cross_tenant_403_drift (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_cross_tenant_403_drift)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 63, in test_rejects_cross_tenant_403_drift
+    self.assert_rejected(mutation)
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 52, in assert_rejected
+    self.assertIn(mutation.expected, result.stdout + result.stderr)
+AssertionError: 'cross-tenant-404' not found in 'Traceback (most recent call last):\n  File "/Users/hyunjun/Documents/MUNI/science-workbench/packages/contracts/python/validate_openapi.py", line 6, in <module>\n    from pydantic import ValidationError\nModuleNotFoundError: No module named \'pydantic\'\n'
+
+======================================================================
+FAIL: test_rejects_insecure_cookie (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_insecure_cookie)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 128, in test_rejects_insecure_cookie
+    self.assert_rejected(mutation)
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 52, in assert_rejected
+    self.assertIn(mutation.expected, result.stdout + result.stderr)
+AssertionError: 'host-only-secure-cookie' not found in 'Traceback (most recent call last):\n  File "/Users/hyunjun/Documents/MUNI/science-workbench/packages/contracts/python/validate_openapi.py", line 6, in <module>\n    from pydantic import ValidationError\nModuleNotFoundError: No module named \'pydantic\'\n'
+
+======================================================================
+FAIL: test_rejects_missing_csrf_origin_fetch_metadata (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_csrf_origin_fetch_metadata)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 141, in test_rejects_missing_csrf_origin_fetch_metadata
+    self.assert_rejected(mutation)
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 52, in assert_rejected
+    self.assertIn(mutation.expected, result.stdout + result.stderr)
+AssertionError: 'cookie-csrf-origin-fetch-metadata' not found in 'Traceback (most recent call last):\n  File "/Users/hyunjun/Documents/MUNI/science-workbench/packages/contracts/python/validate_openapi.py", line 6, in <module>\n    from pydantic import ValidationError\nModuleNotFoundError: No module named \'pydantic\'\n'
+
+======================================================================
+FAIL: test_rejects_missing_idempotency_key (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_idempotency_key)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 102, in test_rejects_missing_idempotency_key
+    self.assert_rejected(mutation)
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 52, in assert_rejected
+    self.assertIn(mutation.expected, result.stdout + result.stderr)
+AssertionError: 'idempotency-key' not found in 'Traceback (most recent call last):\n  File "/Users/hyunjun/Documents/MUNI/science-workbench/packages/contracts/python/validate_openapi.py", line 6, in <module>\n    from pydantic import ValidationError\nModuleNotFoundError: No module named \'pydantic\'\n'
+
+======================================================================
+FAIL: test_rejects_missing_if_match (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_if_match)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 115, in test_rejects_missing_if_match
+    self.assert_rejected(mutation)
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 52, in assert_rejected
+    self.assertIn(mutation.expected, result.stdout + result.stderr)
+AssertionError: 'if-match' not found in 'Traceback (most recent call last):\n  File "/Users/hyunjun/Documents/MUNI/science-workbench/packages/contracts/python/validate_openapi.py", line 6, in <module>\n    from pydantic import ValidationError\nModuleNotFoundError: No module named \'pydantic\'\n'
+
+======================================================================
+FAIL: test_rejects_missing_tenancy_envelope (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_tenancy_envelope)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 76, in test_rejects_missing_tenancy_envelope
+    self.assert_rejected(mutation)
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 52, in assert_rejected
+    self.assertIn(mutation.expected, result.stdout + result.stderr)
+AssertionError: 'x-tenancy' not found in 'Traceback (most recent call last):\n  File "/Users/hyunjun/Documents/MUNI/science-workbench/packages/contracts/python/validate_openapi.py", line 6, in <module>\n    from pydantic import ValidationError\nModuleNotFoundError: No module named \'pydantic\'\n'
+
+======================================================================
+FAIL: test_rejects_noncanonical_error_response (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_noncanonical_error_response)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 89, in test_rejects_noncanonical_error_response
+    self.assert_rejected(mutation)
+  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 52, in assert_rejected
+    self.assertIn(mutation.expected, result.stdout + result.stderr)
+AssertionError: 'canonical-error-envelope' not found in 'Traceback (most recent call last):\n  File "/Users/hyunjun/Documents/MUNI/science-workbench/packages/contracts/python/validate_openapi.py", line 6, in <module>\n    from pydantic import ValidationError\nModuleNotFoundError: No module named \'pydantic\'\n'
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.150s
+
+FAILED (failures=8)
+make: *** [test-openapi] Error 1
+test_openapi_exit_code=2

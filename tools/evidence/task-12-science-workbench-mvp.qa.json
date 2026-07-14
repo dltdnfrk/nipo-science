@@ -1,0 +1,79 @@
+{
+  "task": 12,
+  "status": "implementation_passed_verification_blocked",
+  "acceptance": {
+    "bounds": "100000 table rows, 1024 columns, 1000000 spectrum points, 50MP image, and 1000000 report characters",
+    "determinism": "fixed numeric outputs, PNG/CSV SHA-256, evidence hashes, and structurally identical second run",
+    "evidence": "three branch records hash canonical normalized support payload, calibration timestamp/checksum, hypothesis, and sorted immutable UUIDv7 source Version IDs independent of caller lineage order",
+    "failure_states": "metadata gaps or missing spectrum values are insufficient_data; nonfinite inputs, unrepresentable derived arithmetic, malformed shapes, and invalid Unicode report scalars are invalid_data without exceptions; no path imputes values",
+    "hypotheses": "molecular, optical, and experimental_artifact branches in fixed order with non_diagnostic scope",
+    "image": "RGB means, luminance, calibrated threshold, and four-connected region bounds",
+    "normalization": "table, spectrum, image, and report retain units, calibration checksum, missingness, and lineage",
+    "plot": "deterministic labeled 640x360 RGB PNG with corrected signal and peak annotation using the declared UCUM wavelength code",
+    "spectrum": "linear endpoint baseline correction and positive local-peak prominence"
+  },
+  "golden": {
+    "corrected": [0.0, 1.5, 19.0, 2.5, 0.0],
+    "csv_sha256": "d1bf965a140d71134652b911a482d47e5d3022f6f472c77cd0e9e5bca56f927e",
+    "evidence_sha256": [
+      "1c0bdd70c67945c75502fb8e9dbcdc0bd4e4ecd37c37fac062ebbe9a41baff4e",
+      "31efd838552f30b9643d94ec5a4a32ca5e9be38e166f8b46013b22060a88c8e7",
+      "9b7a0cfd80ddc2214f843dbd7c1735584004d99d91b2f86a0a1df5fbe0e29802"
+    ],
+    "image_region_bounds": [1, 1, 2, 1],
+    "missing_fraction": [0.0, 0.333333],
+    "peak_wavelength": 500.0,
+    "png_bytes": 4829,
+    "png_sha256": "6804068e27501bab92984bbc2f9b12b1ac5d74614ab3745b7e7ee71d650e9963"
+  },
+  "manual_qa": {
+    "happy_status": "valid",
+    "hypothesis_branches": ["molecular", "optical", "experimental_artifact"],
+    "insufficient_issues": ["units_required", "calibration_required"],
+    "invalid_issues": ["spectrum_shape_invalid"],
+    "missing_spectrum_fraction": 0.2,
+    "plot_dimensions": [640, 360],
+    "plot_labels": [
+      "Corrected intensity",
+      "Wavelength (nm)",
+      "500 nm",
+      "Wavelength (um)",
+      "500 um"
+    ],
+    "review_regressions": {
+      "extreme_spectrum": "invalid_data:spectrum_numeric_invalid",
+      "extreme_plot_range": "valid:deterministic_png",
+      "extreme_table": "invalid_data:table_statistics_invalid",
+      "lineage_order_independent": true,
+      "nonfinite_hashes_distinct": true,
+      "unicode_surrogate": "invalid_data:report_unicode_invalid",
+      "unit_claim": "Calibrated corrected signal has a local maximum at 500 um.",
+      "wavelength_seconds": "insufficient_data:wavelength_unit_incompatible"
+    },
+    "regions": 1
+  },
+  "verification": {
+    "artifact_contracts": "60 Python passed; 57 TypeScript passed",
+    "artifact_regression": "33 passed",
+    "boundary": "401 current files; historical sealed CI run checked 357",
+    "ci": {
+      "aggregate_sha256": "760ee2ca921b0f2fa7c4015b1768fcdf15500cdf4b98aa0fb64db6ce8d379c66",
+      "current": false,
+      "environment": "CI=true",
+      "executed": 550,
+      "jobs": 19,
+      "raw_hashes_verified": true,
+      "reason": "Docker API became unavailable before the post-remediation source tree could be resealed"
+    },
+    "cleanup": {"containers": 0, "networks": 0, "volumes": 0},
+    "focused": "24 passed",
+    "full": "645 passed, 217 subtests passed with one Docker-dependent product RLS test excluded; unfiltered run has one environment setup error",
+    "no_excuse": "0 violations in 14 files",
+    "pure_loc_max": 193,
+    "ruff": "passed",
+    "sbom": "192 locked packages checked",
+    "secret_scan": "291 historical checks; current source not resealed",
+    "typecheck": "0 errors, 0 warnings",
+    "visual_qa": "nm and um plots passed at original 640x360"
+  }
+}

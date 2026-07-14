@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 24 items
+
+tests/science/test_normalization.py::test_table_normalization_preserves_units_missingness_and_lineage PASSED [  4%]
+tests/science/test_normalization.py::test_report_normalization_is_bounded_and_deterministic PASSED [  8%]
+tests/science/test_normalization.py::test_unrepresentable_table_statistics_are_explicit_invalid_data PASSED [ 12%]
+tests/science/test_normalization.py::test_unpaired_unicode_surrogate_is_explicit_invalid_data PASSED [ 16%]
+tests/science/test_normalization.py::test_evidence_hashes_are_canonical_over_lineage_order PASSED [ 20%]
+tests/science/test_normalization.py::test_nonfinite_invalid_inputs_keep_distinct_evidence_hashes PASSED [ 25%]
+tests/science/test_normalization.py::test_surrogates_in_support_metadata_are_bounded_without_serialization_error PASSED [ 29%]
+tests/science/test_probe_analysis.py::test_probe_analysis_emits_three_branches_table_plot_and_evidence PASSED [ 33%]
+tests/science/test_probe_analysis.py::test_missing_units_or_calibration_returns_bounded_insufficient_data PASSED [ 37%]
+tests/science/test_probe_analysis.py::test_malformed_numeric_shape_is_explicit_invalid_data_not_exception PASSED [ 41%]
+tests/science/test_probe_analysis.py::test_full_analysis_is_structurally_identical_across_two_runs PASSED [ 45%]
+tests/science/test_probe_analysis.py::test_incomplete_unit_quantities_and_duplicate_lineage_are_insufficient PASSED [ 50%]
+tests/science/test_probe_analysis.py::test_nonfinite_spectrum_and_bad_image_shape_are_invalid PASSED [ 54%]
+tests/science/test_probe_analysis.py::test_empty_probe_and_empty_report_are_explicitly_bounded PASSED [ 58%]
+tests/science/test_probe_analysis.py::test_lineage_rejects_non_uuid7_identity_at_the_input_boundary PASSED [ 62%]
+tests/science/test_probe_analysis.py::test_oversized_report_is_rejected_before_text_normalization PASSED [ 66%]
+tests/science/test_probe_analysis.py::test_missing_spectrum_values_and_empty_table_are_not_imputed PASSED [ 70%]
+tests/science/test_signal_analysis.py::test_spectrum_baseline_and_peak_extraction_have_fixed_numeric_output PASSED [ 75%]
+tests/science/test_signal_analysis.py::test_image_color_and_connected_region_extraction_are_fixed PASSED [ 79%]
+tests/science/test_signal_analysis.py::test_spectrum_plot_is_byte_deterministic_across_two_runs PASSED [ 83%]
+tests/science/test_signal_analysis.py::test_unrepresentable_spectrum_arithmetic_is_explicit_invalid_data PASSED [ 87%]
+tests/science/test_signal_analysis.py::test_declared_wavelength_unit_is_used_in_claim_and_plot PASSED [ 91%]
+tests/science/test_signal_analysis.py::test_extreme_finite_corrected_range_renders_without_plot_exception PASSED [ 95%]
+tests/science/test_signal_analysis.py::test_incompatible_wavelength_dimension_is_bounded_insufficient_data PASSED [100%]
+
+============================== 24 passed in 0.17s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes

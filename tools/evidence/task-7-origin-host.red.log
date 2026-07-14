@@ -1,0 +1,35 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 7 items / 6 deselected / 1 selected
+
+tests/local_stack/test_config.py::test_config_parses_host_only_local_interfaces FAILED [100%]
+
+=================================== FAILURES ===================================
+________________ test_config_parses_host_only_local_interfaces _________________
+
+    def test_config_parses_host_only_local_interfaces() -> None:
+        # Given: complete local configuration with separate application/artifact origins.
+        raw = _valid_env()
+    
+        # When: the environment crosses the typed configuration boundary.
+        config = LocalConfig.from_env(raw)
+    
+        # Then: local interfaces are typed and the cookie remains host-only.
+        assert config.cookie_domain is None
+        assert config.object_store_driver.value == "s3"
+        assert config.mail_driver.value == "mailpit"
+>       assert config.app_origin.host != config.artifact_origin.host
+E       AssertionError: assert 'localhost' != 'localhost'
+E        +  where 'localhost' = AnyHttpUrl('http://localhost:3000/').host
+E        +    where AnyHttpUrl('http://localhost:3000/') = LocalConfig(app_origin=AnyHttpUrl('http://localhost:3000/'), artifact_origin=AnyHttpUrl('http://localhost:9000/'), cookie_domain=None, object_store_driver=<ObjectStoreDriver.S3: 's3'>, object_store_endpoint=AnyHttpUrl('http://minio:9000/'), mail_driver=<MailDriver.MAILPIT: 'mailpit'>, smtp_host='mailpit', smtp_port=1025, clamav_host='clamav', clamav_port=3310, service_role=<ServiceRole.API: 'api'>, service_bind_host=IPv4Address('127.0.0.1'), service_port=8000).app_origin
+E        +  and   'localhost' = AnyHttpUrl('http://localhost:9000/').host
+E        +    where AnyHttpUrl('http://localhost:9000/') = LocalConfig(app_origin=AnyHttpUrl('http://localhost:3000/'), artifact_origin=AnyHttpUrl('http://localhost:9000/'), cookie_domain=None, object_store_driver=<ObjectStoreDriver.S3: 's3'>, object_store_endpoint=AnyHttpUrl('http://minio:9000/'), mail_driver=<MailDriver.MAILPIT: 'mailpit'>, smtp_host='mailpit', smtp_port=1025, clamav_host='clamav', clamav_port=3310, service_role=<ServiceRole.API: 'api'>, service_bind_host=IPv4Address('127.0.0.1'), service_port=8000).artifact_origin
+
+tests/local_stack/test_config.py:37: AssertionError
+=========================== short test summary info ============================
+FAILED tests/local_stack/test_config.py::test_config_parses_host_only_local_interfaces
+======================= 1 failed, 6 deselected in 0.07s ========================

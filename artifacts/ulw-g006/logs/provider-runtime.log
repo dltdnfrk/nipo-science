@@ -1,0 +1,317 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 102 items
+
+tests/g004/test_provider_http.py::test_provider_lifecycle_is_same_origin_idempotent_and_redacted PASSED [  0%]
+tests/g004/test_provider_http.py::test_provider_mutations_reject_unauthenticated_and_cross_origin_requests PASSED [  1%]
+tests/g004/test_provider_http.py::test_provider_dependencies_are_capability_forbidden PASSED [  2%]
+tests/g004/test_provider_http.py::test_provider_revoke_persistence_failure_is_canonical_and_non_mutating PASSED [  3%]
+tests/g004/test_provider_http.py::test_provider_adapter_and_persistence_failures_have_documented_statuses PASSED [  4%]
+tests/g004/test_provider_http.py::test_foreign_and_missing_provider_connections_are_non_disclosing PASSED [  5%]
+tests/g004/test_provider_http.py::test_every_provider_post_requires_idempotency_key PASSED [  6%]
+tests/g004/test_provider_http.py::test_device_oauth_lifecycle_is_redacted PASSED [  7%]
+tests/g004/test_provider_http.py::test_remaining_provider_post_routes_are_single_flight_and_conflict_safe PASSED [  8%]
+tests/g004/test_provider_http.py::test_provider_http_same_key_operations_are_single_flight PASSED [  9%]
+tests/g004/test_provider_http.py::test_unexpected_broker_exception_terminalizes_idempotency_entry PASSED [ 10%]
+tests/g004/test_provider_http.py::test_provider_http_rejects_invalid_oauth_claims_before_exchange PASSED [ 11%]
+tests/g004/test_provider_http.py::test_cancelled_oauth_state_is_non_disclosing PASSED [ 12%]
+tests/g004/test_provider_live_capture.py::test_injected_capture_is_synthetic_and_never_live_qualified PASSED [ 13%]
+tests/g004/test_provider_live_capture.py::test_production_capture_issues_live_receipt_only_after_publish PASSED [ 14%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[login] PASSED [ 15%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[version] PASSED [ 16%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[missing_event] PASSED [ 17%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[error_event] PASSED [ 18%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[malformed] PASSED [ 19%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[wrong_scenario] PASSED [ 20%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[generic_decision] PASSED [ 21%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[generic_result] PASSED [ 22%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[empty_evidence] PASSED [ 23%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[empty_limitations] PASSED [ 24%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[GS08] PASSED [ 25%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[GS09] PASSED [ 26%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[GS10] PASSED [ 27%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[timeout] PASSED [ 28%]
+tests/g004/test_provider_live_capture.py::test_failures_never_publish_profile[nonzero] PASSED [ 29%]
+tests/g004/test_provider_live_capture.py::test_exec_argv_has_required_isolation_flags PASSED [ 30%]
+tests/g004/test_provider_live_capture.py::test_production_invocation_uses_argv_and_scrubbed_environment PASSED [ 31%]
+tests/g004/test_provider_live_capture.py::test_production_invocation_enforces_timeout PASSED [ 32%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[scenario_id] PASSED [ 33%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[requirement] PASSED [ 34%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[input_text] PASSED [ 35%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[rubric] PASSED [ 36%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[decision_code] PASSED [ 37%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[scientific_result] PASSED [ 38%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[artifact_manifest] PASSED [ 39%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[evidence_identifiers] PASSED [ 40%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[limitations] PASSED [ 41%]
+tests/g004/test_provider_live_capture.py::test_mutated_golden_case_is_rejected_before_codex_invocation[forbidden_sentinels] PASSED [ 42%]
+tests/g004/test_provider_live_capture.py::test_module_execution_uses_canonical_capture_proof_type PASSED [ 43%]
+tests/g004/test_provider_postgres.py::test_http_provider_lifecycle_persists_only_safe_requester_owned_data ERROR [ 44%]
+tests/g004/test_provider_qualification.py::test_raw_profile_is_contract_valid_but_never_live_qualified PASSED [ 45%]
+tests/g004/test_provider_qualification.py::test_self_declared_live_kind_is_never_live_qualified_without_receipt PASSED [ 46%]
+tests/g004/test_provider_qualification.py::test_only_the_evaluator_can_issue_a_qualification_result PASSED [ 47%]
+tests/g004/test_provider_qualification.py::test_scenario_specific_outputs_cannot_drift[decision_code] PASSED [ 48%]
+tests/g004/test_provider_qualification.py::test_scenario_specific_outputs_cannot_drift[scientific_result] PASSED [ 49%]
+tests/g004/test_provider_qualification.py::test_scenario_specific_outputs_cannot_drift[artifact_manifest] PASSED [ 50%]
+tests/g004/test_provider_qualification.py::test_scenario_specific_outputs_cannot_drift[evidence_identifiers] PASSED [ 50%]
+tests/g004/test_provider_qualification.py::test_scenario_specific_outputs_cannot_drift[limitations] PASSED [ 51%]
+tests/g004/test_provider_qualification.py::test_hashes_are_computed_from_response_objects[scientific_hash] PASSED [ 52%]
+tests/g004/test_provider_qualification.py::test_hashes_are_computed_from_response_objects[artifact_hash] PASSED [ 53%]
+tests/g004/test_provider_qualification.py::test_security_sentinels_are_rejected[7-decision_code-INJECTION_GS08_DO_NOT_OBEY] PASSED [ 54%]
+tests/g004/test_provider_qualification.py::test_security_sentinels_are_rejected[8-evidence_identifiers-FAKE_SECRET_GS09_NEVER_EMIT] PASSED [ 55%]
+tests/g004/test_provider_qualification.py::test_security_sentinels_are_rejected[9-limitations-FOREIGN_TENANT_GS10_NEVER_EMIT] PASSED [ 56%]
+tests/g004/test_provider_qualification.py::test_schema_rejects_generic_or_incomplete_profiles[_remove_cleanup] PASSED [ 57%]
+tests/g004/test_provider_qualification.py::test_schema_rejects_generic_or_incomplete_profiles[_remove_evidence] PASSED [ 58%]
+tests/g004/test_provider_qualification.py::test_schema_rejects_generic_or_incomplete_profiles[_empty_limitations] PASSED [ 59%]
+tests/g004/test_provider_qualification.py::test_schema_rejects_generic_or_incomplete_profiles[_untrusted_kind] PASSED [ 60%]
+tests/g004/test_provider_qualification.py::test_profile_checksum_tracks_validated_content PASSED [ 61%]
+tests/g004/test_provider_qualification.py::test_parse_returns_immutable_observations PASSED [ 62%]
+tests/g004/test_provider_runtime.py::test_provider_runtime_requires_explicit_persistence PASSED [ 63%]
+tests/g004/test_provider_runtime.py::test_provider_registry_matches_launch_requirements PASSED [ 64%]
+tests/g004/test_provider_runtime.py::test_callback_and_device_completion_are_single_use PASSED [ 65%]
+tests/g004/test_provider_runtime.py::test_state_bindings_expiry_and_cancellation_are_enforced PASSED [ 66%]
+tests/g004/test_provider_runtime.py::test_cross_tenant_is_hidden_and_token_material_and_unsafe_refs_are_rejected PASSED [ 67%]
+tests/g004/test_provider_runtime.py::test_qualification_health_reauth_revoke_and_explicit_dispatch PASSED [ 68%]
+tests/g004/test_provider_runtime.py::test_disabled_adapters_and_non_live_results_fail_closed PASSED [ 69%]
+tests/g004/test_provider_runtime.py::test_concurrent_completion_consumes_one_state_once PASSED [ 70%]
+tests/g004/test_provider_runtime.py::test_persistence_failures_do_not_publish_connection_mutations PASSED [ 71%]
+tests/g004/test_provider_runtime.py::test_blocked_connection_persistence_does_not_block_other_connections PASSED [ 72%]
+tests/g004/test_provider_runtime.py::test_blocked_revoke_destruction_does_not_block_other_connections PASSED [ 73%]
+tests/g004/test_provider_runtime.py::test_missing_connection_mutations_do_not_retain_keyed_locks PASSED [ 74%]
+tests/g004/test_provider_runtime.py::test_foreign_mutation_does_not_wait_for_owner_connection_lock PASSED [ 75%]
+tests/g004/test_provider_ui.py::test_provider_lifecycle_uses_canonical_same_origin_endpoints_and_headers PASSED [ 76%]
+tests/g004/test_provider_ui.py::test_only_openai_has_connect_action_and_glm_has_exact_disabled_reason PASSED [ 77%]
+tests/g004/test_provider_ui.py::test_provider_surface_uses_safe_dom_and_exposes_korean_lifecycle_copy PASSED [ 78%]
+tests/g004/test_provider_ui.py::test_provider_cards_have_responsive_status_styling PASSED [ 79%]
+tests/g004/test_provider_ui.py::test_provider_source_has_node_syntax_contract PASSED [ 80%]
+tests/g004/test_tool_governance.py::test_allow_and_deny_are_application_side[allow-TOOL_ALLOWED-1] PASSED [ 81%]
+tests/g004/test_tool_governance.py::test_allow_and_deny_are_application_side[deny-TOOL_DENIED-0] PASSED [ 82%]
+tests/g004/test_tool_governance.py::test_default_deny_and_scope_rejection_have_zero_side_effects PASSED [ 83%]
+tests/g004/test_tool_governance.py::test_canonical_hash_is_invariant_to_object_key_order PASSED [ 84%]
+tests/g004/test_tool_governance.py::test_ask_requires_requester_approval_then_consumes_once PASSED [ 85%]
+tests/g004/test_tool_governance.py::test_owner_can_reject_another_requester_but_cannot_approve PASSED [ 86%]
+tests/g004/test_tool_governance.py::test_mutated_binding_cannot_consume[attacker_request0] PASSED [ 87%]
+tests/g004/test_tool_governance.py::test_mutated_binding_cannot_consume[attacker_request1] PASSED [ 88%]
+tests/g004/test_tool_governance.py::test_mutated_binding_cannot_consume[attacker_request2] PASSED [ 89%]
+tests/g004/test_tool_governance.py::test_mutated_binding_cannot_consume[attacker_request3] PASSED [ 90%]
+tests/g004/test_tool_governance.py::test_expired_and_foreign_plan_ids_are_indistinguishable_and_safe PASSED [ 91%]
+tests/g004/test_tool_governance.py::test_concurrent_approval_has_one_winner PASSED [ 92%]
+tests/g004/test_tool_governance.py::test_concurrent_consumption_executes_once PASSED [ 93%]
+tests/g004/test_tool_governance.py::test_audit_receipts_do_not_expose_arguments_or_secret_scope PASSED [ 94%]
+tests/g004/test_tool_governance.py::test_approved_arguments_and_scopes_are_sealed_to_registered_handler PASSED [ 95%]
+tests/g004/test_tool_governance.py::test_missing_or_wrong_tool_registration_invokes_nothing PASSED [ 96%]
+tests/g004/test_tool_governance.py::test_registration_cannot_substitute_an_existing_tool_handler PASSED [ 97%]
+tests/g004/test_tool_governance.py::test_ask_plan_seals_all_tool_registration PASSED [ 98%]
+tests/g004/test_tool_governance.py::test_allow_execution_seals_all_tool_registration PASSED [ 99%]
+tests/g004/test_tool_governance.py::test_plan_binds_frozen_registry_identity_and_consume_checks_it PASSED [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of test_http_provider_lifecycle_persists_only_safe_requester_owned_data _
+
+    @pytest.fixture(scope="session")
+    def postgres_database() -> Iterator[None]:
+        try:
+>           _ = compose(
+                (
+                    "up",
+                    "-d",
+                    "postgres",
+                    "--pull",
+                    "never",
+                    "--wait",
+                    "--wait-timeout",
+                    "120",
+                )
+            )
+
+services/api/tests/persistence/conftest.py:11: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+services/api/tests/persistence/postgres_harness.py:19: in compose
+    return subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (('docker', 'compose', '--project-name', 'science-workbench-task8-98199', '-f', 'compose.yaml', ...),)
+kwargs = {'cwd': PosixPath('/Users/hyunjun/Documents/MUNI/science-workbench'), 'env': {'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONP.../XcodeDefault.xctoolchain/usr/share/man:', 'MAKEFLAGS': ' --no-print-directory', ...}, 'text': True, 'stdout': -1, ...}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '('docker', 'compose', '--project-name', 'science-workbench-task8-98199', '-f', 'compose.yaml', 'up', '-d', 'postgres', '--pull', 'never', '--wait', '--wait-timeout', '120')' returned non-zero exit status 1.
+
+.tools/mise/installs/python/3.12.13/lib/python3.12/subprocess.py:571: CalledProcessError
+
+During handling of the above exception, another exception occurred:
+
+    @pytest.fixture(scope="session")
+    def postgres_database() -> Iterator[None]:
+        try:
+            _ = compose(
+                (
+                    "up",
+                    "-d",
+                    "postgres",
+                    "--pull",
+                    "never",
+                    "--wait",
+                    "--wait-timeout",
+                    "120",
+                )
+            )
+            yield
+        finally:
+>           _ = compose(("down", "--volumes", "--remove-orphans"))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+services/api/tests/persistence/conftest.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+services/api/tests/persistence/postgres_harness.py:19: in compose
+    return subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (('docker', 'compose', '--project-name', 'science-workbench-task8-98199', '-f', 'compose.yaml', ...),)
+kwargs = {'cwd': PosixPath('/Users/hyunjun/Documents/MUNI/science-workbench'), 'env': {'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONP.../XcodeDefault.xctoolchain/usr/share/man:', 'MAKEFLAGS': ' --no-print-directory', ...}, 'text': True, 'stdout': -1, ...}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '('docker', 'compose', '--project-name', 'science-workbench-task8-98199', '-f', 'compose.yaml', 'down', '--volumes', '--remove-orphans')' returned non-zero exit status 1.
+
+.tools/mise/installs/python/3.12.13/lib/python3.12/subprocess.py:571: CalledProcessError
+=========================== short test summary info ============================
+ERROR tests/g004/test_provider_postgres.py::test_http_provider_lifecycle_persists_only_safe_requester_owned_data
+========================= 101 passed, 1 error in 8.60s =========================
+make: *** [test-provider-runtime] Error 1

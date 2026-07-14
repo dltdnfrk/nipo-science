@@ -1,0 +1,1092 @@
+{
+  "schemaVersion": 1,
+  "surface": "browser",
+  "tool": "Playwright 1.61.1 with Chrome 149 and axe-core 4.10.3",
+  "actions": [
+    {
+      "type": "goto",
+      "url": "http://127.0.0.1/product/workspace",
+      "timestamp": "2026-07-13T19:23:33.366Z"
+    },
+    {
+      "type": "custom",
+      "target": "authenticated upload-plan-approve-execute-review-export-provider-cleanup journey",
+      "timestamp": "2026-07-13T19:23:33.366Z"
+    },
+    {
+      "type": "screenshot",
+      "selector": "main",
+      "timestamp": "2026-07-13T19:23:37.078Z"
+    }
+  ],
+  "assertions": [
+    {
+      "selector": "main h1",
+      "status": "passed",
+      "timestamp": "2026-07-13T19:23:37.078Z"
+    },
+    {
+      "selector": "a[href]",
+      "status": "passed",
+      "timestamp": "2026-07-13T19:23:37.078Z"
+    }
+  ],
+  "goalId": "G008",
+  "blockedGoalId": "G003",
+  "browser": "149.0.7827.55",
+  "axe": {
+    "version": "4.10.3",
+    "scriptSha256": "880970c081707360e64f34cea25ff91892f5bc95675b0776925b9709dd8a68bb",
+    "seriousOrCritical": []
+  },
+  "startedAt": "2026-07-13T19:23:33.366Z",
+  "finishedAt": "2026-07-13T19:23:37.078Z",
+  "journey": [
+    "upload",
+    "plan",
+    "approve",
+    "execute",
+    "artifacts",
+    "review",
+    "export",
+    "provider-settings",
+    "cleanup"
+  ],
+  "captures": [
+    {
+      "route": "/workspace",
+      "width": 375,
+      "heading": "워크스페이스",
+      "containsKorean": true,
+      "elapsedMs": 10,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-375-workspace.png",
+        "bytes": 43381,
+        "sha256": "1cafb57e8ff69ff6d90d0ccfc2353e2b2e3c36e73ac369a5f93742e7275395ac"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/upload",
+      "width": 375,
+      "heading": "연구 입력 업로드",
+      "containsKorean": true,
+      "elapsedMs": 10,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-375-upload.png",
+        "bytes": 61035,
+        "sha256": "c2172119e515563c1157027e8ce98a104d3aa56f77f114287bb6e8985a0c3487"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/runs/demo/approval",
+      "width": 375,
+      "heading": "ActionPlan 승인",
+      "containsKorean": true,
+      "elapsedMs": 10,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-375-runs-demo-approval.png",
+        "bytes": 58895,
+        "sha256": "1f17dddbc6370f853798556c44d3e88632d2a6b77e7560e9a68b073359202ef2"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/runs/demo",
+      "width": 375,
+      "heading": "보정 스펙트럼 실행 기록",
+      "containsKorean": true,
+      "elapsedMs": 11,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-375-runs-demo.png",
+        "bytes": 62163,
+        "sha256": "72edf3fcda718089b32d1b126e52c1796b424149a776403cc830f7c58ab1291c"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/artifacts",
+      "width": 375,
+      "heading": "아티팩트 라이브러리",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-375-artifacts.png",
+        "bytes": 102785,
+        "sha256": "168c1e70d9af6e71d03683a6e16f8e99b8e65e11711dca8a6abea52a655b4373"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/reviews/demo",
+      "width": 375,
+      "heading": "검토 결과",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-375-reviews-demo.png",
+        "bytes": 41688,
+        "sha256": "bbcb7b627d0293a5f3b54c7f74d8e13eea354321b01b9409a0e47393e6a08d56"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/exports/demo",
+      "width": 375,
+      "heading": "내보내기",
+      "containsKorean": true,
+      "elapsedMs": 13,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-375-exports-demo.png",
+        "bytes": 52532,
+        "sha256": "e1819f8b5653bdc5a211657daa46bdc2044df95e1c37c6948d54e6874522225c"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/settings/providers",
+      "width": 375,
+      "heading": "제공자 설정",
+      "containsKorean": true,
+      "elapsedMs": 10,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-375-settings-providers.png",
+        "bytes": 196230,
+        "sha256": "f35d782d467248345db03f1161c72b4fcdc453c9a5ca0c23fa267b19d8d8fb96"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/workspace",
+      "width": 768,
+      "heading": "워크스페이스",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-768-workspace.png",
+        "bytes": 48890,
+        "sha256": "42c03135488d73a4dad89aa380571b15181f0bc0548b0eba35eca45ddfd10d0e"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/upload",
+      "width": 768,
+      "heading": "연구 입력 업로드",
+      "containsKorean": true,
+      "elapsedMs": 13,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-768-upload.png",
+        "bytes": 67043,
+        "sha256": "a5c5f4c665bcaa2754162a8ee22cff967d93d9a3c8635dcafac8efc2dbe53a4e"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/runs/demo/approval",
+      "width": 768,
+      "heading": "ActionPlan 승인",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-768-runs-demo-approval.png",
+        "bytes": 64848,
+        "sha256": "9f89f54ee98f819199cb541ab47fdecf52791da051b1cb0bb0c4d3805b7c8b20"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/runs/demo",
+      "width": 768,
+      "heading": "보정 스펙트럼 실행 기록",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-768-runs-demo.png",
+        "bytes": 68351,
+        "sha256": "ceb6c0b57164e2c288ffa37021d98a515e2a0e8938af1e9d0a6b8f6fcd1527ba"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/artifacts",
+      "width": 768,
+      "heading": "아티팩트 라이브러리",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-768-artifacts.png",
+        "bytes": 100345,
+        "sha256": "111564414af78bbefa7b31e439dac4737c82c3f6ef90718ee73f250dd05a1387"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/reviews/demo",
+      "width": 768,
+      "heading": "검토 결과",
+      "containsKorean": true,
+      "elapsedMs": 15,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-768-reviews-demo.png",
+        "bytes": 47489,
+        "sha256": "ca30e7ee9e5f4f0d7c84c13bccae217980faffe31d9e512cfa98c12f6bdabcb8"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/exports/demo",
+      "width": 768,
+      "heading": "내보내기",
+      "containsKorean": true,
+      "elapsedMs": 11,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-768-exports-demo.png",
+        "bytes": 58486,
+        "sha256": "5880f76a8b7cefada0dd9faa8d604e6fddf71af1229492c33b62781749ff4455"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/settings/providers",
+      "width": 768,
+      "heading": "제공자 설정",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-768-settings-providers.png",
+        "bytes": 209716,
+        "sha256": "6b24b81741c6e147d2bf8065a9a8911cd438b7c11f851323dd2c064b83d4f9a6"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/workspace",
+      "width": 1280,
+      "heading": "워크스페이스",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-1280-workspace.png",
+        "bytes": 54068,
+        "sha256": "11b7b3151e5d77c6fb4bf9abbceb613d82ea12bab123b40d7097c7b76b7f010d"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/upload",
+      "width": 1280,
+      "heading": "연구 입력 업로드",
+      "containsKorean": true,
+      "elapsedMs": 10,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-1280-upload.png",
+        "bytes": 73524,
+        "sha256": "550d6190dafbdb85cda016080f982bc3d98a728a73b879dfdd9a87fe10bd9bdb"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/runs/demo/approval",
+      "width": 1280,
+      "heading": "ActionPlan 승인",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-1280-runs-demo-approval.png",
+        "bytes": 71633,
+        "sha256": "4ebb38d560ca4e55137065bcee7ba561003cba1e3a353c32e6c8253e24c8463b"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/runs/demo",
+      "width": 1280,
+      "heading": "보정 스펙트럼 실행 기록",
+      "containsKorean": true,
+      "elapsedMs": 10,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-1280-runs-demo.png",
+        "bytes": 74156,
+        "sha256": "587bd7b4eb39d484199f99a5b5bd3e9fae1568b7a9d318b18861a7951038d444"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/artifacts",
+      "width": 1280,
+      "heading": "아티팩트 라이브러리",
+      "containsKorean": true,
+      "elapsedMs": 11,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-1280-artifacts.png",
+        "bytes": 116060,
+        "sha256": "50f080d58ffca1eeb4d585a0a332c6692da52aa2a689cd5eb61f251d51daefee"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/reviews/demo",
+      "width": 1280,
+      "heading": "검토 결과",
+      "containsKorean": true,
+      "elapsedMs": 14,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-1280-reviews-demo.png",
+        "bytes": 52108,
+        "sha256": "ca69c417caefcd0be120b9173c67015dac44f7049455e579a844d1a1659e4be8"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/exports/demo",
+      "width": 1280,
+      "heading": "내보내기",
+      "containsKorean": true,
+      "elapsedMs": 13,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-1280-exports-demo.png",
+        "bytes": 64048,
+        "sha256": "f2cd881c20b84aad29fab6bad062d568f8926cd27d586f33d2d9838ce39c09b2"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    },
+    {
+      "route": "/settings/providers",
+      "width": 1280,
+      "heading": "제공자 설정",
+      "containsKorean": true,
+      "elapsedMs": 12,
+      "screenshot": {
+        "path": "artifacts/ulw-g003/product-1280-settings-providers.png",
+        "bytes": 192377,
+        "sha256": "30e7da6f33a3cf9756652eff43b9cdd09a087ef4dbe8921e3b85de71de13f53d"
+      },
+      "axe": {
+        "violations": 0,
+        "seriousOrCritical": []
+      }
+    }
+  ],
+  "keyboard": {
+    "tag": "A",
+    "href": "#main-content",
+    "text": "본문으로 건너뛰기"
+  },
+  "consoleEvents": [],
+  "pageErrors": [],
+  "requestFailures": [],
+  "responses": [
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dry-lab/upload",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dry-lab/plan",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dry-lab/approve",
+      "status": 202
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dry-lab/execute",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/artifacts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dry-lab/review",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dry-lab/export",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/provider-connections/registry",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/provider-connections",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/artifacts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/provider-connections/registry",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/provider-connections",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/artifacts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/provider-connections/registry",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/provider-connections",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/artifacts",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/provider-connections/registry",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/provider-connections",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/me",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workspace",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/dry-lab/cleanup",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dry-lab/state",
+      "status": 200
+    }
+  ],
+  "verdict": "passed"
+}

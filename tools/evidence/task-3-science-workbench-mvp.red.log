@@ -1,0 +1,9 @@
+task: 3
+phase: RED
+command: .venv/bin/python -m unittest tests/test_architecture.py -v
+exit_code: 1
+tests_run: 8
+result: FAILED (errors=8)
+failure_oracle: docs/architecture did not exist; shutil.copytree raised FileNotFoundError in setUp for every architecture-contract scenario.
+representative_error: FileNotFoundError: /Users/hyunjun/Documents/MUNI/science-workbench/docs/architecture
+

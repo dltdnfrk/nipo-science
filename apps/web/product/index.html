@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="추적 가능한 비진단 연구 지원 워크벤치">
+  <title>연구 워크벤치</title>
+  <link rel="stylesheet" href="/product/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
+  <div class="app-shell">
+    <aside class="global-nav" aria-label="주요 탐색">
+      <a class="brand" href="/workspace">연구 워크벤치<span>비진단 연구 지원</span></a>
+      <nav aria-label="제품 메뉴">
+        <ul>
+          <li><a data-route="/workspace" href="/workspace">워크스페이스</a></li>
+          <li><a data-route="/upload" href="/upload">업로드</a></li>
+          <li><a data-route="/runs/demo" href="/runs/demo">실행 기록</a></li>
+          <li><a data-route="/artifacts" href="/artifacts">아티팩트</a></li>
+          <li><a data-route="/reviews/demo" href="/reviews/demo">검토 결과</a></li>
+          <li><a data-route="/exports/demo" href="/exports/demo">내보내기</a></li>
+          <li><a data-route="/settings/providers" href="/settings/providers">제공자 설정</a></li>
+        </ul>
+        <span class="mobile-nav-hint" aria-hidden="true">좌우로 더 보기 →</span>
+      </nav>
+      <p class="nav-context" id="organization-name">조직 정보 불러오는 중</p>
+    </aside>
+    <main id="main-content" tabindex="-1">
+      <div id="live-region" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+      <div id="error-region" class="inline-error" role="alert" hidden></div>
+      <div id="screen" aria-busy="true"><h1>연구 워크벤치 불러오는 중</h1></div>
+    </main>
+  </div>
+  <noscript><p class="noscript">이 화면을 사용하려면 JavaScript를 활성화해야 합니다.</p></noscript>
+  <script src="/product/app.js" defer></script>
+</body>
+</html>

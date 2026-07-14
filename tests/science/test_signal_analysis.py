@@ -1,0 +1,117 @@
+import hashlib
+
+from science_workbench_science import (
+    MeasurementUnit,
+    OutcomeStatus,
+    ProbeInput,
+    analyze_probe,
+    normalize_image,
+    normalize_spectrum,
+    render_spectrum_png,
+)
+
+from .fixtures import image_input, spectrum_input
+
+
+def test_spectrum_baseline_and_peak_extraction_have_fixed_numeric_output() -> None:
+    normalized = normalize_spectrum(spectrum_input())
+
+    assert normalized.status is OutcomeStatus.VALID
+    assert normalized.baseline == (10.0, 10.5, 11.0, 11.5, 12.0)
+    assert normalized.corrected == (0.0, 1.5, 19.0, 2.5, 0.0)
+    assert normalized.missing_fraction == 0.0
+    assert len(normalized.peaks) == 1
+    assert normalized.peaks[0].wavelength == 500.0
+    assert normalized.peaks[0].corrected_intensity == 19.0
+    assert normalized.peaks[0].prominence == 16.5
+
+
+def test_image_color_and_connected_region_extraction_are_fixed() -> None:
+    normalized = normalize_image(image_input())
+
+    assert normalized.status is OutcomeStatus.VALID
+    assert normalized.mean_rgb == (41.666667, 11.666667, 11.666667)
+    assert normalized.mean_luminance == 18.044667
+    assert normalized.missing_fraction == 0.0
+    assert len(normalized.regions) == 1
+    assert normalized.regions[0].bounds == (1, 1, 2, 1)
+    assert normalized.regions[0].pixel_count == 2
+    assert normalized.regions[0].mean_rgb == (200.0, 20.0, 20.0)
+
+
+def test_spectrum_plot_is_byte_deterministic_across_two_runs() -> None:
+    normalized = normalize_spectrum(spectrum_input())
+    first = render_spectrum_png(normalized)
+    second = render_spectrum_png(normalized)
+
+    assert first == second
+    assert first.startswith(b"\x89PNG\r\n\x1a\n")
+    assert len(first) == 4_829
+    assert hashlib.sha256(first).hexdigest() == (
+        "6804068e27501bab92984bbc2f9b12b1ac5d74614ab3745b7e7ee71d650e9963"
+    )
+    assert hashlib.sha256(second).hexdigest() == hashlib.sha256(first).hexdigest()
+
+
+def test_unrepresentable_spectrum_arithmetic_is_explicit_invalid_data() -> None:
+    spectrum = spectrum_input().model_copy(
+        update={
+            "wavelengths": (-1e308, 0.0, 1e308),
+            "intensities": (1.0, 2.0, 3.0),
+        }
+    )
+
+    result = analyze_probe(ProbeInput(spectrum=spectrum))
+
+    assert result.status is OutcomeStatus.INVALID_DATA
+    assert {issue.code for issue in result.issues} == {"spectrum_numeric_invalid"}
+    assert result.spectrum_plot_png is None
+
+
+def test_declared_wavelength_unit_is_used_in_claim_and_plot() -> None:
+    spectrum = spectrum_input()
+    units = (
+        MeasurementUnit(quantity="wavelength", ucum_code="um"),
+        spectrum.metadata.units[1],
+    )
+    micrometre_input = spectrum.model_copy(
+        update={"metadata": spectrum.metadata.model_copy(update={"units": units})}
+    )
+
+    result = analyze_probe(ProbeInput(spectrum=micrometre_input))
+    nanometre_plot = render_spectrum_png(normalize_spectrum(spectrum))
+
+    assert result.status is OutcomeStatus.VALID
+    assert "500 um" in result.hypotheses[0].observation
+    assert result.spectrum_plot_png is not None
+    assert result.spectrum_plot_png != nanometre_plot
+
+
+def test_extreme_finite_corrected_range_renders_without_plot_exception() -> None:
+    spectrum = spectrum_input().model_copy(
+        update={"intensities": (0.0, -1e308, 0.0, 1e308, 0.0)}
+    )
+
+    result = analyze_probe(ProbeInput(spectrum=spectrum))
+
+    assert result.status is OutcomeStatus.VALID
+    assert result.spectrum_plot_png is not None
+    assert result.spectrum_plot_png.startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_incompatible_wavelength_dimension_is_bounded_insufficient_data() -> None:
+    spectrum = spectrum_input()
+    units = (
+        MeasurementUnit(quantity="wavelength", ucum_code="s"),
+        spectrum.metadata.units[1],
+    )
+    incompatible = spectrum.model_copy(
+        update={"metadata": spectrum.metadata.model_copy(update={"units": units})}
+    )
+
+    result = analyze_probe(ProbeInput(spectrum=incompatible))
+
+    assert result.status is OutcomeStatus.INSUFFICIENT_DATA
+    assert {issue.code for issue in result.issues} == {"wavelength_unit_incompatible"}
+    assert result.spectrum_plot_png is None
+    assert all(item.state == "insufficient" for item in result.hypotheses)

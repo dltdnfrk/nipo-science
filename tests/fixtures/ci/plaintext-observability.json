@@ -1,0 +1,7 @@
+{
+  "metadata": {
+    "error_code": "Bearer sk-secretvalue",
+    "request_id": "req-1"
+  },
+  "name": "provider.connected"
+}

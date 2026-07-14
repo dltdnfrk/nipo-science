@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "kind": "provider-runtime-test-report",
+  "goalId": "G004",
+  "generatedAt": "2026-07-13T19:52:21.963548Z",
+  "verdict": "blocked",
+  "commands": [
+    "pytest tests/g004 --ignore=tests/g004/test_provider_postgres.py",
+    "ruff check services/api/provider_runtime.py services/api/provider_postgres.py services/api/provider_qualification.py services/api/provider_live_capture.py services/api/tool_governance.py services/api/product_app.py tests/g004",
+    "basedpyright services/api/provider_runtime.py services/api/provider_postgres.py services/api/provider_qualification.py services/api/provider_live_capture.py services/api/tool_governance.py services/api/product_app.py tests/g004",
+    "node --check apps/web/product/app.js",
+    "pytest tests/test_openapi_contract.py",
+    ".venv/bin/python -m services.api.provider_live_capture --cases tests/g004/fixtures/golden_session_cases.json --output artifacts/ulw-g004/openai-codex-live-profile.json",
+    "docker info"
+  ],
+  "passingResults": {
+    "g004NonPostgresTests": 101,
+    "providerHttpTests": 13,
+    "openApiContractTests": 15,
+    "ruffErrors": 0,
+    "typeErrors": 0,
+    "typeWarnings": 0,
+    "nodeSyntaxExitCode": 0,
+    "captureHarnessTimeoutTests": 1,
+    "syntheticFixtureLiveQualified": false
+  },
+  "independentReviews": {
+    "architectureStatus": "CLEAR",
+    "architectureRecommendation": "APPROVE",
+    "executorQaStatus": "PASS",
+    "codeReady": true
+  },
+  "coveredBehavior": [
+    "official subscription OAuth callback/device initiation, single-use state, expiry, binding, cancel, reauth and revoke",
+    "authenticated same-origin HTTP lifecycle with pre-exchange state claims and bounded route/principal/method-scoped single-flight idempotency that durably records request-id-correlated redacted diagnostics before caching unexpected-failure 503 responses",
+    "direct concurrent, replay and conflict tests cover initiate, complete, cancel, model, health and reauth; invalid, expired, mismatched and cancelled states prove zero broker exchange",
+    "canonical ErrorEnvelope parity with OpenAPI, tenant-safe origin rejection, absent health/reauth bodies and exact 409/412/503 mutation statuses",
+    "exhaustive provider status mapping distinguishes capability-disabled 403, tenant-hidden 404, conflict 409, revision 412 and infrastructure 503 under a validator-enforced capability-only extension",
+    "canonical provider registry with openai_codex sole required default, optional adapters fail-closed and zai_glm unsupported_auth",
+    "requester and tenant isolation with foreign/missing non-disclosing responses",
+    "account/model/health selection with healthy status and dispatch fail-closed until a sealed evaluator-issued live result exists; no provider/model fallback",
+    "ProviderRuntimeService requires explicit persistence and rejects duck-typed qualification results through an exact module-owned seal verifier",
+    "ref-counted per-connection locks validate ownership before allocation, remove idle entries, serialize CAS and keep persistence/runtime-home destruction outside the short service-wide state lock",
+    "application-only allow/ask/deny tool grants with deep-frozen canonical arguments, a one-way sealed registry identity bound into approvals, exact approved context and zero-side-effect denials",
+    "scenario-specific GS01-GS10 x3 evaluation against exact scientific/artifact/evidence outputs, actual-output hashes, protocol invariants and explicit synthetic-not-live evidence",
+    "real Codex CLI capture harness with isolated argv, read-only sandbox, process-group timeout, atomic publication, exact canonical module proof identity and pinned golden-suite digest aea210e96f0d26df5050ab28eb6fc410c0b61e838d344eeaffe8b5007ed365c9",
+    "Korean provider lifecycle UI and strict token-free OpenAPI schemas",
+    "atomic expected-revision ProviderPersistence proposals and Postgres CAS are static-clean; verified cleanup schedules, destroys, tombstones and records SHA-256 evidence before publication",
+    "provider revocation persistence/destruction failures return documented canonical 503 without publishing revocation"
+  ],
+  "blockedEvidence": {
+    "liveOpenAiCodexProfile": {
+      "status": "blocked",
+      "reason": "Official ChatGPT subscription login and codex-cli 0.144.1 are present. The first pinned protocol attempt reached the fixed 90-second deadline (return code 124), emitted no sensitive pattern, and published no output; the full harness failed closed with exit 2.",
+      "receipt": "artifacts/ulw-g004/live-profile-attempt.json"
+    },
+    "postgresProviderIntegration": {
+      "status": "blocked",
+      "test": "tests/g004/test_provider_postgres.py",
+      "reason": "Docker Desktop daemon socket is absent. docker info cannot connect to unix:///Users/hyunjun/.docker/run/docker.sock; starting Docker Desktop did not complete. The test and sink remain enabled and were not skipped or weakened."
+    }
+  },
+  "blockers": [
+    "No captured_live_profile exists for the required openai_codex adapter because the official logged-in runtime did not complete the pinned protocol attempt before its fail-closed deadline.",
+    "The real HTTP-to-provider_connections forced-RLS integration test cannot execute until the Docker daemon is restored."
+  ]
+}

@@ -1,0 +1,14 @@
+test_accepts_complete_architecture_contract (test_architecture.ArchitectureVerifierTests.test_accepts_complete_architecture_contract) ... ok
+test_rejects_literal_gvisor_seccomp_claim (test_architecture.ArchitectureVerifierTests.test_rejects_literal_gvisor_seccomp_claim) ... ok
+test_rejects_oauth_refresh_token_exfiltration_control_omission (test_architecture.ArchitectureVerifierTests.test_rejects_oauth_refresh_token_exfiltration_control_omission) ... ok
+test_rejects_reviewer_tool_execution (test_architecture.ArchitectureVerifierTests.test_rejects_reviewer_tool_execution) ... ok
+test_rejects_unclassified_sensitive_field (test_architecture.ArchitectureVerifierTests.test_rejects_unclassified_sensitive_field) ... ok
+test_rejects_unowned_trust_boundary (test_architecture.ArchitectureVerifierTests.test_rejects_unowned_trust_boundary) ... ok
+test_rejects_unresolved_placeholder (test_architecture.ArchitectureVerifierTests.test_rejects_unresolved_placeholder) ... ok
+test_rejects_untested_high_threat (test_architecture.ArchitectureVerifierTests.test_rejects_untested_high_threat) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.810s
+
+OK
+architecture-check: PASS (9 decisions, 11 boundaries, 13 High threats, 8 classified fields)

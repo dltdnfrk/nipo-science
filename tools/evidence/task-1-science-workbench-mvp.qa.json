@@ -1,0 +1,20 @@
+{
+  "command": "make test-boundaries",
+  "exit_code": 0,
+  "test_count": 22,
+  "python_3_8_test_count": 22,
+  "fixture_scope": "temporary-directories-only",
+  "mutated_siblings": false,
+  "named_rejections": [
+    "sibling-import",
+    "sibling-path-dependency",
+    "workspace-reference",
+    "escaping-symlink",
+    "outside-build-input",
+    "sibling-write-path",
+    "outside-write-path"
+  ],
+  "real_root_command": "science-workbench/.venv/bin/python science-workbench/tools/check_boundaries.py science-workbench",
+  "real_root_exit_code": 0,
+  "real_root_result": "boundary-check: PASS (261 files checked)"
+}

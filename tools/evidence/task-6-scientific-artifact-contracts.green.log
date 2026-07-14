@@ -1,0 +1,26 @@
+task: 6
+phase: GREEN
+canonical_command: make test-artifact-contracts
+canonical_result: 28 Python + 27 TypeScript passed; Ruff, basedpyright, Biome, tsc clean
+python_command: .venv/bin/pytest -q packages/contracts/python/tests/test_scientific_artifact_contracts.py packages/contracts/python/tests/test_artifact_cas_export.py packages/contracts/python/tests/test_dry_lab_integrity_attacks.py packages/contracts/python/tests/test_artifact_version_review_transitions.py
+python_exit_code: 0
+python_result: 28 passed
+typescript_command: pnpm exec vitest run packages/contracts/tests/scientific-artifact-contracts.test.ts packages/contracts/tests/artifact-cas-export.test.ts packages/contracts/tests/dry-lab-integrity-attacks.test.ts --exclude '.tools/**'
+typescript_exit_code: 0
+typescript_result: 3 files passed; 27 tests passed
+ruff_command: .venv/bin/ruff check <10 owned Python source/test files>
+ruff_exit_code: 0
+ruff_result: All checks passed
+basedpyright_command: .venv/bin/basedpyright <10 owned Python source/test files>
+basedpyright_exit_code: 0
+basedpyright_result: 0 errors, 0 warnings, 0 notes
+biome_command: pnpm exec biome check <10 owned TypeScript source/test files>
+biome_exit_code: 0
+biome_result: Checked 10 files; no fixes applied
+typescript_typecheck_command: pnpm exec tsc -p packages/contracts/tsconfig.json
+typescript_typecheck_exit_code: 0
+python_no_excuse_result: no violations in 17 files
+canonical_pytest_command: PYTHONPATH=.:packages/contracts/python .venv/bin/pytest -q
+canonical_pytest_result: 258 passed
+max_pure_loc: 181
+shared_fixture_sha256: 6389e66adf1a33220f3198729ff4c6fd190c5cb4d40df8a6d8a9bd40b31c1bd4

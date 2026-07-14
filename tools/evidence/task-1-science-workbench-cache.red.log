@@ -1,0 +1,7 @@
+command: PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.13 -m unittest science-workbench/tests/test_boundaries.py -v
+exit_code: 1
+result: FAILED (failures=1)
+tests_run: 9
+reason: BOUNDARY VIOLATION [sibling-import] .cache/mise/bad.py:1: from drylab.
+failing_test: test_ignores_generated_cache_when_file_contains_sibling_import
+duration: 0.264s

@@ -1,0 +1,78 @@
+{
+  "task": 6,
+  "status": "pass",
+  "scope": "scientific Artifact, provenance, Ledger, Review, Skill, and Export contracts",
+  "red": {
+    "python_exit_code": 1,
+    "typescript_exit_code": 1,
+    "reason": "task-6 boundary modules were absent"
+  },
+  "green": {
+    "canonical_command": "make test-artifact-contracts",
+    "python": {"tests": 60, "exit_code": 0},
+    "typescript": {"test_files": 5, "tests": 57, "exit_code": 0},
+    "ruff_exit_code": 0,
+    "basedpyright_exit_code": 0,
+    "biome_exit_code": 0,
+    "tsc_exit_code": 0
+  },
+  "canonical_regression": {
+    "command": "PYTHONPATH=.:packages/contracts/python .venv/bin/pytest -q",
+    "tests": 436,
+    "subtests": 189,
+    "exit_code": 0
+  },
+  "manual_library_drive": {
+    "command": "PYTHONPATH=packages/contracts/python .venv/bin/python -c '<parse shared GS04 fixture and print contract/scope/selection count>'",
+    "exit_code": 0,
+    "observed": "1.0.0 non_diagnostic 5"
+  },
+  "runtime_audit": [
+    {
+      "hypothesis": "Python and TypeScript normalize the shared fixture differently",
+      "evidence": "both round-trip suites passed and preserved the same GS04 output IDs and non_diagnostic scope",
+      "status": "refuted"
+    },
+    {
+      "hypothesis": "a changed provenance checksum can remain structurally valid and escape detection",
+      "evidence": "stale canonical digest and correctly rehashed coordinated mutations across eight provenance families were rejected by parse-time digest and immutable Review pin binding",
+      "status": "refuted"
+    },
+    {
+      "hypothesis": "path normalization or latest-version substitution can bypass Export pinning",
+      "evidence": "both suites rejected traversal, absolute paths, symlink kind, case-normalized collision, and unselected version substitution",
+      "status": "refuted"
+    }
+  ],
+  "contract_coverage": [
+    "Pydantic and Zod shared-fixture round trip",
+    "strict nested JSON Schema and OpenAPI compatibility",
+    "pinned units, calibration, research context, ActionPlan, Executions, and outputs",
+    "Artifact Version immutability, unique revision coordinates, and CAS attach/detach",
+    "canonical Ledger columns",
+    "Reviewer capabilities all false and exactly-once Findings",
+    "canonical Skill ID, content hash, declared needs, and kernel-hash consistency",
+    "GS04 molecular, optical, and experimental-artifact hypotheses without diagnosis",
+    "exact input, calibration, execution, output, Skill, source, runtime, code, environment, and Ledger pins",
+    "stateful exactly-once Review Findings transition and forbidden capability rejection",
+    "monotonic Artifact Version CAS with tenant, identity, and timestamp invariants",
+    "strict Project/Run-bound Skill snapshots with connector declarations",
+    "reviewed-only Export selection and reserved ASCII pack paths",
+    "traversal, absolute path, symlink, normalized collision, and unselected-version rejection"
+    ,"canonical cross-language provenance manifest digest with NFKC-safe ASCII JSON"
+    ,"immutable Review binding rejects correctly rehashed coordinated provenance mutations"
+  ],
+  "artifacts": {
+    "fixture_sha256": "621ff7fdd7a80dd5f0f00e90af88d1d92e0715ba493d5e576756a2f66edc938f",
+    "typescript_contract_sha256": "ab66fea7628f3fa4c06ad3f86d396f6c6ed203717eb5ac3ba2877d8c1bfa5f35",
+    "typescript_integrity_sha256": "5106ed97ef0ddf311bfb4b3775917ac96a2182142be48dea177d0e49f09530f4",
+    "typescript_provenance_sha256": "aa6998a22131c7a51c7e8b8c9b43887edd0c50fc60b8fa1425ed5af4d1a280f4",
+    "python_contract_sha256": "b15586d267b2da7d7cffee66303450a7be8ee85803fd82edd4670ef9e110d1d8",
+    "python_artifact_integrity_sha256": "69b73f46d420eab3951c238f083bb6e2d7f866a9d001b3d0a577ca4159568d5e",
+    "python_review_integrity_sha256": "23524625a5ba8a3aa8f2b88ba97554955c886e139706d37302f2018f139cb566",
+    "python_provenance_sha256": "7e89ff98ca4ee87c4d4c60fb688e5d2ca61ab10930f3dbe1939edb231dbb48cf"
+  },
+  "source_files_max_pure_loc": 196,
+  "mutated_shared_manifests": false,
+  "committed": false
+}

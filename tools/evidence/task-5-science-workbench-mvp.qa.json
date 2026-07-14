@@ -1,0 +1,90 @@
+{
+  "task": 5,
+  "status": "pass",
+  "scope": {
+    "included": [
+      "Run",
+      "Message",
+      "SSE",
+      "Execution",
+      "ActionPlan",
+      "ToolGrant",
+      "Approval",
+      "AgentRuntimeAdapter"
+    ],
+    "excluded": ["Review", "Finding", "Artifact", "Export"]
+  },
+  "red": {
+    "command": ".venv/bin/pytest packages/contracts/python/tests/test_protocol_red.py -q",
+    "exit_code": 1,
+    "tests": 1,
+    "reason": "Initial package absent; security reopen also exposed missing plan/CAS/lease fields and accepted invalid correlation"
+  },
+  "green": {
+    "command": "make test-protocol-contracts",
+    "exit_code": 0,
+    "tests": {"python": 260, "typescript": 12},
+    "checks": ["ruff", "basedpyright", "biome", "tsc"],
+    "fixture_sha256": "42837035408bd5a7b47694655fa6b3646193bbf5f5e14774882c081a35adb7ff",
+    "protocol_sources_sha256": "3622109bc2e2e5cb6eea040b0d667722f2b9f11217ea226209384562dd61a79e"
+  },
+  "coverage": {
+    "run_transition_pairs": 49,
+    "execution_transition_pairs": 25,
+    "approval_transition_pairs": 25,
+    "generated_event_prefixes": 32,
+    "approval_bound_field_mutations": 11,
+    "tool_context_mutations": 4,
+    "approval_revision_cas": true,
+    "execution_lease_expiry": true,
+    "fixture_and_continuation_correlation": true,
+    "standalone_continuation_result_correlation": true,
+    "runtime_text_delta_message_correlation": true,
+    "recursive_forbidden_event_keys": true,
+    "escaped_forbidden_event_keys": true,
+    "nfkc_forbidden_event_keys": true,
+    "recursive_secret_shaped_event_values": true,
+    "strict_wire_parsing": true,
+    "provider_error_categories": 5,
+    "application_only_tool_execution": true,
+    "automatic_fallback": false,
+    "automatic_side_effect_replay": false,
+    "monetary_fields": false
+  },
+  "manual_library": {
+    "fixture_happy": {"exit_code": 0, "result": "PASS"},
+    "same_snapshot_cas": {"exit_code": 0, "result": "APPROVAL_REVISION_CONFLICT"},
+    "expired_lease": {"exit_code": 0, "result": "LEASE_EXPIRED"},
+    "foreign_context": {"exit_code": 0, "result": "runtime_correlation"},
+    "escaped_key": {"exit_code": 0, "result": "forbidden"},
+    "stale_attempt": {"exit_code": 1, "status_code": 409, "result": "STALE_ATTEMPT_TOKEN: 2 -> 1"}
+  },
+  "regression": {
+    "wave0_command": "make test-boundaries verify-spec verify-architecture",
+    "wave0_exit_code": 0,
+    "wave0_tests": 32,
+    "task4_command": "make test-openapi",
+    "task4_exit_code": 0,
+    "task4_tests": {"openapi": 13, "python_passed": 324, "typescript_passed": 144},
+    "task5_impact": "full Python and TypeScript contract suites green"
+  },
+  "quality": {
+    "max_pure_source_loc": 200,
+    "python_no_excuse_violations": 0,
+    "owned_type_errors": 0,
+    "mocks": 0
+  },
+  "independent_security_rerun": {
+    "status": "pass",
+    "verified": [
+      "foreign continuation context",
+      "unknown text-delta Message",
+      "punctuated forbidden semantic keys",
+      "Python and TypeScript default parity",
+      "same-snapshot approval CAS",
+      "execution lease fencing"
+      ,"NFKC-normalized credential keys"
+      ,"credential-shaped scalar values under neutral keys"
+    ]
+  }
+}

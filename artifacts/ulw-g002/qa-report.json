@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "kind": "api-package-browser-test-report",
+  "goalId": "G002",
+  "resolutionGoalId": "G007",
+  "generatedAt": "2026-07-14T04:26:59+09:00",
+  "verdict": "passed",
+  "commands": [
+    "make --no-print-directory test-dry-lab",
+    "Playwright Chrome-for-Testing 149 ordered loopback fixture journey"
+  ],
+  "passingResults": {
+    "dryLabVertical": 14,
+    "browserJourneys": 1,
+    "browserEndpointCalls": 7,
+    "browserConsoleErrors": 0,
+    "browserPageErrors": 0,
+    "browserRequestFailures": 0,
+    "ruffErrors": 0,
+    "typeErrors": 0,
+    "typeWarnings": 0
+  },
+  "browserAutomation": {
+    "status": "passed",
+    "browser": "Chrome for Testing 149.0.7827.55",
+    "viewport": { "width": 1280, "height": 720 },
+    "orderedStages": [
+      "upload",
+      "plan",
+      "approve",
+      "execute",
+      "review",
+      "export",
+      "cleanup"
+    ],
+    "responseStatuses": [201, 201, 202, 200, 201, 200, 200],
+    "transcript": "artifacts/ulw-g002/browser-journey-transcript.json",
+    "transcriptSha256": "39aab340be578162abb3f910f2976dd70bcc1ec51f9b2c7290c830d373a1aa97",
+    "screenshot": "artifacts/ulw-g002/browser-journey-1280.png",
+    "screenshotSha256": "53d8016e32338eda4b7cce6f7e0bc3a07a82d3a5e792110f862709490cc34e03",
+    "screenshotBytes": 80732,
+    "fabricatedEvidence": false
+  },
+  "coveredBehavior": [
+    "real browser ordered upload-plan-approve-execute-review-export-cleanup flow",
+    "immutable plan approval and isolated deterministic execution",
+    "verified review, reproducible export manifest and cleanup receipt",
+    "five rendered artifact names and SHA-256 hashes",
+    "zero console, page or request failures",
+    "non-uniform rendered Korean result screenshot"
+  ],
+  "independentReviews": {
+    "architecture": "agent://170-G002BrowserArchitectureApproval",
+    "architectureStatus": "CLEAR",
+    "architectureDecision": "APPROVE",
+    "executorQa": "agent://171-G002BrowserQaFinal",
+    "executorQaStatus": "PASS"
+  },
+  "revalidation": {
+    "log": "artifacts/ulw-g002/browser-revalidation.log",
+    "sha256": "87d92483b4d1797878c2b262ba75508c9d155ae54c42aa57dfc17b5989277fe8"
+  },
+  "blockers": []
+}

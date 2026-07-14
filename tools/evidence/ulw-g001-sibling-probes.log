@@ -1,0 +1,15 @@
+=== ulw-g001 temporary sibling probes 2026-07-13T07:53:43Z ===
+each probe: created inside science-workbench/tmp_probe, checker run, then removed
+--- probe outputs (named rejections, checker exit=1 each) ---
+BOUNDARY VIOLATION [sibling-import] tmp_probe/probe_import.py:3: from ontologylab
+
+BOUNDARY VIOLATION [escaping-symlink] tmp_probe/probe_symlink: target resolves outside root: /Users/hyunjun/Documents/MUNI/drylab
+BOUNDARY VIOLATION [sibling-import] tmp_probe/probe_import.py:3: from ontologylab
+BOUNDARY VIOLATION [workspace-reference] tmp_probe/pnpm-workspace.yaml:2: "../
+BOUNDARY VIOLATION [outside-build-input] tmp_probe/Dockerfile.probe:2: COPY ../
+BOUNDARY VIOLATION [workspace-reference] tmp_probe/pnpm-workspace.yaml:2: "../
+BOUNDARY VIOLATION [sibling-write-path] tmp_probe/probe_write.py:2: Path("../ontologylab/HACKED.txt").write_text("x")
+BOUNDARY VIOLATION [outside-write-path] tmp_probe/probe_write.py:2: Python write path resolves outside target root
+--- post-probe clean run ---
+boundary-check: PASS (333 files checked)
+clean_exit=0

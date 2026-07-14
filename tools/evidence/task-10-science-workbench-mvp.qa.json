@@ -1,0 +1,83 @@
+{
+  "task": 10,
+  "status": "passed",
+  "acceptance": {
+    "agent_read_before_clean": "denied",
+    "allowed_formats": [
+      "pdf",
+      "png",
+      "jpeg",
+      "tiff",
+      "csv",
+      "tsv",
+      "json",
+      "xlsx",
+      "txt",
+      "md"
+    ],
+    "atomic_cleanup": "zero orphan objects on every tested rejection",
+    "filename_normalization": "NFKC basename with traversal and control-character rejection",
+    "limits": {
+      "file_bytes": 52428800,
+      "chunks_per_file": 8192,
+      "files_per_request": 10,
+      "image_pixels": 50000000,
+      "pdf_pages": 200,
+      "request_bytes": 104857600,
+      "xlsx_data_xml_bytes": 16777216
+    },
+    "preview_bounds": {
+      "cell_characters": 256,
+      "columns": 50,
+      "json_or_text_characters": 4096,
+      "rows_or_lines": 20,
+      "workbook_sheets": 10
+    },
+    "rejections": [
+      "archive",
+      "EICAR threat",
+      "EOF-truncated ClamAV response",
+      "external XLSX relationships",
+      "forged XLSX relationship types",
+      "hostile or colliding XLSX members",
+      "MIME/magic/extension mismatch",
+      "malformed quoted CSV or TSV",
+      "non-finite JSON numbers",
+      "path traversal",
+      "polyglot",
+      "scanner unavailable or protocol failure",
+      "storage or promotion failure",
+      "symlink member"
+    ],
+    "scanner_boundary": "services.local.scanner ClamAV INSTREAM",
+    "structured_text_compatibility": "all standard JSON root types with finite numbers plus full-document RFC-style CSV/TSV validation, bounded previews, long quoted fields, optional leading UTF-8 BOM, and valid Unicode format/separator characters",
+    "xlsx_compatibility": "macro-free tabular workbooks with standard styles, shared strings, themes, calculation chains, document properties, and canonical internal targets",
+    "tenant_scope": "required org_id, project_id, and requester_id on every store operation",
+    "clean_immutability": "clean payload stored as bytes; append after promotion denied"
+  },
+  "verification": {
+    "boundary": "passed, 297 final files checked; sealed CI run checked 282",
+    "ci": {
+      "aggregate_sha256": "2cea92f0337d04df35afbe2590aba7ad41e41d2d728dd8f467251e61efcc0d05",
+      "executed": 491,
+      "jobs": 17,
+      "raw_hashes_verified": true
+    },
+    "cleanup": {
+      "containers": 0,
+      "networks": 0,
+      "volumes": 0
+    },
+    "focused": "85 passed",
+    "full": "516 passed, 217 subtests passed",
+    "local_stack": "22 passed plus Docker clean/EICAR/invalid-header/unavailable smoke; live standard and long quoted CSV plus openpyxl XLSX HTTP 202; late and stray-quote CSV plus non-finite JSON HTTP 422",
+    "lock_offline": "28 packages resolved in Linux container",
+    "no_excuse": "0 violations in 23 files",
+    "platform_ci_contract": "13 passed",
+    "pure_loc_max": 236,
+    "ruff": "passed",
+    "sbom": "passed, 192 locked packages checked",
+    "secret_scan": "passed, 235 checks executed",
+    "typecheck": "0 errors, 0 warnings"
+  }
+}

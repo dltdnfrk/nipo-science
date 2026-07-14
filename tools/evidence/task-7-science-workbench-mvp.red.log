@@ -1,0 +1,384 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 8 items
+
+tests/local_stack/test_compose.py::test_compose_defines_every_local_service_with_healthcheck FAILED [ 12%]
+tests/local_stack/test_compose.py::test_compose_contains_no_provider_or_cloud_credentials FAILED [ 25%]
+tests/local_stack/test_config.py::test_config_parses_host_only_local_interfaces FAILED [ 37%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[OBJECT_STORE_DRIVER-filesystem] FAILED [ 50%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[MAIL_DRIVER-console] FAILED [ 62%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SERVICE_ROLE-scheduler] FAILED [ 75%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SMTP_PORT-0] FAILED [ 87%]
+tests/local_stack/test_config.py::test_config_rejects_shared_application_and_artifact_origin FAILED [100%]
+
+=================================== FAILURES ===================================
+__________ test_compose_defines_every_local_service_with_healthcheck ___________
+
+    def test_compose_defines_every_local_service_with_healthcheck() -> None:
+        # Given: the checked-in hermetic Compose definition.
+>       config = _compose_config()
+                 ^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_compose.py:44: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/local_stack/test_compose.py:32: in _compose_config
+    completed = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['docker', 'compose', '-f', 'compose.yaml', 'config', '--format', ...],)
+kwargs = {'cwd': PosixPath('/Users/hyunjun/Documents/MUNI/science-workbench'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['docker', 'compose', '-f', 'compose.yaml', 'config', '--format', 'json']' returned non-zero exit status 1.
+
+.tools/mise/installs/python/3.12.13/lib/python3.12/subprocess.py:571: CalledProcessError
+____________ test_compose_contains_no_provider_or_cloud_credentials ____________
+
+    def test_compose_contains_no_provider_or_cloud_credentials() -> None:
+        # Given: the fully interpolated default local topology.
+>       config = _compose_config()
+                 ^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_compose.py:56: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/local_stack/test_compose.py:32: in _compose_config
+    completed = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['docker', 'compose', '-f', 'compose.yaml', 'config', '--format', ...],)
+kwargs = {'cwd': PosixPath('/Users/hyunjun/Documents/MUNI/science-workbench'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['docker', 'compose', '-f', 'compose.yaml', 'config', '--format', 'json']' returned non-zero exit status 1.
+
+.tools/mise/installs/python/3.12.13/lib/python3.12/subprocess.py:571: CalledProcessError
+________________ test_config_parses_host_only_local_interfaces _________________
+
+    def test_config_parses_host_only_local_interfaces() -> None:
+        # Given: complete local configuration with separate application/artifact origins.
+        raw = _valid_env()
+    
+        # When: the environment crosses the typed configuration boundary.
+>       config = LocalConfig.from_env(raw)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_config.py:31: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'services.local.config.LocalConfig'>
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str]) -> "LocalConfig":
+        """Parse local service configuration from an environment mapping."""
+        del env
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/config.py:13: NotImplementedError
+_ test_config_rejects_unsupported_or_unsafe_values[OBJECT_STORE_DRIVER-filesystem] _
+
+field = 'OBJECT_STORE_DRIVER', value = 'filesystem'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("OBJECT_STORE_DRIVER", "filesystem"),
+            ("MAIL_DRIVER", "console"),
+            ("SERVICE_ROLE", "scheduler"),
+            ("SMTP_PORT", "0"),
+        ],
+    )
+    def test_config_rejects_unsupported_or_unsafe_values(field: str, value: str) -> None:
+        # Given: one unsupported or unsafe boundary value.
+        raw = _valid_env() | {field: value}
+    
+        # When/Then: parsing fails before the value reaches service logic.
+        with pytest.raises(ValidationError):
+>           LocalConfig.from_env(raw)
+
+tests/local_stack/test_config.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'services.local.config.LocalConfig'>
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str]) -> "LocalConfig":
+        """Parse local service configuration from an environment mapping."""
+        del env
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/config.py:13: NotImplementedError
+____ test_config_rejects_unsupported_or_unsafe_values[MAIL_DRIVER-console] _____
+
+field = 'MAIL_DRIVER', value = 'console'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("OBJECT_STORE_DRIVER", "filesystem"),
+            ("MAIL_DRIVER", "console"),
+            ("SERVICE_ROLE", "scheduler"),
+            ("SMTP_PORT", "0"),
+        ],
+    )
+    def test_config_rejects_unsupported_or_unsafe_values(field: str, value: str) -> None:
+        # Given: one unsupported or unsafe boundary value.
+        raw = _valid_env() | {field: value}
+    
+        # When/Then: parsing fails before the value reaches service logic.
+        with pytest.raises(ValidationError):
+>           LocalConfig.from_env(raw)
+
+tests/local_stack/test_config.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'services.local.config.LocalConfig'>
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str]) -> "LocalConfig":
+        """Parse local service configuration from an environment mapping."""
+        del env
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/config.py:13: NotImplementedError
+___ test_config_rejects_unsupported_or_unsafe_values[SERVICE_ROLE-scheduler] ___
+
+field = 'SERVICE_ROLE', value = 'scheduler'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("OBJECT_STORE_DRIVER", "filesystem"),
+            ("MAIL_DRIVER", "console"),
+            ("SERVICE_ROLE", "scheduler"),
+            ("SMTP_PORT", "0"),
+        ],
+    )
+    def test_config_rejects_unsupported_or_unsafe_values(field: str, value: str) -> None:
+        # Given: one unsupported or unsafe boundary value.
+        raw = _valid_env() | {field: value}
+    
+        # When/Then: parsing fails before the value reaches service logic.
+        with pytest.raises(ValidationError):
+>           LocalConfig.from_env(raw)
+
+tests/local_stack/test_config.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'services.local.config.LocalConfig'>
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str]) -> "LocalConfig":
+        """Parse local service configuration from an environment mapping."""
+        del env
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/config.py:13: NotImplementedError
+________ test_config_rejects_unsupported_or_unsafe_values[SMTP_PORT-0] _________
+
+field = 'SMTP_PORT', value = '0'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("OBJECT_STORE_DRIVER", "filesystem"),
+            ("MAIL_DRIVER", "console"),
+            ("SERVICE_ROLE", "scheduler"),
+            ("SMTP_PORT", "0"),
+        ],
+    )
+    def test_config_rejects_unsupported_or_unsafe_values(field: str, value: str) -> None:
+        # Given: one unsupported or unsafe boundary value.
+        raw = _valid_env() | {field: value}
+    
+        # When/Then: parsing fails before the value reaches service logic.
+        with pytest.raises(ValidationError):
+>           LocalConfig.from_env(raw)
+
+tests/local_stack/test_config.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'services.local.config.LocalConfig'>
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str]) -> "LocalConfig":
+        """Parse local service configuration from an environment mapping."""
+        del env
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/config.py:13: NotImplementedError
+__________ test_config_rejects_shared_application_and_artifact_origin __________
+
+    def test_config_rejects_shared_application_and_artifact_origin() -> None:
+        # Given: artifact delivery is incorrectly placed on the application origin.
+        raw = _valid_env() | {"ARTIFACT_ORIGIN": "http://localhost:3000"}
+    
+        # When/Then: the origin boundary fails closed.
+        with pytest.raises(ValidationError):
+>           LocalConfig.from_env(raw)
+
+tests/local_stack/test_config.py:64: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'services.local.config.LocalConfig'>
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str]) -> "LocalConfig":
+        """Parse local service configuration from an environment mapping."""
+        del env
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/config.py:13: NotImplementedError
+=========================== short test summary info ============================
+FAILED tests/local_stack/test_compose.py::test_compose_defines_every_local_service_with_healthcheck
+FAILED tests/local_stack/test_compose.py::test_compose_contains_no_provider_or_cloud_credentials
+FAILED tests/local_stack/test_config.py::test_config_parses_host_only_local_interfaces
+FAILED tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[OBJECT_STORE_DRIVER-filesystem]
+FAILED tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[MAIL_DRIVER-console]
+FAILED tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SERVICE_ROLE-scheduler]
+FAILED tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SMTP_PORT-0]
+FAILED tests/local_stack/test_config.py::test_config_rejects_shared_application_and_artifact_origin
+============================== 8 failed in 0.19s ===============================

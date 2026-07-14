@@ -1,0 +1,105 @@
+$ make bootstrap
+mise trusted /Users/hyunjun/Documents/MUNI/science-workbench
+mise all tools are installed
+Resolved 20 packages in 3ms
+Installed 18 packages in 1.76s
+ + annotated-doc==0.0.4
+ + annotated-types==0.7.0
+ + anyio==4.14.1
+ + basedpyright==1.39.9
+ + fastapi==0.139.0
+ + idna==3.18
+ + iniconfig==2.3.0
+ + nodejs-wheel-binaries==24.16.0
+ + packaging==26.2
+ + pluggy==1.6.0
+ + pydantic==2.13.4
+ + pydantic-core==2.46.4
+ + pygments==2.20.0
+ + pytest==9.1.1
+ + ruff==0.15.21
+ + starlette==1.3.1
+ + typing-extensions==4.16.0
+ + typing-inspection==0.4.2
+Scope: all 2 workspace projects
+? Verifying lockfile against supply-chain policies (88 entries)...
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +51
++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 51, reused 0, downloaded 0, added 0
+[WARN] Request took 11116ms: https://registry.npmjs.org/lightningcss-win32-arm64-msvc
+[WARN] Request took 11118ms: https://registry.npmjs.org/lightningcss-android-arm64
+[WARN] Request took 11119ms: https://registry.npmjs.org/lightningcss-linux-x64-musl
+Progress: resolved 51, reused 0, downloaded 1, added 0
+[WARN] Request took 11146ms: https://registry.npmjs.org/lightningcss-win32-x64-msvc
+[WARN] Request took 11148ms: https://registry.npmjs.org/lightningcss-darwin-x64
+[WARN] Request took 11149ms: https://registry.npmjs.org/lightningcss-darwin-arm64
+[WARN] Request took 11149ms: https://registry.npmjs.org/lightningcss-linux-arm-gnueabihf
+[WARN] Request took 11149ms: https://registry.npmjs.org/lightningcss-linux-arm64-gnu
+[WARN] Request took 11149ms: https://registry.npmjs.org/lightningcss-linux-arm64-musl
+[WARN] Request took 11150ms: https://registry.npmjs.org/lightningcss-linux-x64-gnu
+[WARN] Request took 11151ms: https://registry.npmjs.org/fdir
+[WARN] Request took 11152ms: https://registry.npmjs.org/fsevents
+[WARN] Request took 11152ms: https://registry.npmjs.org/expect-type
+[WARN] Request took 11279ms: https://registry.npmjs.org/lightningcss-freebsd-x64
+Progress: resolved 51, reused 0, downloaded 5, added 5
+Progress: resolved 51, reused 0, downloaded 6, added 6
+Progress: resolved 51, reused 0, downloaded 22, added 22
+[WARN] Request took 14700ms: https://registry.npmjs.org/@types%2Fdeep-eql
+[WARN] Request took 14706ms: https://registry.npmjs.org/@rolldown%2Fbinding-linux-ppc64-gnu
+[WARN] Request took 14704ms: https://registry.npmjs.org/@types%2Festree
+[WARN] Request took 14708ms: https://registry.npmjs.org/@rolldown%2Fpluginutils
+[WARN] Request took 14718ms: https://registry.npmjs.org/@rolldown%2Fbinding-openharmony-arm64
+[WARN] Request took 14723ms: https://registry.npmjs.org/@rolldown%2Fbinding-linux-s390x-gnu
+[WARN] Request took 14724ms: https://registry.npmjs.org/@tybys%2Fwasm-util
+[WARN] Request took 14734ms: https://registry.npmjs.org/@types%2Fchai
+[WARN] Request took 14773ms: https://registry.npmjs.org/@rolldown%2Fbinding-wasm32-wasi
+[WARN] Request took 14776ms: https://registry.npmjs.org/@rolldown%2Fbinding-win32-arm64-msvc
+[WARN] Request took 14778ms: https://registry.npmjs.org/@rolldown%2Fbinding-linux-x64-musl
+[WARN] Request took 14781ms: https://registry.npmjs.org/@rolldown%2Fbinding-linux-arm64-musl
+[WARN] Request took 14783ms: https://registry.npmjs.org/@rolldown%2Fbinding-linux-arm64-gnu
+[WARN] Request took 14785ms: https://registry.npmjs.org/@rolldown%2Fbinding-win32-x64-msvc
+[WARN] Request took 14788ms: https://registry.npmjs.org/@rolldown%2Fbinding-linux-x64-gnu
+[WARN] Request took 14799ms: https://registry.npmjs.org/assertion-error
+[WARN] Request took 14799ms: https://registry.npmjs.org/detect-libc
+[WARN] Request took 14804ms: https://registry.npmjs.org/estree-walker
+[WARN] Request took 14805ms: https://registry.npmjs.org/convert-source-map
+[WARN] Request took 14813ms: https://registry.npmjs.org/es-module-lexer
+[WARN] Request took 14830ms: https://registry.npmjs.org/chai
+[WARN] Request took 14834ms: https://registry.npmjs.org/@vitest%2Fsnapshot
+[WARN] Request took 14839ms: https://registry.npmjs.org/@vitest%2Fspy
+[WARN] Request took 14842ms: https://registry.npmjs.org/@standard-schema%2Fspec
+[WARN] Request took 14841ms: https://registry.npmjs.org/@vitest%2Futils
+[WARN] Request took 14842ms: https://registry.npmjs.org/@vitest%2Fmocker
+[WARN] Request took 14842ms: https://registry.npmjs.org/@vitest%2Frunner
+[WARN] Request took 14846ms: https://registry.npmjs.org/@vitest%2Fpretty-format
+[WARN] Request took 14849ms: https://registry.npmjs.org/@vitest%2Fexpect
+Progress: resolved 51, reused 0, downloaded 47, added 46
+[WARN] Request took 15432ms: https://registry.npmjs.org/@types%2Fnode
+Progress: resolved 51, reused 0, downloaded 49, added 49
+Progress: resolved 51, reused 0, downloaded 50, added 50
+Progress: resolved 51, reused 0, downloaded 51, added 51, done
+✓ Lockfile passes supply-chain policies (88 entries in 17.4s)
+
+devDependencies:
++ @biomejs/biome 2.5.2
++ @types/node 24.13.2
++ typescript 6.0.3
++ vitest 4.1.9
+
+Done in 17.5s using pnpm v11.12.0
+toolchain: node 24.17.0, pnpm 11.12.0, python 3.12.13, uv 0.11.28
+bootstrap: ready (locked Python and pnpm dependencies installed locally)
+exit_code=0
+$ make bootstrap (idempotence)
+mise trusted /Users/hyunjun/Documents/MUNI/science-workbench
+mise all tools are installed
+Resolved 20 packages in 3ms
+Checked 18 packages in 3ms
+Scope: all 2 workspace projects
+Already up to date
+Done in 32ms using pnpm v11.12.0
+toolchain: node 24.17.0, pnpm 11.12.0, python 3.12.13, uv 0.11.28
+bootstrap: ready (locked Python and pnpm dependencies installed locally)
+idempotent_exit_code=0

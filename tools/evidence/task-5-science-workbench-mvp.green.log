@@ -1,0 +1,46 @@
+$ make test-protocol-contracts
+Python: 194 passed in 0.18s
+TypeScript: 1 file passed, 10 tests passed
+Ruff: All checks passed
+basedpyright: 0 errors, 0 warnings, 0 notes
+Biome: Checked 8 files, no fixes required
+TypeScript: tsc -p packages/contracts/tsconfig.json, exit 0
+exit_code=0
+
+$ make test-boundaries
+Boundary: 14 tests passed; 229 files checked
+exit_code=0
+
+$ make verify-spec
+Spec: 10 tests passed; v0.4, 81 IDs, 12 P0 features
+exit_code=0
+
+$ make verify-architecture
+Architecture: 8 tests passed; 9 decisions, 11 boundaries, 13 High threats
+exit_code=0
+
+$ make test-openapi
+OpenAPI semantic: 8 passed
+Python contracts: 236 passed, 1 failed
+External failure: test_export_manifest_attacks.py::test_rejects_normalized_collision_and_unselected_latest_race
+Scope note: failure is in Task 6 artifact/export validation; Task 5 protocol tests remained green
+exit_code=2
+
+$ manual protocol security driver
+fixture_happy=PASS
+same_snapshot_cas=APPROVAL_REVISION_CONFLICT
+expired_lease=LEASE_EXPIRED
+foreign_context=runtime_correlation
+escaped_key=forbidden
+exit_code=0
+
+$ manual stale attempt completion
+ProtocolTransitionError: STALE_ATTEMPT_TOKEN: 2 -> 1 (status_code=409)
+exit_code=1
+
+fixture_sha256=42837035408bd5a7b47694655fa6b3646193bbf5f5e14774882c081a35adb7ff
+protocol_sources_sha256=5314bfb864876df2856882ce064da2b49229bdabdce3dbb0049a1313c7526391
+
+$ independent security adversarial rerun
+result=PASS
+evidence=foreign continuation IDs, unknown delta Message, punctuated semantic keys, default parity, same-snapshot CAS, and lease fencing all rejected

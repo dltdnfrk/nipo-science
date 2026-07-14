@@ -1,0 +1,25 @@
+=== ulw-g001 pre-sibling baseline 2026-07-13T07:44:41Z ===
+drylab      bcef3c0e1f4cd49d9eda1ef20144743821ae8d2779f7b5dc1f3ce74ac2c36b3a
+ontologylab b77af8b8d6a7e939a4a6eb9109c0f233857537254845bc1e37a11f5ad7b79fc8
+ M ontologylab/HANDOFF.md
+ M ontologylab/README.md
+ M ontologylab/docs/ROADMAP.md
+ M ontologylab/ontologylab/connectors/paper_api.py
+ M ontologylab/ontologylab/engines.py
+ M ontologylab/ontologylab/main.py
+ M ontologylab/ontologylab/mcp_server.py
+ M ontologylab/ontologylab/serve.py
+ M ontologylab/ontologylab/server/app.py
+ M ontologylab/ontologylab/server/routes.py
+ M ontologylab/ontologylab/server/schemas.py
+ M ontologylab/tests/test_paper_api.py
+ M ontologylab/web/app.js
+ M ontologylab/web/index.html
+ M ontologylab/web/style.css
+?? drylab/
+?? ontologylab/ontologylab/expansion.py
+?? ontologylab/ontologylab/server/jobs.py
+?? ontologylab/tests/qa_redteam/
+?? ontologylab/tests/qa_round2/
+?? ontologylab/tests/test_expansion.py
+?? ontologylab/tests/test_server_m8.py

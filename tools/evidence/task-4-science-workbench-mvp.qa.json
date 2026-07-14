@@ -1,0 +1,51 @@
+{
+  "task": 4,
+  "status": "pass",
+  "red": {
+    "command": ".venv/bin/python -m unittest tests.test_openapi_contract -v",
+    "exit_code": 1,
+    "tests": 2,
+    "reason": "OpenAPI contract was not implemented"
+  },
+  "green": {
+    "command": "make test-openapi",
+    "exit_code": 0,
+    "tests": {"openapi_semantic": 8, "pydantic": 4, "zod_vitest": 6},
+    "artifact_sha256": "0d75dd17ae7503f85c1dcae67425013d0967bd92f287f06490feb4d77de1566d"
+  },
+  "tooling": {
+    "typescript": {"version": "6.0.3", "published": "2026-04-16T23:38:27.905Z"},
+    "zod": {"version": "4.4.3", "published": "2026-05-04T07:06:40.819Z"},
+    "vitest": {"version": "4.1.9", "published": "2026-06-15T07:23:00.326Z"},
+    "biome": {"version": "2.5.2", "published": "2026-07-01T10:30:58.351Z"},
+    "node_types": {"version": "24.13.2", "published": "2026-06-10T22:15:29.361Z"},
+    "selection": "newest stable exact version satisfying the active seven-day registry age gate"
+  },
+  "regression": {
+    "command": "make test-boundaries verify-spec verify-architecture",
+    "exit_code": 0,
+    "tests": 27
+  },
+  "bootstrap": {
+    "red": {
+      "command": "make bootstrap && make test-openapi from moved generated dependency roots",
+      "bootstrap_exit_code": 0,
+      "test_openapi_exit_code": 2,
+      "reason": "Pydantic and pnpm dependencies were not installed"
+    },
+    "green": {
+      "first_exit_code": 0,
+      "second_exit_code": 0,
+      "python_packages": 18,
+      "pnpm_packages": 51,
+      "supply_chain_entries": 88,
+      "symlink_guard_exit_code": 2
+    },
+    "pnpm_lock_sha256": "bb8f1a523b746c8046c60f0bad3f959699b623cbde9cc2fdfdb40bbc0319f9fe",
+    "uv_lock_sha256": "ee9003d9ba1ef2dd721b414e3c198a05840b8a764323a1f5ec0c304529a2b44a"
+  },
+  "manual_cli": {
+    "happy": {"exit_code": 0, "result": "openapi-contract: PASS (32 paths)"},
+    "malformed": {"input": "/dev/null", "exit_code": 2, "result": "json_invalid"}
+  }
+}

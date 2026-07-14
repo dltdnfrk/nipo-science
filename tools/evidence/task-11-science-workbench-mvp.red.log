@@ -1,0 +1,6 @@
+TASK=11 immutable Artifact Versions, CAS, lineage, Output Watcher, downloads
+RESULT=EXPECTED_FAIL
+COMMAND=PYTHONPATH=. PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest tests/artifacts -q
+OBSERVED=2 collection errors
+CAUSE=ModuleNotFoundError: services.api.artifacts
+RED_CONTRACT=V1 to V2 immutability, stale base, lineage, unique Session links, watcher forgery, tenant object keys, checksum, signed download expiry/archive

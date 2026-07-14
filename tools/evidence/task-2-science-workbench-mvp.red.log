@@ -1,0 +1,7 @@
+command: make verify-spec
+exit_code: 2
+result: FAILED (errors=1)
+tests_run: 1
+reason: ModuleNotFoundError: No module named 'tools.verify_spec'
+failing_test: test_verify_spec (unittest.loader._FailedTest.test_verify_spec)
+phase: RED before verifier, manifest, or SPEC implementation

@@ -1,0 +1,318 @@
+{
+  "contract_version": "1.0.0",
+  "org_id": "018f47a0-7b9c-7a01-8def-0123456789ab",
+  "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+  "source_run_id": "018f47a0-7b9c-7a02-8def-0123456789ab",
+  "scientific_inputs": [
+    {
+      "artifact_version_id": "018f47a0-7b9c-7a10-8def-0123456789ab",
+      "kind": "spectrum",
+      "units": [{"quantity": "wavelength", "ucum_code": "nm"}],
+      "calibration": {
+        "method": "reference-standard",
+        "reference": "calibration-panel-v2",
+        "calibrated_at": "2026-07-13T10:00:00Z",
+        "calibration_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "context": {
+        "purpose": "research_only",
+        "subject_scope": "non_clinical",
+        "description": "Bench probe anomaly characterization"
+      }
+    }
+  ],
+  "action_plan": {
+    "action_plan_id": "018f47a0-7b9c-7a30-8def-0123456789ab",
+    "version": 1,
+    "digest_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+    "approval_id": "018f47a0-7b9c-7a31-8def-0123456789ab",
+    "approved_at": "2026-07-13T10:01:00Z",
+    "immutable": true
+  },
+  "executions": [
+    {
+      "execution_id": "018f47a0-7b9c-7a32-8def-0123456789ab",
+      "action_plan_id": "018f47a0-7b9c-7a30-8def-0123456789ab",
+      "approval_id": "018f47a0-7b9c-7a31-8def-0123456789ab",
+      "status": "completed",
+      "execution_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "artifact_versions": [
+    {
+      "id": "018f47a0-7b9c-7a10-8def-0123456789ab",
+      "org_id": "018f47a0-7b9c-7a01-8def-0123456789ab",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "artifact_id": "018f47a0-7b9c-7a20-8def-0123456789ab",
+      "version": 1,
+      "content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "size_bytes": 128,
+      "media_type": "text/csv",
+      "producing_execution_id": "018f47a0-7b9c-7a32-8def-0123456789ab",
+      "environment_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "input_version_ids": [],
+      "code_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "runtime_adapter_id": "openai_codex",
+      "runtime_connection_id": "018f47a0-7b9c-7a33-8def-0123456789ab",
+      "skill_content_hashes": [],
+      "source_hashes": [],
+      "immutable": true,
+      "created_at": "2026-07-13T10:00:00Z"
+    },
+    {
+      "id": "018f47a0-7b9c-7a11-8def-0123456789ab",
+      "org_id": "018f47a0-7b9c-7a01-8def-0123456789ab",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "artifact_id": "018f47a0-7b9c-7a21-8def-0123456789ab",
+      "version": 1,
+      "content_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "size_bytes": 256,
+      "media_type": "text/csv",
+      "producing_execution_id": "018f47a0-7b9c-7a32-8def-0123456789ab",
+      "environment_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "input_version_ids": ["018f47a0-7b9c-7a10-8def-0123456789ab"],
+      "code_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "runtime_adapter_id": "openai_codex",
+      "runtime_connection_id": "018f47a0-7b9c-7a33-8def-0123456789ab",
+      "skill_content_hashes": ["7777777777777777777777777777777777777777777777777777777777777777", "8888888888888888888888888888888888888888888888888888888888888888", "9999999999999999999999999999999999999999999999999999999999999999"],
+      "source_hashes": [],
+      "immutable": true,
+      "created_at": "2026-07-13T10:02:00Z"
+    },
+    {
+      "id": "018f47a0-7b9c-7a12-8def-0123456789ab",
+      "org_id": "018f47a0-7b9c-7a01-8def-0123456789ab",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "artifact_id": "018f47a0-7b9c-7a22-8def-0123456789ab",
+      "version": 1,
+      "content_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "size_bytes": 512,
+      "media_type": "image/png",
+      "producing_execution_id": "018f47a0-7b9c-7a32-8def-0123456789ab",
+      "environment_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "input_version_ids": ["018f47a0-7b9c-7a10-8def-0123456789ab"],
+      "code_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "runtime_adapter_id": "openai_codex",
+      "runtime_connection_id": "018f47a0-7b9c-7a33-8def-0123456789ab",
+      "skill_content_hashes": ["7777777777777777777777777777777777777777777777777777777777777777", "8888888888888888888888888888888888888888888888888888888888888888", "9999999999999999999999999999999999999999999999999999999999999999"],
+      "source_hashes": [],
+      "immutable": true,
+      "created_at": "2026-07-13T10:02:00Z"
+    },
+    {
+      "id": "018f47a0-7b9c-7a13-8def-0123456789ab",
+      "org_id": "018f47a0-7b9c-7a01-8def-0123456789ab",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "artifact_id": "018f47a0-7b9c-7a23-8def-0123456789ab",
+      "version": 1,
+      "content_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "size_bytes": 384,
+      "media_type": "text/markdown",
+      "producing_execution_id": "018f47a0-7b9c-7a32-8def-0123456789ab",
+      "environment_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "input_version_ids": ["018f47a0-7b9c-7a10-8def-0123456789ab"],
+      "code_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "runtime_adapter_id": "openai_codex",
+      "runtime_connection_id": "018f47a0-7b9c-7a33-8def-0123456789ab",
+      "skill_content_hashes": ["7777777777777777777777777777777777777777777777777777777777777777", "8888888888888888888888888888888888888888888888888888888888888888", "9999999999999999999999999999999999999999999999999999999999999999"],
+      "source_hashes": [],
+      "immutable": true,
+      "created_at": "2026-07-13T10:02:00Z"
+    },
+    {
+      "id": "018f47a0-7b9c-7a14-8def-0123456789ab",
+      "org_id": "018f47a0-7b9c-7a01-8def-0123456789ab",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "artifact_id": "018f47a0-7b9c-7a24-8def-0123456789ab",
+      "version": 1,
+      "content_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "size_bytes": 640,
+      "media_type": "application/json",
+      "producing_execution_id": "018f47a0-7b9c-7a32-8def-0123456789ab",
+      "environment_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "input_version_ids": ["018f47a0-7b9c-7a10-8def-0123456789ab"],
+      "code_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "runtime_adapter_id": "openai_codex",
+      "runtime_connection_id": "018f47a0-7b9c-7a33-8def-0123456789ab",
+      "skill_content_hashes": ["7777777777777777777777777777777777777777777777777777777777777777", "8888888888888888888888888888888888888888888888888888888888888888", "9999999999999999999999999999999999999999999999999999999999999999"],
+      "source_hashes": [],
+      "immutable": true,
+      "created_at": "2026-07-13T10:02:00Z"
+    },
+    {
+      "id": "018f47a0-7b9c-7a15-8def-0123456789ab",
+      "org_id": "018f47a0-7b9c-7a01-8def-0123456789ab",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "artifact_id": "018f47a0-7b9c-7a25-8def-0123456789ab",
+      "version": 1,
+      "content_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "size_bytes": 512,
+      "media_type": "text/csv",
+      "producing_execution_id": "018f47a0-7b9c-7a32-8def-0123456789ab",
+      "environment_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "input_version_ids": ["018f47a0-7b9c-7a10-8def-0123456789ab"],
+      "code_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "runtime_adapter_id": "openai_codex",
+      "runtime_connection_id": "018f47a0-7b9c-7a33-8def-0123456789ab",
+      "skill_content_hashes": ["7777777777777777777777777777777777777777777777777777777777777777", "8888888888888888888888888888888888888888888888888888888888888888", "9999999999999999999999999999999999999999999999999999999999999999"],
+      "source_hashes": [],
+      "immutable": true,
+      "created_at": "2026-07-13T10:02:00Z"
+    }
+  ],
+  "outputs": {
+    "normalized_csv_version_id": "018f47a0-7b9c-7a11-8def-0123456789ab",
+    "figure_png_version_id": "018f47a0-7b9c-7a12-8def-0123456789ab",
+    "analysis_markdown_version_id": "018f47a0-7b9c-7a13-8def-0123456789ab",
+    "ledger_json_version_id": "018f47a0-7b9c-7a14-8def-0123456789ab",
+    "ledger_csv_version_id": "018f47a0-7b9c-7a15-8def-0123456789ab"
+  },
+  "analysis_scope": {
+    "hypothesis_classes": ["molecular", "optical", "experimental_artifact"],
+    "conclusion_scope": "non_diagnostic"
+  },
+  "ledger": {
+    "columns": ["claim_id", "claim_text", "evidence_kind", "source_id", "artifact_version_id", "execution_id", "supporting_sha256", "locator", "retrieved_at"],
+    "rows": [
+      {
+        "claim_id": "GS04-C1",
+        "claim_text": "Observed intensity deviation is present in the normalized output.",
+        "evidence_kind": "execution_output",
+        "source_id": "execution:018f47a0-7b9c-7a32-8def-0123456789ab",
+        "artifact_version_id": "018f47a0-7b9c-7a11-8def-0123456789ab",
+        "execution_id": "018f47a0-7b9c-7a32-8def-0123456789ab",
+        "supporting_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "locator": "row=2,column=intensity",
+        "retrieved_at": "2026-07-13T10:02:00Z"
+      }
+    ],
+    "json_artifact_version_id": "018f47a0-7b9c-7a14-8def-0123456789ab",
+    "csv_artifact_version_id": "018f47a0-7b9c-7a15-8def-0123456789ab"
+  },
+  "provenance": {
+    "source_run_id": "018f47a0-7b9c-7a02-8def-0123456789ab",
+    "action_plan_sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+    "code_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "environment_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "runtime_adapter_id": "openai_codex",
+    "runtime_connection_id": "018f47a0-7b9c-7a33-8def-0123456789ab",
+    "input_hashes": [
+      {"ref_id": "018f47a0-7b9c-7a10-8def-0123456789ab", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      {"ref_id": "calibration:018f47a0-7b9c-7a10-8def-0123456789ab", "sha256": "5555555555555555555555555555555555555555555555555555555555555555"}
+    ],
+    "execution_hashes": [{"ref_id": "018f47a0-7b9c-7a32-8def-0123456789ab", "sha256": "3333333333333333333333333333333333333333333333333333333333333333"}],
+    "output_hashes": [
+      {"ref_id": "018f47a0-7b9c-7a11-8def-0123456789ab", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+      {"ref_id": "018f47a0-7b9c-7a12-8def-0123456789ab", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
+      {"ref_id": "018f47a0-7b9c-7a13-8def-0123456789ab", "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"},
+      {"ref_id": "018f47a0-7b9c-7a14-8def-0123456789ab", "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"},
+      {"ref_id": "018f47a0-7b9c-7a15-8def-0123456789ab", "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
+    ],
+    "skill_hashes": [
+      {"ref_id": "literature-review@1.0.0", "sha256": "7777777777777777777777777777777777777777777777777777777777777777"},
+      {"ref_id": "source-attribution@1.0.0", "sha256": "8888888888888888888888888888888888888888888888888888888888888888"},
+      {"ref_id": "probe-diagnostic@1.0.0", "sha256": "9999999999999999999999999999999999999999999999999999999999999999"}
+    ],
+    "source_hashes": [],
+    "manifest_sha256": "23574897dc448a252838e01001c18eea5c87414e073f476d2cdc4bc518d5c157"
+  },
+  "review": {
+    "id": "018f47a0-7b9c-7a40-8def-0123456789ab",
+    "revision": 1,
+    "run_id": "018f47a0-7b9c-7a41-8def-0123456789ab",
+    "source_run_id": "018f47a0-7b9c-7a02-8def-0123456789ab",
+    "status": "completed",
+    "pinned_artifact_version_ids": [
+      "018f47a0-7b9c-7a11-8def-0123456789ab",
+      "018f47a0-7b9c-7a12-8def-0123456789ab",
+      "018f47a0-7b9c-7a13-8def-0123456789ab",
+      "018f47a0-7b9c-7a14-8def-0123456789ab",
+      "018f47a0-7b9c-7a15-8def-0123456789ab"
+    ],
+    "pinned_execution_ids": ["018f47a0-7b9c-7a32-8def-0123456789ab"],
+    "pinned_input_sha256": "23574897dc448a252838e01001c18eea5c87414e073f476d2cdc4bc518d5c157",
+    "reviewer_capabilities": {
+      "runner": false,
+      "python": false,
+      "bash": false,
+      "connector": false,
+      "network": false,
+      "artifact_write": false,
+      "tool_execute": false,
+      "version_update": false,
+      "reexecution": false
+    },
+    "submission": {
+      "submission_id": "018f47a0-7b9c-7a42-8def-0123456789ab",
+      "exactly_once": true,
+      "submitted_at": "2026-07-13T10:03:00Z",
+      "findings": [
+        {
+          "id": "018f47a0-7b9c-7a43-8def-0123456789ab",
+          "rule_id": "RV05",
+          "verdict": "pass",
+          "status": "open",
+          "artifact_version_ids": ["018f47a0-7b9c-7a13-8def-0123456789ab"],
+          "execution_ids": ["018f47a0-7b9c-7a32-8def-0123456789ab"],
+          "message": "Molecular, optical, and experimental-artifact hypotheses remain non-diagnostic."
+        }
+      ]
+    },
+    "created_at": "2026-07-13T10:03:00Z"
+  },
+  "skills": [
+    {
+      "id": "literature-review",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "run_id": "018f47a0-7b9c-7a02-8def-0123456789ab",
+      "version": "1.0.0",
+      "content_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+      "kernel_sha256": null,
+      "needs": {"tools": ["connector.search"], "connectors": ["pubmed", "openalex"], "network_hosts": ["pubmed.ncbi.nlm.nih.gov", "api.openalex.org"], "secret_names": [], "kernel": false}
+    },
+    {
+      "id": "source-attribution",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "run_id": "018f47a0-7b9c-7a02-8def-0123456789ab",
+      "version": "1.0.0",
+      "content_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+      "kernel_sha256": null,
+      "needs": {"tools": ["connector.resolve"], "connectors": ["pubmed", "openalex"], "network_hosts": ["pubmed.ncbi.nlm.nih.gov", "api.openalex.org"], "secret_names": [], "kernel": false}
+    },
+    {
+      "id": "probe-diagnostic",
+      "project_id": "018f47a0-7b9c-7a03-8def-0123456789ab",
+      "run_id": "018f47a0-7b9c-7a02-8def-0123456789ab",
+      "version": "1.0.0",
+      "content_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "kernel_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "needs": {"tools": ["python.execute"], "connectors": [], "network_hosts": [], "secret_names": [], "kernel": true}
+    }
+  ],
+  "export": {
+    "id": "018f47a0-7b9c-7a50-8def-0123456789ab",
+    "source_run_id": "018f47a0-7b9c-7a02-8def-0123456789ab",
+    "review_id": "018f47a0-7b9c-7a40-8def-0123456789ab",
+    "selected_artifact_version_ids": [
+      "018f47a0-7b9c-7a11-8def-0123456789ab",
+      "018f47a0-7b9c-7a12-8def-0123456789ab",
+      "018f47a0-7b9c-7a13-8def-0123456789ab",
+      "018f47a0-7b9c-7a14-8def-0123456789ab",
+      "018f47a0-7b9c-7a15-8def-0123456789ab"
+    ],
+    "artifact_entries": [
+      {"path": "artifacts/normalized.csv", "artifact_version_id": "018f47a0-7b9c-7a11-8def-0123456789ab", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "media_type": "text/csv", "entry_kind": "file"},
+      {"path": "artifacts/figure.png", "artifact_version_id": "018f47a0-7b9c-7a12-8def-0123456789ab", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "media_type": "image/png", "entry_kind": "file"},
+      {"path": "artifacts/analysis.md", "artifact_version_id": "018f47a0-7b9c-7a13-8def-0123456789ab", "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "media_type": "text/markdown", "entry_kind": "file"},
+      {"path": "artifacts/ledger.json", "artifact_version_id": "018f47a0-7b9c-7a14-8def-0123456789ab", "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "media_type": "application/json", "entry_kind": "file"},
+      {"path": "artifacts/ledger.csv", "artifact_version_id": "018f47a0-7b9c-7a15-8def-0123456789ab", "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "media_type": "text/csv", "entry_kind": "file"}
+    ],
+    "manifest_path": "manifest.json",
+    "checksums_path": "checksums.sha256",
+    "provenance_path": "provenance/manifest.json",
+    "action_plan_path": "provenance/action-plan.json",
+    "review_path": "review/review.json",
+    "created_at": "2026-07-13T10:04:00Z"
+  },
+  "completed_at": "2026-07-13T10:04:00Z"
+}

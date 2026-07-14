@@ -1,0 +1,44 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 7 items / 6 deselected / 1 selected
+
+tests/local_stack/test_config.py::test_config_ignores_container_runtime_environment FAILED [100%]
+
+=================================== FAILURES ===================================
+______________ test_config_ignores_container_runtime_environment _______________
+
+    def test_config_ignores_container_runtime_environment() -> None:
+        # Given: valid app settings mixed with base-image runtime variables.
+        raw = _valid_env() | {"PATH": "/usr/local/bin", "HOSTNAME": "container-id"}
+    
+        # When: only the owned configuration namespace crosses the boundary.
+>       config = LocalConfig.from_env(raw)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_config.py:72: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'services.local.config.LocalConfig'>
+env = {'APP_ORIGIN': 'http://localhost:3000', 'ARTIFACT_ORIGIN': 'http://localhost:9000', 'COOKIE_DOMAIN': '', 'OBJECT_STORE_DRIVER': 's3', ...}
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str]) -> Self:
+        """Parse local service configuration from an environment mapping."""
+>       return cls.model_validate(env)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 2 validation errors for LocalConfig
+E       PATH
+E         Extra inputs are not permitted [type=extra_forbidden, input_value='/usr/local/bin', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+E       HOSTNAME
+E         Extra inputs are not permitted [type=extra_forbidden, input_value='container-id', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+
+services/local/config.py:80: ValidationError
+=========================== short test summary info ============================
+FAILED tests/local_stack/test_config.py::test_config_ignores_container_runtime_environment
+======================= 1 failed, 6 deselected in 0.05s ========================

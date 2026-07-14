@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "risk_method": "qualitative pre-control severity; release accepts no untested High item",
+  "threats": [
+    {
+      "id": "T01", "name": "tenant-escape", "severity": "High", "owner": "tenant-security",
+      "controls": ["server-derived-org-id", "postgres-rls-and-composite-tenant-fks", "tenant-scoped-queue-cache-object-keys", "cross-tenant-404"],
+      "executable_test": "make test-security CASE=tenant-escape", "evidence_path": "tools/evidence/security/T01-tenant-escape.json"
+    },
+    {
+      "id": "T02", "name": "oauth-token-theft", "severity": "High", "owner": "runtime-security",
+      "controls": [
+        "kms-encrypted-per-user-runtime-home",
+        "refresh-token-never-enters-provider-runtime-process",
+        "broker-only-provider-egress",
+        "token-pattern-redaction-and-canary-scan",
+        "wipe-on-disconnect-or-reauth-failure"
+      ],
+      "executable_test": "make test-security CASE=oauth-token-theft", "evidence_path": "tools/evidence/security/T02-oauth-token-theft.json"
+    },
+    {
+      "id": "T03", "name": "provider-built-in-tool-bypass", "severity": "High", "owner": "runtime-platform",
+      "controls": ["disable-shell-web-search-mcp-plugins-worktrees", "startup-and-per-run-capability-probes", "application-sole-tool-executor", "fail-closed-on-unknown-event"],
+      "executable_test": "make test-security CASE=provider-tool-bypass", "evidence_path": "tools/evidence/security/T03-provider-tool-bypass.json"
+    },
+    {
+      "id": "T04", "name": "provider-vendor-compromise", "severity": "High", "owner": "supply-chain-security",
+      "controls": ["pinned-approved-runtime-binary", "signature-sbom-and-vulnerability-admission", "provider-only-egress", "no-tenant-or-control-plane-credential", "live-cleanup-conformance"],
+      "executable_test": "make test-security CASE=vendor-runtime-compromise", "evidence_path": "tools/evidence/security/T04-vendor-runtime-compromise.json"
+    },
+    {
+      "id": "T05", "name": "prompt-injection", "severity": "High", "owner": "agent-security",
+      "controls": ["tool-output-and-files-treated-as-data", "typed-action-proposals", "policy-evaluated-outside-model", "secret-and-network-scope-never-model-selected"],
+      "executable_test": "make test-security CASE=prompt-injection", "evidence_path": "tools/evidence/security/T05-prompt-injection.json"
+    },
+    {
+      "id": "T06", "name": "ssrf", "severity": "High", "owner": "connector-security",
+      "controls": ["registry-fixed-https-host-method-path", "dns-ip-validation-on-connect-and-redirect", "block-private-linklocal-loopback-metadata", "origin-change-strips-auth-and-needs-new-approval"],
+      "executable_test": "make test-security CASE=ssrf", "evidence_path": "tools/evidence/security/T06-ssrf.json"
+    },
+    {
+      "id": "T07", "name": "malicious-files-and-archives", "severity": "High", "owner": "ingestion-security",
+      "controls": ["archives-rejected-in-p0", "size-mime-magic-extension-validation", "malware-scan-before-read", "normalized-name-no-symlink-or-traversal", "active-content-isolated-or-downloaded"],
+      "executable_test": "make test-upload", "evidence_path": "tools/evidence/task-10-science-workbench-mvp.qa.json"
+    },
+    {
+      "id": "T08", "name": "sandbox-escape", "severity": "High", "owner": "runner-security",
+      "controls": ["gvisor-separate-node-pool", "nonroot-readonly-drop-capabilities", "default-deny-egress", "no-hostpath-runtime-socket-service-token", "resource-quotas-and-image-admission", "local-gke-denial-outcome-parity"],
+      "executable_test": "make test-security CASE=sandbox-escape", "evidence_path": "tools/evidence/security/T08-sandbox-escape.json"
+    },
+    {
+      "id": "T09", "name": "stale-workers-and-lease-fencing", "severity": "High", "owner": "orchestration-platform",
+      "controls": ["15s-heartbeat-45s-lease", "monotonic-attempt-token", "fenced-completion-transaction", "kernel-loss-fails-without-side-effect-replay"],
+      "executable_test": "make test-security CASE=lease-fencing", "evidence_path": "tools/evidence/security/T09-lease-fencing.json"
+    },
+    {
+      "id": "T10", "name": "approval-replay", "severity": "High", "owner": "tool-policy",
+      "controls": ["digest-binds-org-run-requester-tool-args-scopes-expiry", "single-consume-in-execution-start-transaction", "cross-tenant-and-expired-digest-rejected"],
+      "executable_test": "make test-security CASE=approval-replay", "evidence_path": "tools/evidence/security/T10-approval-replay.json"
+    },
+    {
+      "id": "T11", "name": "export-traversal", "severity": "High", "owner": "artifact-platform",
+      "controls": ["server-generated-normalized-unique-paths", "reject-absolute-dotdot-symlink-and-collision", "pinned-authorized-version-selection", "single-object-short-lived-download"],
+      "executable_test": "make test-security CASE=export-traversal", "evidence_path": "tools/evidence/security/T11-export-traversal.json"
+    },
+    {
+      "id": "T12", "name": "deletion-and-backup-resurrection", "severity": "High", "owner": "data-governance",
+      "controls": ["immediate-tombstone", "per-system-deletion-receipts", "restore-reapplies-tombstones-before-access", "backup-and-provider-copy-expiry-tracked", "legal-hold-is-append-only-and-separated"],
+      "executable_test": "make test-security CASE=deletion-resurrection", "evidence_path": "tools/evidence/security/T12-deletion-resurrection.json"
+    },
+    {
+      "id": "T13", "name": "dependency-and-supply-chain-compromise", "severity": "High", "owner": "supply-chain-security",
+      "controls": ["lockfiles-and-digest-pinned-images", "signature-sbom-vulnerability-and-license-gates", "trusted-build-provenance", "runtime-updaters-disabled", "release-binary-allowlist"],
+      "executable_test": "make test-security CASE=supply-chain", "evidence_path": "tools/evidence/security/T13-supply-chain.json"
+    }
+  ]
+}

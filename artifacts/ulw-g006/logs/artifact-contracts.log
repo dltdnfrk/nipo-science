@@ -1,0 +1,97 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 68 items
+
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_round_trips_shared_gs04_input_to_reviewed_export_chain PASSED [  1%]
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_exposes_compatible_json_schema_and_required_ledger_columns PASSED [  2%]
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_rejects_tampered_provenance_pin["ref_id": "018f47a0-7b9c-7a10-8def-0123456789ab", "sha256": "aaaa-"ref_id": "018f47a0-7b9c-7a10-8def-0123456789ab", "sha256": "baaa] PASSED [  4%]
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_rejects_tampered_provenance_pin["ref_id": "018f47a0-7b9c-7a32-8def-0123456789ab", "sha256": "3333-"ref_id": "018f47a0-7b9c-7a32-8def-0123456789ab", "sha256": "4333] PASSED [  5%]
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_rejects_tampered_provenance_pin["ref_id": "literature-review@1.0.0", "sha256": "7777-"ref_id": "literature-review@1.0.0", "sha256": "6777] PASSED [  7%]
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_rejects_tampered_provenance_pin["supporting_sha256": "bbbb-"supporting_sha256": "abbb] PASSED [  8%]
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_rejects_tampered_provenance_pin["runtime_adapter_id": "openai_codex",\n    "runtime_connection_id"-"runtime_adapter_id": "changed",\n    "runtime_connection_id"] PASSED [ 10%]
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_rejects_mutable_duplicate_or_coercive_artifact_version PASSED [ 11%]
+packages/contracts/python/tests/test_scientific_artifact_contracts.py::test_rejects_reviewer_capability_findings_replay_and_invalid_skill PASSED [ 13%]
+packages/contracts/python/tests/test_artifact_cas_export.py::test_applies_attach_and_detach_with_compare_and_swap PASSED [ 14%]
+packages/contracts/python/tests/test_artifact_cas_export.py::test_rejects_stale_compare_and_swap_without_state_change PASSED [ 16%]
+packages/contracts/python/tests/test_artifact_cas_export.py::test_rejects_duplicate_attachment_and_missing_attach_detach_targets PASSED [ 17%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_creates_monotonic_artifact_version_and_rejects_stale_base PASSED [ 19%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_rejects_cross_org_same_id_and_backdated_successor PASSED [ 20%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_submits_review_findings_once_and_rejects_duplicate PASSED [ 22%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_authoritative_store_serializes_competing_pending_submissions PASSED [ 23%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_requires_actor_and_reason_for_audited_finding_dispositions PASSED [ 25%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_accepts_execution_only_review_pins_and_rejects_empty_pins PASSED [ 26%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_rejects_duplicate_or_unpinned_finding_evidence PASSED [ 27%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_appends_checksumming_resolution_events_under_revision_cas PASSED [ 29%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_resolution_store_distinguishes_replay_invalid_stale_and_lineage PASSED [ 30%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_resolution_store_serializes_concurrent_correction_append PASSED [ 32%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_artifact_target_enforces_nested_openapi_review_compatibility PASSED [ 33%]
+packages/contracts/python/tests/test_artifact_version_review_transitions.py::test_rejects_submission_before_completion_and_exposes_no_execution_api PASSED [ 35%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/normalized.csv"-"path":"../escape"] PASSED [ 36%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/normalized.csv"-"path":"/absolute.csv"] PASSED [ 38%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["entry_kind":"file"-"entry_kind":"symlink"] PASSED [ 39%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/normalized.csv"-"path":"manifest.json"] PASSED [ 41%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/normalized.csv"-"path":"manifest.json/evil"] PASSED [ 42%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/normalized.csv"-"path":"provenance"] PASSED [ 44%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/normalized.csv"-"path":"review"] PASSED [ 45%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/normalized.csv"-"path":"CON.txt"] PASSED [ 47%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/normalized.csv"-"path":"manifest.json."] PASSED [ 48%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unsafe_export_entries["path":"artifacts/figure.png"-"path":"artifacts/normalized.csv/child"] PASSED [ 50%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_normalized_collision_and_unselected_latest_race PASSED [ 51%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_unreviewed_extra_export_and_aliased_required_output PASSED [ 52%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_detached_export_proof_rejects_payload_and_metadata_tampering PASSED [ 54%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_final_export_requires_exact_contract_detached_proof PASSED [ 55%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_final_export_composes_review_and_correction_chain_validation PASSED [ 57%]
+packages/contracts/python/tests/test_export_manifest_attacks.py::test_export_envelope_is_self_contained_and_rejects_archive_attacks PASSED [ 58%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_matches_shared_python_and_typescript_canonical_provenance_digest PASSED [ 60%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_coordinated_provenance_mutation_with_stale_digest[code] PASSED [ 61%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_coordinated_provenance_mutation_with_stale_digest[environment] PASSED [ 63%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_coordinated_provenance_mutation_with_stale_digest[source] PASSED [ 64%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_coordinated_provenance_mutation_with_stale_digest[input] PASSED [ 66%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_coordinated_provenance_mutation_with_stale_digest[execution] PASSED [ 67%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_coordinated_provenance_mutation_with_stale_digest[skill] PASSED [ 69%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_coordinated_provenance_mutation_with_stale_digest[runtime] PASSED [ 70%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_coordinated_provenance_mutation_with_stale_digest[output] PASSED [ 72%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_rehashed_coordinated_provenance_mutation_at_review_pin[code] PASSED [ 73%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_rehashed_coordinated_provenance_mutation_at_review_pin[environment] PASSED [ 75%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_rehashed_coordinated_provenance_mutation_at_review_pin[source] PASSED [ 76%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_rehashed_coordinated_provenance_mutation_at_review_pin[input] PASSED [ 77%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_rehashed_coordinated_provenance_mutation_at_review_pin[execution] PASSED [ 79%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_rehashed_coordinated_provenance_mutation_at_review_pin[skill] PASSED [ 80%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_rehashed_coordinated_provenance_mutation_at_review_pin[runtime] PASSED [ 82%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_rehashed_coordinated_provenance_mutation_at_review_pin[output] PASSED [ 83%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_incomplete_or_extra_exact_provenance_set["input_version_ids": ["018f47a0-7b9c-7a10-8def-0123456789ab"]-"input_version_ids": []] PASSED [ 85%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_incomplete_or_extra_exact_provenance_set["skill_content_hashes": ["7777777777777777777777777777777777777777777777777777777777777777", "8888888888888888888888888888888888888888888888888888888888888888", "9999999999999999999999999999999999999999999999999999999999999999"]-"skill_content_hashes": []] PASSED [ 86%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_incomplete_or_extra_exact_provenance_set["source_hashes": []-"source_hashes": ["6666666666666666666666666666666666666666666666666666666666666666"]] PASSED [ 88%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_incomplete_or_extra_exact_provenance_set["input_version_ids": ["018f47a0-7b9c-7a10-8def-0123456789ab"]-"input_version_ids": ["018f47a0-7b9c-7a11-8def-0123456789ab"]] PASSED [ 89%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_duplicate_provenance_ref_ids PASSED [ 91%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_output_skill_hash_subset_and_extra_input_dependency PASSED [ 92%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_unapproved_review_execution_pin PASSED [ 94%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_duplicate_aggregate_members_and_unrelated_pins PASSED [ 95%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_output_tenant_binding_mutation["org_id": "018f47a0-7b9c-7a01-8def-0123456789ab"-"org_id": "018f47a0-7b9c-7aff-8def-0123456789ab"] PASSED [ 97%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_output_tenant_binding_mutation["project_id": "018f47a0-7b9c-7a03-8def-0123456789ab"-"project_id": "018f47a0-7b9c-7aff-8def-0123456789ab"] PASSED [ 98%]
+packages/contracts/python/tests/test_dry_lab_integrity_attacks.py::test_rejects_review_run_aliasing_source_run PASSED [100%]
+
+============================== 68 passed in 0.18s ==============================
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.9 [39m[90m/Users/hyunjun/Documents/MUNI/science-workbench[39m
+
+ [32m✓[39m packages/contracts/tests/review-findings-cas.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/contracts/tests/artifact-cas-export.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m packages/contracts/tests/export-manifest-attacks.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m packages/contracts/tests/scientific-artifact-contracts.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m packages/contracts/tests/dry-lab-integrity-attacks.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m57 passed[39m[22m[90m (57)[39m
+[2m   Start at [22m 17:51:00
+[2m   Duration [22m 199ms[2m (transform 181ms, setup 0ms, import 412ms, tests 82ms, environment 0ms)[22m
+
+All checks passed!
+$ biome check packages/contracts
+Checked 36 files in 9ms. No fixes applied.
+0 errors, 0 warnings, 0 notes
+$ tsc -p packages/contracts/tsconfig.json

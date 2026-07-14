@@ -1,0 +1,12 @@
+command: PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.13 -m unittest science-workbench/tests/test_boundaries.py -v && PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.13 science-workbench/tools/check_boundaries.py science-workbench
+exit_code: 0
+result: OK
+tests_run: 14
+duration: 0.360s
+project_scan: boundary-check: PASS (219 files checked)
+detected_cases:
+- Path variable plus concatenated sibling plus write_text
+- Path joinpath plus resolve plus generic parent path plus write_bytes
+- Path variable plus concatenated sibling plus open write mode
+- shell variable plus sibling path plus redirect
+- chained shell variables plus generic parent path plus redirect

@@ -1,0 +1,51 @@
+{
+  "task": 11,
+  "phase": "review_remediation",
+  "status": "passed",
+  "remediated_findings": {
+    "durability": "PostgreSQL CAS metadata and owner-private filesystem content survive adapter restart",
+    "requester_binding": "Output Watcher and durable execution validation bind org, project, requester, and execution",
+    "project_scope": "composite PostgreSQL keys reject same-org cross-project lineage and Session links",
+    "lineage_immutability": "artifact_dependencies rejects UPDATE and DELETE for the application role and has an immutable trigger",
+    "object_keys": "service and PostgreSQL accept only org/project/SHA-256 content addresses",
+    "watcher_fencing": "opaque claim tokens make release ownership-fenced, finalize idempotent, and commit exceptions retryable",
+    "ambiguous_commit": "canonical lineage order lets uncertain commit reconcile by server Version ID and prevents watcher replay",
+    "blob_compensation": "fsync failure leaves no published blob; metadata and compensation failures normalize through reconciliation and release the claim for a successful retry",
+    "runtime_provenance": "watcher and PostgreSQL reject current-requester, execution, provider-connection, runtime-adapter, and active-Session mismatch",
+    "session_races": "archived Project/Session writes are rejected and concurrent duplicate attach has one stable winner",
+    "downloads": "1ms minimum is not shortened, ten-minute hard cap is never exceeded, redemption locks archive check through blob read, and token segments are canonical unpadded base64url"
+  },
+  "manual_qa": {
+    "archive_redemption": "blocked atomically",
+    "download_expiry": "2026-07-13T06:10:00.123000+00:00",
+    "hard_cap": "bounded to ten minutes",
+    "download_payload": "signal,1",
+    "invalid_ttl": "1500 microseconds rejected",
+    "lineage_count": 1,
+    "restart_payload": "signal,2",
+    "session_link_revision": 1,
+    "version_numbers": [1, 2]
+  },
+  "verification": {
+    "artifact_contracts": "60 Python passed; 57 TypeScript passed",
+    "boundary": "336 final files; sealed CI run checked 320",
+    "ci": {
+      "aggregate_sha256": "96fe22a102cc1dbd415e8fbbdd698d88dbaa5e1b2c01f41c618935840473286a",
+      "executed": 515,
+      "jobs": 18,
+      "raw_hashes_verified": true
+    },
+    "cleanup": {"containers": 0, "networks": 0, "volumes": 0},
+    "focused": "33 passed",
+    "full": "532 passed, 217 subtests passed",
+    "migrations": "15 passed",
+    "no_excuse": "0 violations in 24 files",
+    "pure_loc_max": 248,
+    "rls": "33 passed",
+    "ruff": "passed",
+    "schema": "41 tables, 300 columns",
+    "secret_scan": "258 checks executed",
+    "sbom": "192 locked packages checked",
+    "typecheck": "0 errors, 0 warnings"
+  }
+}

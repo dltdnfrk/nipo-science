@@ -1,0 +1,22 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+  "files": {
+    "includes": [
+      "packages/contracts/**",
+      "!packages/contracts/openapi/**",
+      "!packages/contracts/fixtures/**",
+      "!**/node_modules/**"
+    ]
+  },
+  "formatter": { "enabled": true, "indentStyle": "space", "lineWidth": 100 },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": { "noUnusedImports": "error", "noUnusedVariables": "error" },
+      "style": { "noDefaultExport": "error", "noNonNullAssertion": "error", "useImportType": "error" },
+      "suspicious": { "noExplicitAny": "error" }
+    }
+  },
+  "javascript": { "formatter": { "quoteStyle": "double", "semicolons": "asNeeded" } }
+}

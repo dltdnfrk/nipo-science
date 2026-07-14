@@ -1,0 +1,35 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 23 items
+
+tests/local_stack/test_compose.py::test_compose_defines_every_local_service_with_healthcheck PASSED [  4%]
+tests/local_stack/test_compose.py::test_compose_contains_no_provider_or_cloud_credentials PASSED [  8%]
+tests/local_stack/test_compose.py::test_compose_uses_resolvable_separate_loopback_origins PASSED [ 13%]
+tests/local_stack/test_compose.py::test_anonymous_docker_config_disables_global_credential_helpers PASSED [ 17%]
+tests/local_stack/test_compose.py::test_host_ports_are_isolated_and_overrideable PASSED [ 21%]
+tests/local_stack/test_config.py::test_config_parses_host_only_local_interfaces PASSED [ 26%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[OBJECT_STORE_DRIVER-filesystem] PASSED [ 30%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[MAIL_DRIVER-console] PASSED [ 34%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SERVICE_ROLE-scheduler] PASSED [ 39%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SMTP_PORT-0] PASSED [ 43%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[HOST_IP-192.0.2.1] PASSED [ 47%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[COOKIE_DOMAIN-.localhost] PASSED [ 52%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[COOKIE_DOMAIN-example.test] PASSED [ 56%]
+tests/local_stack/test_config.py::test_config_rejects_shared_application_and_artifact_origin PASSED [ 60%]
+tests/local_stack/test_config.py::test_config_ignores_container_runtime_environment PASSED [ 65%]
+tests/local_stack/test_scanner.py::test_scan_stream_uses_the_task_10_file_limit PASSED [ 69%]
+tests/local_stack/test_scanner.py::test_scan_stream_accepts_only_explicit_clean_response PASSED [ 73%]
+tests/local_stack/test_scanner.py::test_ingestion_uses_local_clam_adapter_before_clean_promotion PASSED [ 78%]
+tests/local_stack/test_scanner.py::test_scan_stream_returns_signature_when_clamd_finds_threat PASSED [ 82%]
+tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_on_protocol_error PASSED [ 86%]
+tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_on_eof_truncated_clean_response PASSED [ 91%]
+tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_when_daemon_is_unavailable PASSED [ 95%]
+tests/local_stack/test_scanner.py::test_scan_stream_rejects_oversize_before_connecting PASSED [100%]
+
+============================== 23 passed in 1.61s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes

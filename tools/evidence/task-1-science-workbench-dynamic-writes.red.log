@@ -1,0 +1,11 @@
+command: PYTHONDONTWRITEBYTECODE=1 /opt/homebrew/bin/python3.13 -m unittest science-workbench/tests/test_boundaries.py -v
+exit_code: 1
+result: FAILED (failures=5)
+tests_run: 14
+duration: 0.359s
+false_negatives:
+- dynamic Path variable plus write_text: checker returned 0
+- joinpath plus resolve plus write_bytes: checker returned 0
+- dynamic Path variable plus open write mode: checker returned 0
+- shell variable plus generic parent redirect: checker returned 0
+- shell variable plus sibling redirect: checker returned 0

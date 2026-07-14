@@ -1,0 +1,49 @@
+$ make test-openapi
+test_accepts_complete_openapi_contract (tests.test_openapi_contract.OpenApiAcceptanceTests.test_accepts_complete_openapi_contract) ... ok
+test_rejects_cross_tenant_403_drift (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_cross_tenant_403_drift) ... ok
+test_rejects_insecure_cookie (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_insecure_cookie) ... ok
+test_rejects_missing_csrf_origin_fetch_metadata (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_csrf_origin_fetch_metadata) ... ok
+test_rejects_missing_idempotency_key (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_idempotency_key) ... ok
+test_rejects_missing_if_match (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_if_match) ... ok
+test_rejects_missing_tenancy_envelope (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_missing_tenancy_envelope) ... ok
+test_rejects_noncanonical_error_response (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_noncanonical_error_response) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 1.114s
+
+OK
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 4 items
+
+packages/contracts/python/tests/test_contract_models.py::test_round_trips_auth_run_artifact_fixture PASSED [ 25%]
+packages/contracts/python/tests/test_contract_models.py::test_rejects_client_supplied_org_id[ProjectCreate] PASSED [ 50%]
+packages/contracts/python/tests/test_contract_models.py::test_rejects_client_supplied_org_id[RunCreate] PASSED [ 75%]
+packages/contracts/python/tests/test_contract_models.py::test_rejects_non_uuidv7_and_non_utc_fixture PASSED [100%]
+
+============================== 4 passed in 0.09s ===============================
+$ vitest run packages/contracts/tests
+
+ RUN  v4.1.9 /Users/hyunjun/Documents/MUNI/science-workbench
+
+
+ Test Files  2 passed (2)
+      Tests  6 passed (6)
+   Start at  01:25:32
+   Duration  118ms (transform 52ms, setup 0ms, import 104ms, tests 10ms, environment 0ms)
+
+All checks passed!
+$ biome check packages/contracts
+Checked 10 files in 2ms. No fixes applied.
+0 errors, 0 warnings, 0 notes
+$ tsc -p packages/contracts/tsconfig.json
+exit_code=0
+artifact_checksums:
+0d75dd17ae7503f85c1dcae67425013d0967bd92f287f06490feb4d77de1566d  packages/contracts/openapi/openapi.json
+6a4c5b780307c65957656b712ae27a1a3162b3ef93cfb5905fc879b718e01632  packages/contracts/fixtures/auth-run-artifact.json
+bb8f1a523b746c8046c60f0bad3f959699b623cbde9cc2fdfdb40bbc0319f9fe  pnpm-lock.yaml
+ee9003d9ba1ef2dd721b414e3c198a05840b8a764323a1f5ec0c304529a2b44a  uv.lock

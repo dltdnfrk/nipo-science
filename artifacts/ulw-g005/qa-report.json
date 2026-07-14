@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 2,
+  "goalId": "G005",
+  "revision": "877e5f33a1b8ed54d8446f0e93e124d30a105c7e",
+  "capturedAtUtc": "2026-07-13T22:23:50.368889Z",
+  "verdict": "human_blocked",
+  "codeAndTestsReady": true,
+  "externalEvidenceReady": false,
+  "sourceScope": {
+    "fileCount": 17,
+    "sha256": "1dbcd9431d903c841d26aba3f510f733ab367e95b010fea4aec2ee968bb04f1b"
+  },
+  "verification": {
+    "integratedG005": {"passed": 327, "exitCode": 0},
+    "contractPackage": {"passed": 332, "exitCode": 0},
+    "platformPackage": {"passed": 321, "exitCode": 0},
+    "ruff": {"errors": 0, "exitCode": 0},
+    "basedpyright": {"errors": 0, "warnings": 0, "exitCode": 0},
+    "fullPython": {
+      "passed": 996,
+      "subtestsPassed": 218,
+      "errors": 2,
+      "exitCode": 1,
+      "classification": "human_blocked",
+      "blocker": "Docker daemon unavailable for the two Postgres-backed integration fixtures"
+    }
+  },
+  "independentReviews": {
+    "export": {
+      "architecture": "agent://201-G005ExportArchitectureFinal2",
+      "architectureVerdict": "CLEAR/APPROVE",
+      "qa": "agent://205-G005ExportQaFinal2",
+      "qaVerdict": "PASS"
+    },
+    "retention": {
+      "architecture": "agent://202-G005RetentionArchitectureFinal2",
+      "architectureVerdict": "WATCH/APPROVE; source ready, external deployment evidence outstanding",
+      "qa": "agent://206-G005RetentionQaFinal2",
+      "qaVerdict": "PASS"
+    },
+    "deployment": {
+      "architecture": "agent://203-G005DeploymentArchitectureFinal2",
+      "architectureVerdict": "CLEAR/APPROVE",
+      "qa": "agent://207-G005DeploymentQaFinal2",
+      "qaVerdict": "PASS"
+    },
+    "recoveryCi": {
+      "architecture": "agent://204-G005RecoveryArchitectureFinal2",
+      "architectureVerdict": "CLEAR/APPROVE",
+      "qa": "agent://208-G005RecoveryQaFinal2",
+      "qaVerdict": "PASS"
+    }
+  },
+  "siblingPreservation": {
+    "drylab": {
+      "fileCount": 44,
+      "expectedSha256": "8866ad048e15e8424b7f5c6b62288f98b605ed33ada3c76fae42580b0984229b",
+      "currentSha256": "8866ad048e15e8424b7f5c6b62288f98b605ed33ada3c76fae42580b0984229b",
+      "equal": true
+    },
+    "ontologylab": {
+      "fileCount": 2867,
+      "recordedSha256": "c28d53a11191c382aff79be3b023b8c8a19011c95705dfd2fea07d7f0f5c5990",
+      "currentSha256": "13b22e8c3b1fa94f7a2d4417e8eeb8df6e46528cfb4b174d03fe98f998c3b17c",
+      "equal": false,
+      "classification": "foreign_work_collision",
+      "action": "Preserved as user/parallel-session work; not reverted or modified by this goal"
+    }
+  },
+  "externalBlockers": [
+    "No authorized staging or production GKE context is configured.",
+    "The required root-owned Linux collector and singleton allowed-signers trust policy are not available on this macOS host.",
+    "No production external contract/challenge/deletion/restore-epoch authority implementations are provisioned for live evidence.",
+    "Docker daemon is unavailable for the Postgres-backed integration gates."
+  ],
+  "evidenceRefs": [
+    "science-workbench/artifacts/ulw-g005/verification.log",
+    "science-workbench/artifacts/ulw-g005/deployment-live-attempt.json"
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "surface": "browser",
+  "tool": "Playwright 1.61.1 with Chrome 149",
+  "actions": [
+    {
+      "type": "goto",
+      "url": "http://127.0.0.1:54311/",
+      "timestamp": "2026-07-13T19:09:24.829Z"
+    },
+    {
+      "type": "click",
+      "selector": "#run-fixture",
+      "timestamp": "2026-07-13T19:09:24.829Z"
+    },
+    {
+      "type": "screenshot",
+      "selector": "main",
+      "timestamp": "2026-07-13T19:09:25.657Z"
+    }
+  ],
+  "assertions": [
+    {
+      "selector": "#fixture-status",
+      "status": "passed",
+      "timestamp": "2026-07-13T19:09:25.657Z"
+    },
+    {
+      "selector": "#fixture-results",
+      "status": "passed",
+      "timestamp": "2026-07-13T19:09:25.657Z"
+    }
+  ],
+  "goalId": "G007",
+  "blockedGoalId": "G002",
+  "browser": "149.0.7827.55",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "startedAt": "2026-07-13T19:09:24.829Z",
+  "finishedAt": "2026-07-13T19:09:25.657Z",
+  "url": "http://127.0.0.1:54311/",
+  "title": "G002 건식 실험 연구용 Fixture",
+  "initialStatus": "준비됨",
+  "finalStatus": "완료: calibrated.csv",
+  "stages": [
+    "업로드 완료",
+    "계획 생성 완료",
+    "승인 완료",
+    "격리 실행 완료",
+    "검토 완료",
+    "내보내기 완료",
+    "정리 완료"
+  ],
+  "expectedStages": [
+    "업로드 완료",
+    "계획 생성 완료",
+    "승인 완료",
+    "격리 실행 완료",
+    "검토 완료",
+    "내보내기 완료",
+    "정리 완료"
+  ],
+  "responses": [
+    {
+      "method": "POST",
+      "path": "/api/fixture/upload",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/fixture/plan",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/fixture/approve",
+      "status": 202
+    },
+    {
+      "method": "POST",
+      "path": "/api/fixture/execute",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/fixture/review",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "path": "/api/fixture/export",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/fixture/cleanup",
+      "status": 200
+    }
+  ],
+  "resultText": "검토: verified; 내보내기: 2ed4bc44cad82ea1c8e44e51e2c0c879b98990285256d84b1bbc3b1e04dfe377; 정리: true\n\nnormalized.csv dca2c0a59b011b4210261efe857f9f41c0a572f11de126620a40dc8fadc9bb4c\npreview.png 6c8c84bf87fd1455d217df73a218de61ed4149a7ec1da3597607ea2a9f696a0c\nreport.md 5338ff9fd0e1bb69e51567eec682e5236de49a964a59bd014b0b2c17180e10ee\nevidence.csv f80e5366742c2c18b7ac00687d89d9ce1555d8e4e2c710aa9f49ac33b79d3e8a\nprovenance.json f2928874810642217cc8f987fef4707e7f72731132fcc4a22384a939a588574c",
+  "consoleEvents": [],
+  "pageErrors": [],
+  "requestFailures": [],
+  "screenshot": {
+    "path": "artifacts/ulw-g002/browser-journey-1280.png",
+    "bytes": 80732,
+    "sha256": "53d8016e32338eda4b7cce6f7e0bc3a07a82d3a5e792110f862709490cc34e03"
+  },
+  "verdict": "passed"
+}

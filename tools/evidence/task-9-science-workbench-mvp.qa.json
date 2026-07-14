@@ -1,0 +1,36 @@
+{
+  "aggregate_sha256": "99f5aa0053d7da4b356c6b2b68eea86c534ef014718f572126f42f876908a6e9",
+  "happy": {
+    "ci_executed": 451,
+    "ci_jobs": 14,
+    "retention_tests": 15,
+    "status": "pass"
+  },
+  "negative_fixtures": {
+    "floating_workflow_action": "rejected",
+    "plaintext_observability": "rejected",
+    "stale_codegen": "rejected",
+    "success_without_sha256": "rejected",
+    "tampered_raw_evidence": "rejected",
+    "zero_test": "rejected"
+  },
+  "retention": {
+    "append_only_audit": "pass",
+    "audit_days": 365,
+    "audit_expiry": "pass",
+    "hold_exception": "pass",
+    "operational_days": 90,
+    "operational_expiry": "pass",
+    "policy_change_audit": "pass"
+  },
+  "supply_chain": {
+    "locked_packages": 184,
+    "secret_scanned_files": 206,
+    "pinned_workflow_actions": 3,
+    "status": "pass"
+  },
+  "tooling": {
+    "basedpyright_errors": 0,
+    "ruff_errors": 0
+  }
+}

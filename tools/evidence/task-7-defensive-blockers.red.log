@@ -1,0 +1,738 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 18 items
+
+tests/local_stack/test_config.py::test_config_parses_host_only_local_interfaces FAILED [  5%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[OBJECT_STORE_DRIVER-filesystem] PASSED [ 11%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[MAIL_DRIVER-console] PASSED [ 16%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SERVICE_ROLE-scheduler] PASSED [ 22%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[SMTP_PORT-0] PASSED [ 27%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[HOST_IP-0.0.0.0] FAILED [ 33%]
+tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[COOKIE_DOMAIN-.localhost] FAILED [ 38%]
+tests/local_stack/test_config.py::test_config_rejects_shared_application_and_artifact_origin PASSED [ 44%]
+tests/local_stack/test_config.py::test_config_ignores_container_runtime_environment PASSED [ 50%]
+tests/local_stack/test_scanner.py::test_scan_stream_accepts_only_explicit_clean_response FAILED [ 55%]
+tests/local_stack/test_scanner.py::test_scan_stream_returns_signature_when_clamd_finds_threat FAILED [ 61%]
+tests/local_stack/test_scanner.py::test_scan_stream_returns_signature_when_clamd_finds_threat ERROR [ 61%]
+tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_on_protocol_error FAILED [ 66%]
+tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_on_protocol_error ERROR [ 66%]
+tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_when_daemon_is_unavailable FAILED [ 72%]
+tests/local_stack/test_scanner.py::test_scan_stream_rejects_oversize_before_connecting FAILED [ 77%]
+tests/local_stack/test_compose.py::test_compose_defines_every_local_service_with_healthcheck FAILED [ 83%]
+tests/local_stack/test_compose.py::test_compose_contains_no_provider_or_cloud_credentials FAILED [ 88%]
+tests/local_stack/test_compose.py::test_anonymous_docker_config_disables_global_credential_helpers PASSED [ 94%]
+tests/local_stack/test_compose.py::test_host_ports_are_isolated_and_overrideable FAILED [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at teardown of test_scan_stream_returns_signature_when_clamd_finds_threat _
+  + Exception Group Traceback (most recent call last):
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/_pytest/runner.py", line 361, in from_call
+  |     result: TResult | None = func()
+  |                              ^^^^^^
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/_pytest/runner.py", line 250, in <lambda>
+  |     lambda: runtest_hook(item=item, **kwds),
+  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/pluggy/_hooks.py", line 512, in __call__
+  |     return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/pluggy/_manager.py", line 120, in _hookexec
+  |     return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 167, in _multicall
+  |     raise exception
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 139, in _multicall
+  |     teardown.throw(exception)
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/_pytest/logging.py", line 873, in pytest_runtest_teardown
+  |     yield
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 139, in _multicall
+  |     teardown.throw(exception)
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/_pytest/capture.py", line 905, in pytest_runtest_teardown
+  |     return (yield)
+  |             ^^^^^
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/pluggy/_callers.py", line 121, in _multicall
+  |     res = hook_impl.function(*args)
+  |           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/_pytest/threadexception.py", line 152, in pytest_runtest_teardown
+  |     collect_thread_exception(item.config)
+  |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/_pytest/threadexception.py", line 72, in collect_thread_exception
+  |     raise ExceptionGroup("multiple thread exception warnings", errors)
+  | ExceptionGroup: multiple thread exception warnings (2 sub-exceptions)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.tools/mise/installs/python/3.12.13/lib/python3.12/threading.py", line 1075, in _bootstrap_inner
+    |     self.run()
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.tools/mise/installs/python/3.12.13/lib/python3.12/threading.py", line 1012, in run
+    |     self._target(*self._args, **self._kwargs)
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/local_stack/test_scanner.py", line 59, in serve
+    |     with listener.accept()[0] as connection:
+    |          ^^^^^^^^^^^^^^^^^
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.tools/mise/installs/python/3.12.13/lib/python3.12/socket.py", line 295, in accept
+    |     fd, addr = self._accept()
+    |                ^^^^^^^^^^^^^^
+    | ConnectionAbortedError: [Errno 53] Software caused connection abort
+    | 
+    | The above exception was the direct cause of the following exception:
+    | 
+    | Traceback (most recent call last):
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/_pytest/threadexception.py", line 58, in collect_thread_exception
+    |     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+    | pytest.PytestUnhandledThreadExceptionWarning: Exception in thread Thread-2 (serve)
+    | Enable tracemalloc to get traceback where the object was allocated.
+    | See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    +---------------- 2 ----------------
+    | Traceback (most recent call last):
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.tools/mise/installs/python/3.12.13/lib/python3.12/threading.py", line 1075, in _bootstrap_inner
+    |     self.run()
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.tools/mise/installs/python/3.12.13/lib/python3.12/threading.py", line 1012, in run
+    |     self._target(*self._args, **self._kwargs)
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/local_stack/test_scanner.py", line 59, in serve
+    |     with listener.accept()[0] as connection:
+    |          ^^^^^^^^^^^^^^^^^
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.tools/mise/installs/python/3.12.13/lib/python3.12/socket.py", line 295, in accept
+    |     fd, addr = self._accept()
+    |                ^^^^^^^^^^^^^^
+    | ConnectionAbortedError: [Errno 53] Software caused connection abort
+    | 
+    | The above exception was the direct cause of the following exception:
+    | 
+    | Traceback (most recent call last):
+    |   File "/Users/hyunjun/Documents/MUNI/science-workbench/.venv/lib/python3.12/site-packages/_pytest/threadexception.py", line 58, in collect_thread_exception
+    |     warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+    | pytest.PytestUnhandledThreadExceptionWarning: Exception in thread Thread-1 (serve)
+    | Enable tracemalloc to get traceback where the object was allocated.
+    | See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    +------------------------------------
+_____ ERROR at teardown of test_scan_stream_fails_closed_on_protocol_error _____
+
+    def serve() -> None:
+>       with listener.accept()[0] as connection:
+             ^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_scanner.py:59: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket [closed] fd=-1, family=2, type=1, proto=0>
+
+    def accept(self):
+        """accept() -> (socket object, address info)
+    
+        Wait for an incoming connection.  Return a new socket
+        representing the connection, and the address of the client.
+        For IP sockets, the address info is a pair (hostaddr, port).
+        """
+>       fd, addr = self._accept()
+                   ^^^^^^^^^^^^^^
+E       ConnectionAbortedError: [Errno 53] Software caused connection abort
+
+.tools/mise/installs/python/3.12.13/lib/python3.12/socket.py:295: ConnectionAbortedError
+
+The above exception was the direct cause of the following exception:
+
+cls = <class '_pytest.runner.CallInfo'>
+func = <function call_and_report.<locals>.<lambda> at 0x10b70c9a0>
+when = 'teardown'
+reraise = (<class '_pytest.outcomes.Exit'>, <class 'KeyboardInterrupt'>)
+
+    @classmethod
+    def from_call(
+        cls,
+        func: Callable[[], TResult],
+        when: Literal["collect", "setup", "call", "teardown"],
+        reraise: type[BaseException] | tuple[type[BaseException], ...] | None = None,
+    ) -> CallInfo[TResult]:
+        """Call func, wrapping the result in a CallInfo.
+    
+        :param func:
+            The function to call. Called without arguments.
+        :type func: Callable[[], _pytest.runner.TResult]
+        :param when:
+            The phase in which the function is called.
+        :param reraise:
+            Exception or exceptions that shall propagate if raised by the
+            function, instead of being wrapped in the CallInfo.
+        """
+        excinfo = None
+        instant = timing.Instant()
+        try:
+>           result: TResult | None = func()
+                                     ^^^^^^
+
+.venv/lib/python3.12/site-packages/_pytest/runner.py:361: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/_pytest/runner.py:250: in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/pluggy/_hooks.py:512: in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/pluggy/_manager.py:120: in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/_pytest/logging.py:873: in pytest_runtest_teardown
+    yield
+.venv/lib/python3.12/site-packages/_pytest/capture.py:905: in pytest_runtest_teardown
+    return (yield)
+            ^^^^^
+.venv/lib/python3.12/site-packages/_pytest/threadexception.py:152: in pytest_runtest_teardown
+    collect_thread_exception(item.config)
+.venv/lib/python3.12/site-packages/_pytest/threadexception.py:70: in collect_thread_exception
+    raise errors[0]
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+config = <_pytest.config.Config object at 0x10aca1670>
+
+    def collect_thread_exception(config: Config) -> None:
+        pop_thread_exception = config.stash[thread_exceptions].pop
+        errors: list[pytest.PytestUnhandledThreadExceptionWarning | RuntimeError] = []
+        meta = None
+        hook_error = None
+        try:
+            while True:
+                try:
+                    meta = pop_thread_exception()
+                except IndexError:
+                    break
+    
+                if isinstance(meta, BaseException):
+                    hook_error = RuntimeError("Failed to process thread exception")
+                    hook_error.__cause__ = meta
+                    errors.append(hook_error)
+                    continue
+    
+                msg = meta.msg
+                try:
+>                   warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+E                   pytest.PytestUnhandledThreadExceptionWarning: Exception in thread Thread-3 (serve)
+E                   Enable tracemalloc to get traceback where the object was allocated.
+E                   See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
+.venv/lib/python3.12/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning
+=================================== FAILURES ===================================
+________________ test_config_parses_host_only_local_interfaces _________________
+
+    def test_config_parses_host_only_local_interfaces() -> None:
+        # Given: complete local configuration with separate application/artifact origins.
+        raw = _valid_env()
+    
+        # When: the environment crosses the typed configuration boundary.
+        config = LocalConfig.from_env(raw)
+    
+        # Then: local interfaces are typed and the cookie remains host-only.
+        assert config.cookie_domain is None
+        assert config.object_store_driver.value == "s3"
+        assert config.mail_driver.value == "mailpit"
+        assert config.app_origin.host != config.artifact_origin.host
+>       assert str(config.host_ip) == "127.0.0.1"
+                   ^^^^^^^^^^^^^^
+
+tests/local_stack/test_config.py:39: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = LocalConfig(app_origin=AnyHttpUrl('http://app.localhost:3000/'), artifact_origin=AnyHttpUrl('http://artifact.localhost...clamav_port=3310, service_role=<ServiceRole.API: 'api'>, service_bind_host=IPv4Address('127.0.0.1'), service_port=8000)
+item = 'host_ip'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'LocalConfig' object has no attribute 'host_ip'
+
+.venv/lib/python3.12/site-packages/pydantic/main.py:1042: AttributeError
+______ test_config_rejects_unsupported_or_unsafe_values[HOST_IP-0.0.0.0] _______
+
+field = 'HOST_IP', value = '0.0.0.0'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("OBJECT_STORE_DRIVER", "filesystem"),
+            ("MAIL_DRIVER", "console"),
+            ("SERVICE_ROLE", "scheduler"),
+            ("SMTP_PORT", "0"),
+            ("HOST_IP", "0.0.0.0"),
+            ("COOKIE_DOMAIN", ".localhost"),
+        ],
+    )
+    def test_config_rejects_unsupported_or_unsafe_values(field: str, value: str) -> None:
+        # Given: one unsupported or unsafe boundary value.
+        raw = _valid_env() | {field: value}
+    
+        # When/Then: parsing fails before the value reaches service logic.
+>       with pytest.raises(ValidationError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValidationError
+
+tests/local_stack/test_config.py:58: Failed
+__ test_config_rejects_unsupported_or_unsafe_values[COOKIE_DOMAIN-.localhost] __
+
+field = 'COOKIE_DOMAIN', value = '.localhost'
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("OBJECT_STORE_DRIVER", "filesystem"),
+            ("MAIL_DRIVER", "console"),
+            ("SERVICE_ROLE", "scheduler"),
+            ("SMTP_PORT", "0"),
+            ("HOST_IP", "0.0.0.0"),
+            ("COOKIE_DOMAIN", ".localhost"),
+        ],
+    )
+    def test_config_rejects_unsupported_or_unsafe_values(field: str, value: str) -> None:
+        # Given: one unsupported or unsafe boundary value.
+        raw = _valid_env() | {field: value}
+    
+        # When/Then: parsing fails before the value reaches service logic.
+>       with pytest.raises(ValidationError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValidationError
+
+tests/local_stack/test_config.py:58: Failed
+____________ test_scan_stream_accepts_only_explicit_clean_response _____________
+
+    def test_scan_stream_accepts_only_explicit_clean_response() -> None:
+        # Given: clamd completes INSTREAM with an explicit OK response.
+        with _fake_clamd(b"stream: OK\0") as port:
+            # When: clean bytes are scanned through the socket protocol.
+>           result = scan_stream(_config(port), b"clean scientific input")
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_scanner.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def scan_stream(config: LocalConfig, payload: bytes) -> ScanResult:
+        """Scan bytes through ClamAV INSTREAM without storing the upload."""
+        del config, payload
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/scanner.py:43: NotImplementedError
+__________ test_scan_stream_returns_signature_when_clamd_finds_threat __________
+
+    def test_scan_stream_returns_signature_when_clamd_finds_threat() -> None:
+        # Given: clamd identifies the harmless EICAR test signature.
+        with _fake_clamd(b"stream: Win.Test.EICAR_HDB-1 FOUND\0") as port:
+            # When: the bytes cross the INSTREAM boundary.
+>           result = scan_stream(_config(port), b"eicar-like fixture")
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_scanner.py:92: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def scan_stream(config: LocalConfig, payload: bytes) -> ScanResult:
+        """Scan bytes through ClamAV INSTREAM without storing the upload."""
+        del config, payload
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/scanner.py:43: NotImplementedError
+_______________ test_scan_stream_fails_closed_on_protocol_error ________________
+
+    def test_scan_stream_fails_closed_on_protocol_error() -> None:
+        # Given: clamd returns neither OK nor FOUND.
+        with _fake_clamd(b"unexpected response\0") as port:
+            # When: the scanner parses the response.
+>           result = scan_stream(_config(port), b"scientific input")
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_scanner.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def scan_stream(config: LocalConfig, payload: bytes) -> ScanResult:
+        """Scan bytes through ClamAV INSTREAM without storing the upload."""
+        del config, payload
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/scanner.py:43: NotImplementedError
+___________ test_scan_stream_fails_closed_when_daemon_is_unavailable ___________
+
+    def test_scan_stream_fails_closed_when_daemon_is_unavailable() -> None:
+        # Given: a loopback port with no listening clamd.
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as unused:
+            unused.bind(("127.0.0.1", 0))
+            port = unused.getsockname()[1]
+    
+        # When: scanning attempts to connect.
+>       result = scan_stream(_config(port), b"scientific input")
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_scanner.py:115: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def scan_stream(config: LocalConfig, payload: bytes) -> ScanResult:
+        """Scan bytes through ClamAV INSTREAM without storing the upload."""
+        del config, payload
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/scanner.py:43: NotImplementedError
+_____________ test_scan_stream_rejects_oversize_before_connecting ______________
+
+    def test_scan_stream_rejects_oversize_before_connecting() -> None:
+        # Given: bytes larger than the local upload envelope.
+        payload = bytes(8 * 1024 * 1024 + 1)
+    
+        # When: the upload reaches the scanner boundary.
+>       result = scan_stream(_config(1), payload)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_scanner.py:126: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def scan_stream(config: LocalConfig, payload: bytes) -> ScanResult:
+        """Scan bytes through ClamAV INSTREAM without storing the upload."""
+        del config, payload
+>       raise NotImplementedError
+E       NotImplementedError
+
+services/local/scanner.py:43: NotImplementedError
+__________ test_compose_defines_every_local_service_with_healthcheck ___________
+
+    def test_compose_defines_every_local_service_with_healthcheck() -> None:
+        # Given: the checked-in hermetic Compose definition.
+>       config = _compose_config()
+                 ^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_compose.py:55: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/local_stack/test_compose.py:50: in _compose_config
+    return TypeAdapter(ComposeConfig).validate_python(json.loads(completed.stdout))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = TypeAdapter(ComposeConfig)
+object = {'name': 'science-workbench-local', 'networks': {'default': {'name': 'science-workbench-local_default', 'ipam': {}}}, ...name': 'science-workbench-local_minio-data'}, 'postgres-data': {'name': 'science-workbench-local_postgres-data'}}, ...}
+strict = None, extra = None, from_attributes = None, context = None
+experimental_allow_partial = False, by_alias = None, by_name = None
+
+    def validate_python(
+        self,
+        object: Any,
+        /,
+        *,
+        strict: bool | None = None,
+        extra: ExtraValues | None = None,
+        from_attributes: bool | None = None,
+        context: Any | None = None,
+        experimental_allow_partial: bool | Literal['off', 'on', 'trailing-strings'] = False,
+        by_alias: bool | None = None,
+        by_name: bool | None = None,
+    ) -> T:
+        """Validate a Python object against the model.
+    
+        Args:
+            object: The Python object to validate against the model.
+            strict: Whether to strictly check types.
+            extra: Whether to ignore, allow, or forbid extra data during model validation.
+                See the [`extra` configuration value][pydantic.ConfigDict.extra] for details.
+            from_attributes: Whether to extract data from object attributes.
+            context: Additional context to pass to the validator.
+            experimental_allow_partial: **Experimental** whether to enable
+                [partial validation](../concepts/experimental.md#partial-validation), e.g. to process streams.
+                * False / 'off': Default behavior, no partial validation.
+                * True / 'on': Enable partial validation.
+                * 'trailing-strings': Enable partial validation and allow trailing strings in the input.
+            by_alias: Whether to use the field's alias when validating against the provided input data.
+            by_name: Whether to use the field's name when validating against the provided input data.
+    
+        !!! note
+            When using `TypeAdapter` with a Pydantic `dataclass`, the use of the `from_attributes`
+            argument is not supported.
+    
+        Returns:
+            The validated object.
+        """
+        if by_alias is False and by_name is not True:
+            raise PydanticUserError(
+                'At least one of `by_alias` or `by_name` must be set to True.',
+                code='validate-by-alias-and-name-false',
+            )
+    
+>       return self.validator.validate_python(
+            object,
+            strict=strict,
+            extra=extra,
+            from_attributes=from_attributes,
+            context=context,
+            allow_partial=experimental_allow_partial,
+            by_alias=by_alias,
+            by_name=by_name,
+        )
+E       pydantic_core._pydantic_core.ValidationError: 8 validation errors for ComposeConfig
+E       services.api.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.mailpit.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...025', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.mailpit.ports.1.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...025', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.minio.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.postgres.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...432', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.redis.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...379', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.web.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.worker.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...001', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+
+.venv/lib/python3.12/site-packages/pydantic/type_adapter.py:441: ValidationError
+____________ test_compose_contains_no_provider_or_cloud_credentials ____________
+
+    def test_compose_contains_no_provider_or_cloud_credentials() -> None:
+        # Given: the fully interpolated default local topology.
+>       config = _compose_config()
+                 ^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_compose.py:67: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/local_stack/test_compose.py:50: in _compose_config
+    return TypeAdapter(ComposeConfig).validate_python(json.loads(completed.stdout))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = TypeAdapter(ComposeConfig)
+object = {'name': 'science-workbench-local', 'networks': {'default': {'name': 'science-workbench-local_default', 'ipam': {}}}, ...name': 'science-workbench-local_minio-data'}, 'postgres-data': {'name': 'science-workbench-local_postgres-data'}}, ...}
+strict = None, extra = None, from_attributes = None, context = None
+experimental_allow_partial = False, by_alias = None, by_name = None
+
+    def validate_python(
+        self,
+        object: Any,
+        /,
+        *,
+        strict: bool | None = None,
+        extra: ExtraValues | None = None,
+        from_attributes: bool | None = None,
+        context: Any | None = None,
+        experimental_allow_partial: bool | Literal['off', 'on', 'trailing-strings'] = False,
+        by_alias: bool | None = None,
+        by_name: bool | None = None,
+    ) -> T:
+        """Validate a Python object against the model.
+    
+        Args:
+            object: The Python object to validate against the model.
+            strict: Whether to strictly check types.
+            extra: Whether to ignore, allow, or forbid extra data during model validation.
+                See the [`extra` configuration value][pydantic.ConfigDict.extra] for details.
+            from_attributes: Whether to extract data from object attributes.
+            context: Additional context to pass to the validator.
+            experimental_allow_partial: **Experimental** whether to enable
+                [partial validation](../concepts/experimental.md#partial-validation), e.g. to process streams.
+                * False / 'off': Default behavior, no partial validation.
+                * True / 'on': Enable partial validation.
+                * 'trailing-strings': Enable partial validation and allow trailing strings in the input.
+            by_alias: Whether to use the field's alias when validating against the provided input data.
+            by_name: Whether to use the field's name when validating against the provided input data.
+    
+        !!! note
+            When using `TypeAdapter` with a Pydantic `dataclass`, the use of the `from_attributes`
+            argument is not supported.
+    
+        Returns:
+            The validated object.
+        """
+        if by_alias is False and by_name is not True:
+            raise PydanticUserError(
+                'At least one of `by_alias` or `by_name` must be set to True.',
+                code='validate-by-alias-and-name-false',
+            )
+    
+>       return self.validator.validate_python(
+            object,
+            strict=strict,
+            extra=extra,
+            from_attributes=from_attributes,
+            context=context,
+            allow_partial=experimental_allow_partial,
+            by_alias=by_alias,
+            by_name=by_name,
+        )
+E       pydantic_core._pydantic_core.ValidationError: 8 validation errors for ComposeConfig
+E       services.api.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.mailpit.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...025', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.mailpit.ports.1.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...025', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.minio.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.postgres.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...432', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.redis.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...379', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.web.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.worker.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...001', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+
+.venv/lib/python3.12/site-packages/pydantic/type_adapter.py:441: ValidationError
+________________ test_host_ports_are_isolated_and_overrideable _________________
+
+    def test_host_ports_are_isolated_and_overrideable() -> None:
+        overrides = {
+            "SWB_POSTGRES_PORT": "45432",
+            "SWB_REDIS_PORT": "46379",
+            "SWB_MINIO_PORT": "49000",
+            "SWB_SMTP_PORT": "41025",
+            "SWB_MAILPIT_PORT": "48025",
+            "SWB_API_PORT": "48000",
+            "SWB_WORKER_PORT": "48001",
+            "SWB_WEB_PORT": "43000",
+        }
+>       config = _compose_config(overrides)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/local_stack/test_compose.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/local_stack/test_compose.py:50: in _compose_config
+    return TypeAdapter(ComposeConfig).validate_python(json.loads(completed.stdout))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = TypeAdapter(ComposeConfig)
+object = {'name': 'science-workbench-local', 'networks': {'default': {'name': 'science-workbench-local_default', 'ipam': {}}}, ...name': 'science-workbench-local_minio-data'}, 'postgres-data': {'name': 'science-workbench-local_postgres-data'}}, ...}
+strict = None, extra = None, from_attributes = None, context = None
+experimental_allow_partial = False, by_alias = None, by_name = None
+
+    def validate_python(
+        self,
+        object: Any,
+        /,
+        *,
+        strict: bool | None = None,
+        extra: ExtraValues | None = None,
+        from_attributes: bool | None = None,
+        context: Any | None = None,
+        experimental_allow_partial: bool | Literal['off', 'on', 'trailing-strings'] = False,
+        by_alias: bool | None = None,
+        by_name: bool | None = None,
+    ) -> T:
+        """Validate a Python object against the model.
+    
+        Args:
+            object: The Python object to validate against the model.
+            strict: Whether to strictly check types.
+            extra: Whether to ignore, allow, or forbid extra data during model validation.
+                See the [`extra` configuration value][pydantic.ConfigDict.extra] for details.
+            from_attributes: Whether to extract data from object attributes.
+            context: Additional context to pass to the validator.
+            experimental_allow_partial: **Experimental** whether to enable
+                [partial validation](../concepts/experimental.md#partial-validation), e.g. to process streams.
+                * False / 'off': Default behavior, no partial validation.
+                * True / 'on': Enable partial validation.
+                * 'trailing-strings': Enable partial validation and allow trailing strings in the input.
+            by_alias: Whether to use the field's alias when validating against the provided input data.
+            by_name: Whether to use the field's name when validating against the provided input data.
+    
+        !!! note
+            When using `TypeAdapter` with a Pydantic `dataclass`, the use of the `from_attributes`
+            argument is not supported.
+    
+        Returns:
+            The validated object.
+        """
+        if by_alias is False and by_name is not True:
+            raise PydanticUserError(
+                'At least one of `by_alias` or `by_name` must be set to True.',
+                code='validate-by-alias-and-name-false',
+            )
+    
+>       return self.validator.validate_python(
+            object,
+            strict=strict,
+            extra=extra,
+            from_attributes=from_attributes,
+            context=context,
+            allow_partial=experimental_allow_partial,
+            by_alias=by_alias,
+            by_name=by_name,
+        )
+E       pydantic_core._pydantic_core.ValidationError: 8 validation errors for ComposeConfig
+E       services.api.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.mailpit.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...025', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.mailpit.ports.1.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...025', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.minio.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.postgres.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...432', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.redis.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...379', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.web.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...000', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+E       services.worker.ports.0.host_ip
+E         Field required [type=missing, input_value={'mode': 'ingress', 'targ...001', 'protocol': 'tcp'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/missing
+
+.venv/lib/python3.12/site-packages/pydantic/type_adapter.py:441: ValidationError
+=========================== short test summary info ============================
+ERROR tests/local_stack/test_scanner.py::test_scan_stream_returns_signature_when_clamd_finds_threat
+ERROR tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_on_protocol_error
+FAILED tests/local_stack/test_config.py::test_config_parses_host_only_local_interfaces
+FAILED tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[HOST_IP-0.0.0.0]
+FAILED tests/local_stack/test_config.py::test_config_rejects_unsupported_or_unsafe_values[COOKIE_DOMAIN-.localhost]
+FAILED tests/local_stack/test_scanner.py::test_scan_stream_accepts_only_explicit_clean_response
+FAILED tests/local_stack/test_scanner.py::test_scan_stream_returns_signature_when_clamd_finds_threat
+FAILED tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_on_protocol_error
+FAILED tests/local_stack/test_scanner.py::test_scan_stream_fails_closed_when_daemon_is_unavailable
+FAILED tests/local_stack/test_scanner.py::test_scan_stream_rejects_oversize_before_connecting
+FAILED tests/local_stack/test_compose.py::test_compose_defines_every_local_service_with_healthcheck
+FAILED tests/local_stack/test_compose.py::test_compose_contains_no_provider_or_cloud_credentials
+FAILED tests/local_stack/test_compose.py::test_host_ports_are_isolated_and_overrideable
+=================== 11 failed, 7 passed, 2 errors in 10.24s ====================

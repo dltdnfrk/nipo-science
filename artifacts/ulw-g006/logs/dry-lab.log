@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 14 items
+
+tests/g002/test_http_flow.py::test_loopback_fixture_http_flow_and_ordering PASSED [  7%]
+tests/g002/test_http_flow.py::test_fixture_server_serves_page_and_state[/] PASSED [ 14%]
+tests/g002/test_http_flow.py::test_fixture_server_serves_page_and_state[/api/fixture/state] PASSED [ 21%]
+tests/g002/test_vertical.py::test_equivalent_runs_have_pinned_deterministic_outputs_and_cleanup PASSED [ 28%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_malformed_upload-malformed-csv-0] PASSED [ 35%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_missing_calibration-missing-calibration-0] PASSED [ 42%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_unsafe_filename-unsafe-filename-0] PASSED [ 50%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_egress_request-egress-requested-0] PASSED [ 57%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_package_install_request-package-install-requested-0] PASSED [ 64%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_stale_lease-stale-lease-0] PASSED [ 71%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_cancel_before_execution-cancelled-before-execution-0] PASSED [ 78%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_kernel_loss_before_execution-kernel-lost-before-execution-0] PASSED [ 85%]
+tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_approval_replay-approval-replayed-5] PASSED [ 92%]
+tests/g002/test_vertical.py::test_approval_replay_has_no_second_execution_or_retry PASSED [100%]
+
+============================== 14 passed in 1.70s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes

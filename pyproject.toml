@@ -1,0 +1,91 @@
+[project]
+name = "science-workbench"
+version = "0.0.0"
+description = "Scientific workbench services and domain packages"
+readme = "README.md"
+requires-python = "==3.12.13"
+dependencies = [
+  "alembic==1.18.5",
+  "asyncpg==0.31.0",
+  "fastapi==0.139.0",
+  "pillow==12.3.0",
+  "pydantic==2.13.4",
+  "pypdf==6.14.2",
+  "sqlalchemy[asyncio]==2.0.51",
+]
+
+[dependency-groups]
+dev = [
+  "basedpyright==1.39.9",
+  "pytest==9.1.1",
+  "ruff==0.15.21",
+]
+
+[tool.uv]
+package = false
+
+[tool.basedpyright]
+typeCheckingMode = "all"
+pythonVersion = "3.12"
+pythonPlatform = "All"
+include = ["services", "packages/science", "packages/contracts/python", "tests"]
+extraPaths = ["packages/contracts/python", "packages/science"]
+exclude = ["**/__pycache__", "**/.venv", "**/build", "**/dist"]
+reportUnusedCallResult = "warning"
+reportUnnecessaryTypeIgnoreComment = "error"
+reportUnusedVariable = "error"
+reportMissingParameterType = "error"
+reportPrivateUsage = "error"
+reportImplicitStringConcatenation = "none"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+src = ["services", "packages/science", "packages/contracts/python", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "COM812",
+  "ISC001",
+  "D203",
+  "D213",
+  "CPY001",
+  "FBT001",
+  "FBT002",
+  "TD002",
+  "TD003",
+  "FIX002",
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "ARG", "PLR2004", "SLF001", "D", "INP001"]
+"tests/*.py" = ["S101", "S603", "ARG", "PLR2004", "SLF001", "PT009", "E501", "D"]
+"packages/contracts/python/science_workbench_contracts/*.py" = ["D"]
+"packages/contracts/python/science_workbench_contracts/openapi_validator.py" = ["C901", "PLR0912", "D"]
+"packages/contracts/python/tests/*.py" = ["S101", "ARG", "PLR2004", "SLF001", "D"]
+"packages/contracts/python/validate_openapi.py" = ["D", "T201"]
+"services/api/migrations/**/*.py" = ["D", "S608"]
+"services/api/migrations/*.py" = ["D", "S608"]
+"services/api/persistence/principal.py" = ["TC001"]
+"services/api/tests/persistence/**/*.py" = ["D", "S101", "S603", "S607", "S608", "PLR2004"]
+"services/api/tests/persistence/*.py" = ["D", "S101", "S603", "S607", "S608", "PLR2004"]
+"tests/upload/fixtures.py" = ["PLR0913"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests", "packages/contracts/python/tests"]
+pythonpath = [".", "packages/contracts/python", "packages/science"]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+filterwarnings = ["error"]

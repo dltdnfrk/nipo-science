@@ -1,0 +1,46 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 34 items
+
+tests/platform/test_retention.py::test_policy_retention_periods_are_exact[89-365] PASSED [  2%]
+tests/platform/test_retention.py::test_policy_retention_periods_are_exact[90-364] PASSED [  5%]
+tests/platform/test_retention.py::test_policy_retention_periods_are_exact[91-365] PASSED [  8%]
+tests/platform/test_retention.py::test_policy_retention_periods_are_exact[90-366] PASSED [ 11%]
+tests/platform/test_retention.py::test_production_store_rejects_symmetric_hmac_verifier_bindings PASSED [ 14%]
+tests/platform/test_retention.py::test_append_and_read_are_tenant_and_capability_bound PASSED [ 17%]
+tests/platform/test_retention.py::test_monotonic_clock_and_event_identifier_binding_are_store_wide PASSED [ 20%]
+tests/platform/test_retention.py::test_rejected_legal_hold_commands_do_not_consume_audit_or_state PASSED [ 23%]
+tests/platform/test_retention.py::test_rejected_legal_hold_releases_leave_clock_and_ids_unchanged PASSED [ 26%]
+tests/platform/test_retention.py::test_audit_record_preserves_datetime_while_hashing_canonical_isoformat PASSED [ 29%]
+tests/platform/test_retention.py::test_expiry_hides_candidates_then_completed_run_purges_them PASSED [ 32%]
+tests/platform/test_retention.py::test_overlapping_runs_reserve_expired_candidates_and_replay_is_stable PASSED [ 35%]
+tests/platform/test_retention.py::test_zero_candidate_runs_are_rejected_before_completion PASSED [ 38%]
+tests/platform/test_retention.py::test_completion_rejects_missing_foreign_duplicate_and_bad_receipts PASSED [ 41%]
+tests/platform/test_retention.py::test_completed_run_requires_exact_replay_and_authorizes_lookup_and_resume PASSED [ 44%]
+tests/platform/test_retention.py::test_holds_block_expiry_and_late_holds_quarantine_reserved_candidates PASSED [ 47%]
+tests/platform/test_retention.py::test_break_glass_enforces_approval_order_tenant_binding_and_boundaries PASSED [ 50%]
+tests/platform/test_retention.py::test_completion_rejects_every_attestation_binding_adversary PASSED [ 52%]
+tests/platform/test_retention.py::test_zero_candidate_run_cannot_produce_verifiable_completion PASSED [ 55%]
+tests/platform/test_retention.py::test_policy_change_events_are_fully_audited PASSED [ 58%]
+tests/platform/test_retention.py::test_initial_policy_cannot_apply_before_its_effective_time PASSED [ 61%]
+tests/platform/test_retention.py::test_policy_change_evidence_cannot_bind_a_different_policy PASSED [ 64%]
+tests/platform/test_retention.py::test_break_glass_events_are_fully_audited PASSED [ 67%]
+tests/platform/test_retention.py::test_denied_break_glass_transitions_are_audited_without_grants PASSED [ 70%]
+tests/platform/test_retention.py::test_restored_break_glass_grant_requires_current_external_epoch PASSED [ 73%]
+tests/platform/test_retention.py::test_unauthorized_break_glass_use_does_not_mutate_store PASSED [ 76%]
+tests/platform/test_retention.py::test_threaded_run_start_reserves_each_expired_candidate_once PASSED [ 79%]
+tests/platform/test_retention.py::test_threaded_shared_event_id_creates_one_grant_and_one_audit PASSED [ 82%]
+tests/platform/test_retention.py::test_threaded_hold_and_completion_are_serialized_without_purge_race PASSED [ 85%]
+tests/platform/test_retention.py::test_audit_exact_boundary_and_released_hold_evidence_remain_protected PASSED [ 88%]
+tests/platform/test_retention.py::test_audit_inspection_requires_authorization PASSED [ 91%]
+tests/platform/test_retention.py::test_policy_change_rejects_unbound_audit_evidence PASSED [ 94%]
+tests/platform/test_retention.py::test_candidate_run_challenges_and_manifests_are_unique_per_run PASSED [ 97%]
+tests/platform/test_retention.py::test_released_hold_leaves_candidate_available_for_later_retry PASSED [100%]
+
+============================== 34 passed in 0.05s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes
