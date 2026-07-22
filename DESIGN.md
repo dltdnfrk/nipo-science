@@ -1,4 +1,4 @@
-# Science Workbench Design Contract
+# Nipo Science Design Contract
 
 Status: frozen before G003 product-screen implementation  
 Decision date: 2026-07-13  
@@ -8,7 +8,7 @@ Selected generated reference: `docs/design/reference-mineral-notebook.svg`
 
 ### Product and users
 
-Science Workbench is a Korean-first, non-diagnostic research-support product for researchers who must inspect how an input became a result. The primary user is a computational researcher moving between Project context, calibrated input, immutable approval, live execution, Artifact evidence, persisted Review, and reproducible Export. Organization owners additionally manage membership and provider connections, but ownership never grants another researcher's provider credentials or approval authority.
+Nipo Science is a Korean-first, non-diagnostic research-support product for researchers who must inspect how an input became a result. The primary user is a computational researcher moving between Project context, calibrated input, immutable approval, live execution, Artifact evidence, persisted Review, and reproducible Export. Organization owners additionally manage membership and provider connections, but ownership never grants another researcher's provider credentials or approval authority.
 
 The product must optimize for traceability rather than chat novelty. Every important state needs a visible object, stable identifier, timestamp, status, and next action. Evidence and interpretation remain distinct. Failures stay visible and recoverable; no optimistic UI may imply that a mutation committed before the server confirms it.
 

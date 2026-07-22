@@ -1,4 +1,4 @@
-# Science Workbench
+# Nipo Science
 
 The current foundation establishes an isolated monorepo, reproducible toolchain,
 shared Python/TypeScript contracts, local services, the PostgreSQL persistence

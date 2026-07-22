@@ -42,7 +42,7 @@
   function status(label, tone = "neutral") { return element("span", { class: `status ${tone}`, text: label }); }
   function button(label, action, tone = "") { return buttonWithAttributes(label, action, tone, {}); }
   function buttonWithAttributes(label, action, tone, attributes) { return element("button", { class: `button ${tone}`, type: "button", "data-action": action, text: label, ...attributes }); }
-  function header(title, description, crumb = "프로젝트 / 스펙트럼 보정 실험") { return [element("p", { class: "breadcrumbs", text: crumb }), element("h1", { text: title }), element("p", { class: "lede", text: description })]; }
+  function header(title, description, crumb = "Nipo Science") { return [element("p", { class: "breadcrumbs", text: crumb }), element("h1", { text: title }), element("p", { class: "lede", text: description })]; }
   function keyValues(values) { const list = element("dl", { class: "key-values" }); values.forEach(([key, value]) => list.append(element("dt", { text: key }), element("dd", { text: value }))); return list; }
   function hashValue(label, value = digest) { return element("div", {}, element("p", { class: "hash-label", text: label }), element("code", { class: "hash", text: value || "서버 확인 대기" })); }
   function value(...keys) { for (const key of keys) if (dryLabState[key] !== undefined && dryLabState[key] !== null) return dryLabState[key]; return "서버 확인 대기"; }
