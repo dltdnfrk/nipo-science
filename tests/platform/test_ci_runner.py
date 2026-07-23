@@ -1171,6 +1171,7 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
         "tools/tests/test_verify_spec.py",
         "tools/verify_architecture.py",
         "tools/architecture_contract.py",
+        "tools/architecture_evidence.py",
         "tools/architecture_manifest.py",
         "tests/test_architecture.py",
         "services/api/migrations",

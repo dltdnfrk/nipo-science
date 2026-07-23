@@ -28,7 +28,7 @@ def test_artifact_ui_declares_version_diff_lineage_preview_and_associations() ->
         'button("세션에 연결", "attach")',
         'button("세션 연결 해제", "detach", "secondary")',
         'method: action === "detach" ? "DELETE" : "POST"',
-        'sandbox: ""',
+        'sandbox: "allow-same-origin"',
         'referrerpolicy: "no-referrer"',
         'class: "preview-frame"',
         'class: "preview-status"',

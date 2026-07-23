@@ -94,7 +94,8 @@ export default defineConfig({
         PRODUCT_UI_FIXTURE_CREDENTIALS_DIRECTORY: productCredentialsDirectory,
         PRODUCT_UI_FIXTURE_CREDENTIALS_FILE: productCredentialsFile,
         PRODUCT_UI_FIXTURE_CREDENTIALS_TEMP_FILE: productCredentialsTempFile,
-        PRODUCT_UI_FIXTURE_REMOVE_CREDENTIALS_DIRECTORY: ownsCredentialsDirectory ? "1" : "0",
+        // Fixed .cache path is shared across runs; never delete the directory itself.
+        PRODUCT_UI_FIXTURE_REMOVE_CREDENTIALS_DIRECTORY: "0",
         PYTHONPATH: `${process.cwd()}/packages/science:${process.cwd()}`,
         PYTHONDONTWRITEBYTECODE: "1",
       },

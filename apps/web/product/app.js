@@ -579,8 +579,8 @@
     const exportAction = capabilityButton("export");
     const verified = reviewState.verdict === "verified";
     const finding = verified
-      ? element("p", {}, text("독립 검토가 "), phrase("실행 결과와"), text(" "), phrase("고정된 체크섬을 확인했습니다."))
-      : element("p", {}, text("독립 검토에서 "), phrase("실행 결과 또는"), text(" "), phrase("고정된 체크섬의 불일치를 발견했습니다."));
+      ? element("p", {}, text("독립 검토가 "), phrase("실행 결과와"), text(" "), phrase("고정된 체크섬을"), text(" "), phrase("확인했습니다."))
+      : element("p", {}, text("독립 검토에서 "), phrase("실행 결과 또는"), text(" "), phrase("고정된 체크섬의"), text(" "), phrase("불일치를 발견했습니다."));
     return [...header("검토 결과", [text("고정된 근거에 연결된 결과를 읽습니다. "), phrase("이 화면은"), text(" "), phrase("재실행하지"), text(" "), phrase("않습니다.")]), element("div", { class: "section-grid" }, panel("검토 발견 사항", [status(reviewState.verdict, verified ? "positive" : "danger"), objectSummary("Review", dryLabState.review_id), hashValue("연구 목적 체크섬", dryLabState.research_intent_sha256), finding, exportAction ? element("div", { class: "button-row" }, exportAction) : null], true), panel("고정된 근거", [hashes.length ? keyValues(hashes) : element("p", { class: "empty-state", text: "고정된 근거가 없습니다." }), element("p", { text: "이 검토는 위 불변 버전의 근거에 고정되어 있습니다." })]))];
   }
   function exportScreen() {
@@ -921,6 +921,7 @@
           window.clearTimeout(timeout);
           resolve();
         }, { once: true });
+        // allow-same-origin (no allow-scripts): parent can measure the passive image without enabling script execution.
         frame.srcdoc = `<!doctype html><meta charset="utf-8"><title>검증된 PNG 미리보기</title><img alt="검증된 PNG 미리보기" width="320" height="180" src="${dataUrl}">`;
       });
       if (!frame.isConnected || frame.dataset.previewDownload !== downloadUrl) return;
@@ -1118,6 +1119,20 @@
         updateArtifactActionLocks();
         if (mutation && !buttonNode.isConnected) restoreActionFocus(action, buttonNode.dataset.versionId || "");
       });
+  }
+  const skipLink = document.querySelector(".skip-link");
+  if (skipLink instanceof HTMLAnchorElement) {
+    skipLink.addEventListener("click", (event) => {
+      const main = document.querySelector("#main-content");
+      if (!(main instanceof HTMLElement)) return;
+      // Ensure keyboard skip target receives focus even when hash navigation does not.
+      event.preventDefault();
+      main.focus({ preventScroll: false });
+      main.scrollTop = 0;
+      if (main.id) {
+        history.replaceState(null, "", `#${main.id}`);
+      }
+    });
   }
   screen.addEventListener("click", onScreenClick);
   screen.addEventListener("change", (event) => {

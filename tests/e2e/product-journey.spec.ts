@@ -373,7 +373,8 @@ async function completeJourney(page: Page, suffix: string, fileSuffix: string, c
   const reviewId = new URL(page.url()).pathname.split("/")[2];
   await expect(page.getByText("verified", { exact: true })).toBeVisible();
   await expect(page.getByText("normalized.csv", { exact: true })).toBeVisible();
-  await expect(page.locator(".phrase").getByText("고정된 체크섬을 확인했습니다.", { exact: true })).toBeVisible();
+  await expect(page.locator(".phrase").getByText("고정된 체크섬을", { exact: true })).toBeVisible();
+  await expect(page.locator(".phrase").getByText("확인했습니다.", { exact: true })).toBeVisible();
   expect(await page.locator(".section-grid > .panel").evaluateAll((nodes) =>
     nodes.map((node) => node.getAttribute("aria-label")),
   )).toEqual(["검토 발견 사항", "고정된 근거"]);

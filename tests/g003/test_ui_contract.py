@@ -237,7 +237,9 @@ def test_review_copy_preserves_rejected_server_verdicts() -> None:
     assert 'const verified = reviewState.verdict === "verified";' in JAVASCRIPT
     assert 'status(reviewState.verdict, verified ? "positive" : "danger")' in JAVASCRIPT
     assert 'phrase("실행 결과 또는")' in JAVASCRIPT
-    assert "고정된 체크섬의 불일치를 발견했습니다." in JAVASCRIPT
+    # Connected CJK phrase units keep nowrap layout without forcing long single-line overflow.
+    assert 'phrase("고정된 체크섬의")' in JAVASCRIPT
+    assert 'phrase("불일치를 발견했습니다.")' in JAVASCRIPT
 
 
 def test_research_intent_ui_preserves_boundary_whitespace_for_server_rejection() -> (
