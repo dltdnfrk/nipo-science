@@ -1598,6 +1598,11 @@ def _redact_raw_output(raw_output: bytes) -> bytes:
     return re.sub(rb"[ \t]+(?=\r?$)", b"", redacted, flags=re.MULTILINE)
 
 
+def redact_raw_output(raw_output: bytes) -> bytes:
+    """Public sanitizer entry point for sibling CI tools (e.g. ci_validation)."""
+    return _redact_raw_output(raw_output)
+
+
 def _utc_now() -> str:
     """Return canonical UTC timestamps used at every run transition."""
     return datetime.now(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
