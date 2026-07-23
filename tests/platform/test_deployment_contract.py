@@ -7,6 +7,7 @@ import base64
 import hashlib
 import inspect
 import os
+import shutil
 import struct
 import subprocess
 from dataclasses import replace
@@ -45,7 +46,20 @@ from tools.platform_policy.deployment_contract import (
 
 _REAL_START_FIXED_COLLECTOR = deployment_capture.start_fixed_collector
 _REAL_VERIFY_DETACHED_SIGNATURE = deployment_capture.verify_detached_signature
-_OPENSSL_COMMAND = "/opt/homebrew/bin/openssl"
+def _resolve_openssl_command() -> str:
+    """Portable OpenSSL 3 resolution: ed25519 `pkeyutl -rawin` requires real
+    OpenSSL, so prefer Homebrew installs on macOS (the system LibreSSL lacks
+    -rawin) and fall back to PATH openssl on Linux CI runners."""
+    override = os.environ.get("NIPO_OPENSSL_COMMAND")
+    if override:
+        return override
+    for candidate in ("/opt/homebrew/bin/openssl", "/usr/local/opt/openssl/bin/openssl"):
+        if Path(candidate).exists():
+            return candidate
+    return shutil.which("openssl") or "openssl"
+
+
+_OPENSSL_COMMAND = _resolve_openssl_command()
 
 
 def _digest(value: str) -> str:
