@@ -1,3 +1,11 @@
 packages:
   - apps/*
   - packages/*
+
+# Single source of truth for the project-local pnpm store. Bootstrap installs
+# with these same paths; later pnpm invocations (including scrubbed ci-validate
+# children, where the CI env variable is stripped) must agree, and any config
+# migration must not demand an interactive modules purge on a TTY-less runner.
+storeDir: .tools/pnpm/store
+cacheDir: .cache/pnpm
+confirmModulesPurge: false
