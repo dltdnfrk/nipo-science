@@ -1,6 +1,8 @@
 import hashlib
+from io import BytesIO
 
 import pytest
+from PIL import Image
 from pydantic import ValidationError
 
 from science_workbench_science import (
@@ -72,11 +74,20 @@ def test_spectrum_plot_is_byte_deterministic_across_two_runs() -> None:
 
     assert first == second
     assert first.startswith(b"\x89PNG\r\n\x1a\n")
-    assert len(first) == 4_829
-    assert hashlib.sha256(first).hexdigest() == (
-        "6804068e27501bab92984bbc2f9b12b1ac5d74614ab3745b7e7ee71d650e9963"
-    )
     assert hashlib.sha256(second).hexdigest() == hashlib.sha256(first).hexdigest()
+
+    # Platform-independent content invariants instead of a compressed-byte pin:
+    # freetype (text antialiasing) and zlib (IDAT compression) versions differ
+    # across OSes, so exact byte length/sha only ever held on one platform.
+    # Determinism within the environment is asserted above; the rendered
+    # structure is asserted on decoded pixels.
+    image = Image.open(BytesIO(first))
+    assert image.size == (640, 360)
+    assert image.mode == "RGB"
+    colors = {color for _, color in image.getcolors(maxcolors=100_000) or ()}
+    assert (0x33, 0x41, 0x55) in colors  # axes
+    assert (0x25, 0x63, 0xEB) in colors  # corrected-signal curve
+    assert (0xDC, 0x26, 0x26) in colors  # peak markers
 
 
 def test_unrepresentable_spectrum_arithmetic_is_explicit_invalid_data() -> None:

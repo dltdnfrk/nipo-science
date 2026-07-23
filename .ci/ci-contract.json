@@ -3,8 +3,8 @@
     "version": 1,
     "source_identity": "checked-in-ci-contract-v1",
     "requirements_sha256": "8d8c44f87a8c6b145991f5ecfb0727f58ef1edf133ae8785239d574b7a572779",
-    "source_root_sha256": "20215a52cd79c6767afb34e185bd235f374664e763790785aadb71f77069ff0c",
-    "catalog_root_sha256": "06ea13ab5df73c3b155fa60bc262dc3afdb7122414118eb3fb8733b3209b2e24",
+    "source_root_sha256": "bb3eb0118d63bab770c99588b60c42f1c63c7630318b9a1cd655c3f33008b0fa",
+    "catalog_root_sha256": "a2dfa0a40e8949c242521d813811673ed4917fcda7800d604b1a5a0886910267",
     "security_catalog_id": "high-threat-v1",
     "jobs": [
       {
@@ -218,7 +218,7 @@
         ],
         "count_kind": "analyzer-inventory",
         "parser_version": 1,
-        "analyzer_inventory_root_sha256": "556d0503a6da3629457a0d0758d8768779d1db08c7b0c652f7d9532f58db36a6",
+        "analyzer_inventory_root_sha256": "786c2aa83864812dcce5396c0de5c9ca59df10adbdc3f805ed3264ada146c658",
         "analyzer_inventory_count": 272,
         "category": "quality",
         "environment_profile": "local-ci",
@@ -671,7 +671,7 @@
         ],
         "count_kind": "analyzer-inventory",
         "parser_version": 1,
-        "analyzer_inventory_root_sha256": "556d0503a6da3629457a0d0758d8768779d1db08c7b0c652f7d9532f58db36a6",
+        "analyzer_inventory_root_sha256": "786c2aa83864812dcce5396c0de5c9ca59df10adbdc3f805ed3264ada146c658",
         "analyzer_inventory_count": 272,
         "category": "quality",
         "environment_profile": "local-ci",
