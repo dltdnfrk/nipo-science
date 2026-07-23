@@ -338,9 +338,11 @@ def test_product_script_parses_with_the_repository_locked_node() -> None:
     assert package["engines"]["node"] == "24.17.0"
     node_executable = shutil.which("node")
     assert node_executable is not None
-    node_path = Path(node_executable).resolve()
+    # Do not resolve() the executable: under mise the PATH entry is a shim
+    # symlink whose argv[0] selects the pinned tool; dereferencing it invokes
+    # the mise binary itself, which then parses --check as its own argument.
     result = subprocess.run(
-        [str(node_path), "--check", str(PRODUCT / "app.js")],
+        [node_executable, "--check", str(PRODUCT / "app.js")],
         check=False,
         capture_output=True,
     )
