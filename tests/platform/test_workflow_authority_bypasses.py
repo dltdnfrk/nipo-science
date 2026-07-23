@@ -173,7 +173,7 @@ def test_security_every_executable_workflow_uses_authority_schema(
             "    needs: validate\n    runs-on: ubuntu-24.04\n",
             "    needs: validate\n    runs-on: self-hosted\n",
         ),
-        ("    timeout-minutes: 20\n", "    timeout-minutes: 21\n"),
+        ("    timeout-minutes: 30\n", "    timeout-minutes: 31\n"),
         ("    timeout-minutes: 5\n", "    timeout-minutes: 6\n"),
         (
             "\npermissions:\n  contents: read\n",
