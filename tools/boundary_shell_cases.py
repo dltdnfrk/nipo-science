@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 OUTSIDE = ".." + "/shared/out"
-ABSOLUTE_OUTSIDE = "/Users/hyunjun/Documents/MUNI/shared/out"
+ABSOLUTE_OUTSIDE = "/opt/science-workbench-boundary/out"
 
 MUTATION_COMMANDS = (
     ("rm", f"rm -rf {OUTSIDE}"),

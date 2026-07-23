@@ -1,7 +1,7 @@
 command: python3 -m unittest discover -s science-workbench/tests -p 'test_boundaries.py' -v
 exit_code: 1
 result: FAILED (failures=8)
-reason: /usr/local/bin/python3: can't open file '/Users/hyunjun/Documents/MUNI/science-workbench/tools/check_boundaries.py': [Errno 2] No such file or directory
+reason: /usr/local/bin/python3: can't open file '<repo>/tools/check_boundaries.py': [Errno 2] No such file or directory
 tests:
 - test_accepts_files_confined_to_target_when_project_is_clean: FAIL
 - test_rejects_build_input_when_docker_copy_escapes_root: FAIL

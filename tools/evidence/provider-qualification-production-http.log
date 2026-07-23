@@ -1,0 +1,17 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- <repo>/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: <repo>
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 7 items
+
+services/api/tests/persistence/test_artifact_production_http.py::test_production_config_rejects_secret_bearing_or_incomplete_environment PASSED [ 14%]
+services/api/tests/persistence/test_artifact_production_http.py::test_production_config_requires_provider_dispatch_before_serving PASSED [ 28%]
+services/api/tests/persistence/test_artifact_production_http.py::test_production_composition_injects_only_dispatch_socket_client PASSED [ 42%]
+services/api/tests/persistence/test_artifact_production_http.py::test_session_authentication_function_has_one_non_login_bypass_owner PASSED [ 57%]
+services/api/tests/persistence/test_artifact_production_http.py::test_production_server_bounds_slow_clients_and_handler_concurrency PASSED [ 71%]
+services/api/tests/persistence/test_artifact_production_http.py::test_authenticated_artifact_http_survives_full_production_reconstruction PASSED [ 85%]
+services/api/tests/persistence/test_artifact_production_http.py::test_persisted_browser_bootstraps_csrf_after_production_restart PASSED [100%]
+
+============================== 7 passed in 10.63s ==============================

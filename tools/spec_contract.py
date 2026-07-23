@@ -38,6 +38,9 @@ AC_IDS: Final = (
     "AC-F13-B",
     "AC-F13-C",
     "AC-F13-D",
+    "AC-PROVIDER-AUTHORITY",
+    "AC-PROVIDER-RUN-BINDING",
+    "AC-PROVIDER-MIGRATION",
     "AC-SAFE",
     "AC-TENANT",
     "AC-COMPLIANCE",
@@ -52,6 +55,7 @@ EXPECTED_IDS: Final = frozenset(P0_IDS + AC_IDS + SEC_IDS + NFR_IDS + GS_IDS + R
 SKILL_IDS: Final = ("literature-review", "source-attribution", "probe-diagnostic")
 DRY_LAB_CHAIN: Final = (
     "scientific_input",
+    "research_intent",
     "immutable_action_plan",
     "isolated_python",
     "csv",

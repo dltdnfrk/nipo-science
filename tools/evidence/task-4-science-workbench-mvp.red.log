@@ -6,7 +6,7 @@ test_rejects_cross_tenant_403_drift (tests.test_openapi_contract.OpenApiAcceptan
 FAIL: test_accepts_complete_openapi_contract (tests.test_openapi_contract.OpenApiAcceptanceTests.test_accepts_complete_openapi_contract)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 27, in test_accepts_complete_openapi_contract
+  File "<repo>/tests/test_openapi_contract.py", line 27, in test_accepts_complete_openapi_contract
     self.assertTrue(OPENAPI.is_file(), "OpenAPI contract is not implemented")
 AssertionError: False is not true : OpenAPI contract is not implemented
 
@@ -14,7 +14,7 @@ AssertionError: False is not true : OpenAPI contract is not implemented
 FAIL: test_rejects_cross_tenant_403_drift (tests.test_openapi_contract.OpenApiAcceptanceTests.test_rejects_cross_tenant_403_drift)
 ----------------------------------------------------------------------
 Traceback (most recent call last):
-  File "/Users/hyunjun/Documents/MUNI/science-workbench/tests/test_openapi_contract.py", line 38, in test_rejects_cross_tenant_403_drift
+  File "<repo>/tests/test_openapi_contract.py", line 38, in test_rejects_cross_tenant_403_drift
     self.assertTrue(OPENAPI.is_file(), "OpenAPI contract is not implemented")
 AssertionError: False is not true : OpenAPI contract is not implemented
 

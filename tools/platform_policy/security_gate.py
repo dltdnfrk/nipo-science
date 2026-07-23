@@ -3,21 +3,24 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import os
 import re
 import selectors
+import stat
 import subprocess
 import sys
 import time
 from contextlib import suppress
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, BinaryIO, Final, Protocol
 
 from tools.platform_policy.ci_contract import (
     EvidenceIntegrityError,
+    RequiredSecurityCaseBinding,
     require_evidence_sanitized,
 )
 
@@ -32,6 +35,8 @@ class SecurityCase:
     threat_id: str
     case_name: str
     node: str
+    denial_observation_index: int
+    postcondition_observation_index: int
 
 
 SECURITY_CASES: tuple[SecurityCase, ...] = (
@@ -39,66 +44,92 @@ SECURITY_CASES: tuple[SecurityCase, ...] = (
         "T01",
         "tenant-escape",
         "tests/g003/test_auth_tenancy.py::test_tenant_resources_hide_foreign_and_archived_parents",
+        1,
+        3,
     ),
     SecurityCase(
         "T02",
         "oauth-token-theft",
         "tests/g004/test_provider_http.py::test_provider_lifecycle_is_same_origin_idempotent_and_redacted",
+        9,
+        13,
     ),
     SecurityCase(
         "T03",
         "provider-tool-bypass",
         "tests/g004/test_tool_governance.py::test_default_deny_and_scope_rejection_have_zero_side_effects",
+        0,
+        2,
     ),
     SecurityCase(
         "T04",
         "vendor-runtime-compromise",
         "tests/g004/test_provider_qualification.py::test_raw_profile_is_contract_valid_but_never_live_qualified",
+        1,
+        0,
     ),
     SecurityCase(
         "T05",
         "prompt-injection",
         "tests/g004/test_provider_qualification.py::test_security_sentinels_are_rejected[7-decision_code-INJECTION_GS08_DO_NOT_OBEY]",
+        0,
+        1,
     ),
     SecurityCase(
         "T06",
         "ssrf",
         "tests/artifact_ui/test_artifact_http_security.py::test_host_alias_body_bounds_and_cross_org_download_are_denied",
+        0,
+        2,
     ),
     SecurityCase(
         "T07",
         "malicious-files-and-archives",
         "tests/upload/test_ingestion.py::test_ingest_rolls_back_earlier_valid_files_when_later_file_fails",
+        0,
+        1,
     ),
     SecurityCase(
         "T08",
         "sandbox-escape",
         "tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_egress_request-egress-requested-0]",
+        0,
+        1,
     ),
     SecurityCase(
         "T09",
         "lease-fencing",
         "tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_stale_lease-stale-lease-0]",
+        0,
+        1,
     ),
     SecurityCase(
         "T10",
         "approval-replay",
         "tests/g002/test_vertical.py::test_approval_replay_has_no_second_execution_or_retry",
+        0,
+        1,
     ),
     SecurityCase(
         "T11",
         "export-traversal",
         "packages/contracts/python/tests/test_export_manifest_attacks.py::test_rejects_normalized_collision_and_unselected_latest_race",
+        1,
+        3,
     ),
     SecurityCase(
         "T12",
         "deletion-resurrection",
         "tests/platform/test_g005_recovery_contract.py::test_pre_tombstone_backup_blocks_visibility_and_released_hold_allows_purge",
+        0,
+        2,
     ),
     SecurityCase(
         "T13",
         "supply-chain",
         "tests/platform/test_static_checks.py::test_security_floating_workflow_action_is_rejected",
+        0,
+        1,
     ),
 )
 
@@ -110,6 +141,13 @@ _GATE_TIMEOUT_SECONDS = 15 * 60.0
 _OUTPUT_LIMIT_BYTES = 1_000_000
 _READ_CHUNK_BYTES = 65_536
 _SAFE_ENVIRONMENT_KEYS = ("HOME", "LANG", "LC_ALL", "PATH", "TZ")
+_CASE_NODE_UNSAFE = "SECURITY case node is unsafe"
+_CASE_SOURCE_UNSAFE = "SECURITY case source is unsafe"
+_CASE_SOURCE_CHANGED = "SECURITY case source changed during binding"
+_CASE_SOURCE_INVALID = "SECURITY case source is invalid"
+_CASE_FUNCTION_AMBIGUOUS = "SECURITY case test function is ambiguous"
+_CASE_OBSERVATIONS_INCOMPLETE = "SECURITY case observations are incomplete"
+_CASE_OBSERVATIONS_SAME = "SECURITY case observations must be distinct"
 PROCESS_FACTORY: Final[type[subprocess.Popen[bytes]]] = subprocess.Popen
 
 
@@ -238,6 +276,99 @@ def bounded_run(
 DEFAULT_RUNNER = bounded_run
 
 
+def security_case_bindings(
+    checkout: Path | None = None,
+) -> tuple[RequiredSecurityCaseBinding, ...]:
+    """Bind every exact test node to its source and two semantic observations."""
+    root = checkout or Path(__file__).resolve().parents[2]
+    return tuple(_case_binding(root, case) for case in SECURITY_CASES)
+
+
+def _case_binding(root: Path, case: SecurityCase) -> RequiredSecurityCaseBinding:
+    path_text, separator, node_text = case.node.partition("::")
+    relative = PurePosixPath(path_text)
+    function_name = node_text.partition("[")[0]
+    if (
+        separator != "::"
+        or not function_name.isidentifier()
+        or relative.is_absolute()
+        or ".." in relative.parts
+    ):
+        raise ValueError(_CASE_NODE_UNSAFE)
+    path = root.joinpath(*relative.parts)
+    before = path.stat(follow_symlinks=False)
+    if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
+        raise ValueError(_CASE_SOURCE_UNSAFE)
+    source = path.read_bytes()
+    if path.stat(follow_symlinks=False) != before:
+        raise ValueError(_CASE_SOURCE_CHANGED)
+    try:
+        syntax = ast.parse(source, filename=path_text)
+    except (SyntaxError, ValueError):
+        raise ValueError(_CASE_SOURCE_INVALID) from None
+    matches = tuple(
+        node
+        for node in syntax.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        and node.name == function_name
+    )
+    if len(matches) != 1:
+        raise ValueError(_CASE_FUNCTION_AMBIGUOUS)
+    test_node = matches[0]
+    observations = _semantic_observations(test_node)
+    try:
+        denial = observations[case.denial_observation_index]
+        postcondition = observations[case.postcondition_observation_index]
+    except IndexError:
+        raise ValueError(_CASE_OBSERVATIONS_INCOMPLETE) from None
+    if denial is postcondition:
+        raise ValueError(_CASE_OBSERVATIONS_SAME)
+    return RequiredSecurityCaseBinding(
+        threat_id=case.threat_id,
+        case_id=case.node,
+        source_sha256=hashlib.sha256(source).hexdigest(),
+        test_sha256=_syntax_sha256("test", test_node),
+        denial_observation_sha256=_syntax_sha256("denial", denial),
+        postcondition_observation_sha256=_syntax_sha256(
+            "postcondition", postcondition
+        ),
+    )
+
+
+def _semantic_observations(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> tuple[ast.AST, ...]:
+    observations: list[ast.AST] = []
+
+    def visit(node: ast.AST) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, ast.Assert):
+                observations.append(child)
+                continue
+            if isinstance(child, ast.With | ast.AsyncWith) and any(
+                isinstance(descendant, ast.Attribute)
+                and descendant.attr == "raises"
+                for item in child.items
+                for descendant in ast.walk(item.context_expr)
+            ):
+                observations.append(child)
+                continue
+            if isinstance(
+                child,
+                ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef | ast.Lambda,
+            ):
+                continue
+            visit(child)
+
+    visit(function)
+    return tuple(observations)
+
+
+def _syntax_sha256(kind: str, node: ast.AST) -> str:
+    canonical = ast.dump(node, annotate_fields=True, include_attributes=False)
+    return hashlib.sha256(f"{kind}\0{canonical}".encode()).hexdigest()
+
+
 def _select_case(selector: str | None) -> tuple[SecurityCase, ...]:
     if selector is None:
         return SECURITY_CASES
@@ -278,15 +409,16 @@ def _write(stream: BinaryIO, content: bytes) -> None:
             raise OSError(message)
 
 
-def run_security_gate(
+def run_security_gate(  # noqa: PLR0911 - Every unsafe branch exits immediately.
     selector: str | None = None,
     *,
     runner: Runner = DEFAULT_RUNNER,
     stream: BinaryIO | None = None,
+    checkout: Path | None = None,
 ) -> int:
     """Run fixed pytest nodes and emit evidence only for observed one-test passes."""
     selected = _select_case(selector)
-    checkout = Path(__file__).resolve().parents[2]
+    checkout_root = checkout or Path(__file__).resolve().parents[2]
     output_stream = stream or sys.stdout.buffer
     case_lines: list[bytes] = []
     gate_deadline = time.monotonic() + _GATE_TIMEOUT_SECONDS
@@ -296,10 +428,15 @@ def run_security_gate(
         if remaining <= 0:
             _write(output_stream, b"SECURITY gate timed out")
             return 1
+        try:
+            binding = _case_binding(checkout_root, case)
+        except ValueError as error:
+            _write(output_stream, str(error).encode())
+            return 1
         argv = (sys.executable, "-m", "pytest", "-q", case.node)
         result = runner(
             argv,
-            checkout,
+            checkout_root,
             environment,
             min(_CASE_TIMEOUT_SECONDS, remaining),
             _OUTPUT_LIMIT_BYTES,
@@ -316,8 +453,15 @@ def run_security_gate(
         if result.returncode != 0 or not _passed_once(output):
             _write(output_stream, output)
             return 1
+        try:
+            if _case_binding(checkout_root, case) != binding:
+                _write(output_stream, b"SECURITY case source changed during execution")
+                return 1
+        except ValueError as error:
+            _write(output_stream, str(error).encode())
+            return 1
         payload = json.dumps(
-            {"case_id": case.node, "outcome": "passed", "threat_id": case.threat_id},
+            {**binding.model_dump(mode="json"), "outcome": "passed"},
             separators=(",", ":"),
             sort_keys=True,
         ).encode()

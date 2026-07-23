@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 2,
+  "recordedAt": "2026-07-16",
+  "verificationScope": "repository code-path and PostgreSQL integration evidence only",
+  "authoritativeLiveQualification": false,
+  "requirements": [
+    "AC-PROVIDER-AUTHORITY",
+    "AC-PROVIDER-RUN-BINDING",
+    "AC-PROVIDER-MIGRATION"
+  ],
+  "threats": ["T14", "T15"],
+  "ciAuthority": {
+    "trustedRequirementIdsPresent": true,
+    "checkedInBootstrapCatalog": "unverified",
+    "checkedInRequirementBindings": 0,
+    "freshExternalRequirementBindingsPresent": false,
+    "explanation": "The checked-in catalog is intentionally non-authoritative. Exact semantic requirement bindings must be supplied by the fresh external CI authority and parent-observed at execution time."
+  },
+  "repositoryContractsExercised": [
+    "the external authority server alone loads signing material while evaluator, adopter and dispatcher compositions use public verification material",
+    "receipt claim, subject, signature, runtime identity, authority response and pinned verification-key bytes fail closed on mismatch",
+    "signed receipt and legacy_unverified histories are immutable and survive refresh or restart",
+    "the ordinary application role cannot append receipts, choose the current receipt or insert a provider-model Run",
+    "qualification adopter, Run dispatcher and cleanup worker use distinct exact database-role boundaries",
+    "the qualification writer exposes fixed receipt append and connection compare-and-swap operations without an arbitrary database callback",
+    "the dedicated dispatcher atomically pins the current receipt, connection revision, profile, runtime, executable and model identity",
+    "fresh and already-stamped migrations converge without fabricating lost legacy evidence and refuse destructive history rollback"
+  ],
+  "repositoryCaseMap": [
+    {
+      "requirementId": "AC-PROVIDER-AUTHORITY",
+      "cases": [
+        {
+          "caseId": "provider-authority-uds-private-key-boundary",
+          "job": "provider-runtime",
+          "sourcePath": "services/api/provider_qualification_authority_server.py",
+          "sourceSha256": "18927138231506c2450035d7d84318b7301d558be19c357e061b37ce9489e30b",
+          "testPath": "tests/g004/test_provider_live_capture.py",
+          "testSha256": "03cf008e46d28e328d12a7b66e80f35ea541c7be5f98f5939e10c6fb03fd48ee",
+          "testNodeId": "tests/g004/test_provider_live_capture.py::test_production_authority_server_keeps_private_key_behind_uds",
+          "observedInRawLogSha256": "813459e90b4bef4584dc04fc09b6ed2589ba053904d808d2e92ab2be743a24c2"
+        },
+        {
+          "caseId": "provider-adoption-real-postgres",
+          "job": "provider-runtime",
+          "sourcePath": "services/api/provider_live_capture.py",
+          "sourceSha256": "7fb19b0c1eb162e4117381a4e59c662222287d5e6c98f05ba7ac69532b461dbc",
+          "testPath": "tests/g004/test_provider_live_capture.py",
+          "testSha256": "03cf008e46d28e328d12a7b66e80f35ea541c7be5f98f5939e10c6fb03fd48ee",
+          "testNodeId": "tests/g004/test_provider_live_capture.py::test_runtime_orchestration_persists_live_qualification_in_postgres",
+          "observedInRawLogSha256": "813459e90b4bef4584dc04fc09b6ed2589ba053904d808d2e92ab2be743a24c2"
+        },
+        {
+          "caseId": "provider-cleanup-fixed-due-boundary",
+          "job": "provider-runtime",
+          "sourcePath": "services/api/migrations/versioned_0004_roles.py",
+          "sourceSha256": "5361bad7a2423b49dd5f4792e2370be182086099a5a62b03ea09e77d2ca2b148",
+          "testPath": "services/api/tests/persistence/test_rls_contracts.py",
+          "testSha256": "304799c227708e9d63d522875d3e2bc655f1360ab75e77496bc1a2c260942b5d",
+          "testNodeId": "services/api/tests/persistence/test_rls_contracts.py::test_cleanup_functions_enforce_deadlines_and_exact_runtime_binding",
+          "observedInRawLogSha256": "813459e90b4bef4584dc04fc09b6ed2589ba053904d808d2e92ab2be743a24c2"
+        },
+        {
+          "caseId": "provider-metadata-guard-temp-schema",
+          "job": "provider-runtime",
+          "sourcePath": "services/api/migrations/versioned_0004_guards.py",
+          "sourceSha256": "39d2185f857dc51e14bed7789c4b35b669c1e6652f70d473f28a3cf97c579ed4",
+          "testPath": "services/api/tests/persistence/test_rls_security.py",
+          "testSha256": "aac1af6e48b74ea7ea040de711c2f416efa924846fb03ff637815611495a34fe",
+          "testNodeId": "services/api/tests/persistence/test_rls_security.py::test_provider_metadata_guard_rejects_temp_schema_shadowing",
+          "observedInRawLogSha256": "813459e90b4bef4584dc04fc09b6ed2589ba053904d808d2e92ab2be743a24c2"
+        }
+      ]
+    },
+    {
+      "requirementId": "AC-PROVIDER-RUN-BINDING",
+      "cases": [
+        {
+          "caseId": "provider-product-dispatch-boundary",
+          "job": "provider-runtime",
+          "sourcePath": "services/api/provider_run_dispatch.py",
+          "sourceSha256": "e5d96971874d485a9d111ee9871bcf300983c2914115c50b9383d0bb3f2f1555",
+          "testPath": "tests/g004/test_provider_http.py",
+          "testSha256": "76a93fab158ded2751c3d99fd2396d6fb7e01b81e680b978d1a8b25213ecf806",
+          "testNodeId": "tests/g004/test_provider_http.py::test_provider_run_creation_uses_injected_secretless_dispatch_boundary",
+          "observedInRawLogSha256": "813459e90b4bef4584dc04fc09b6ed2589ba053904d808d2e92ab2be743a24c2"
+        },
+        {
+          "caseId": "provider-dispatch-current-binding",
+          "job": "provider-runtime",
+          "sourcePath": "services/api/migrations/versioned_0004_guards.py",
+          "sourceSha256": "39d2185f857dc51e14bed7789c4b35b669c1e6652f70d473f28a3cf97c579ed4",
+          "testPath": "services/api/tests/persistence/test_rls_contracts.py",
+          "testSha256": "304799c227708e9d63d522875d3e2bc655f1360ab75e77496bc1a2c260942b5d",
+          "testNodeId": "services/api/tests/persistence/test_rls_contracts.py::test_dispatcher_role_creates_only_an_exact_current_model_run",
+          "observedInRawLogSha256": "813459e90b4bef4584dc04fc09b6ed2589ba053904d808d2e92ab2be743a24c2"
+        },
+        {
+          "caseId": "provider-dispatch-revoke-interleaving",
+          "job": "provider-runtime",
+          "sourcePath": "services/api/migrations/versioned_0004_guards.py",
+          "sourceSha256": "39d2185f857dc51e14bed7789c4b35b669c1e6652f70d473f28a3cf97c579ed4",
+          "testPath": "services/api/tests/persistence/test_rls_contracts.py",
+          "testSha256": "304799c227708e9d63d522875d3e2bc655f1360ab75e77496bc1a2c260942b5d",
+          "testNodeId": "services/api/tests/persistence/test_rls_contracts.py::test_dispatch_waits_for_concurrent_revocation_and_fails_closed",
+          "observedInRawLogSha256": "813459e90b4bef4584dc04fc09b6ed2589ba053904d808d2e92ab2be743a24c2"
+        }
+      ]
+    },
+    {
+      "requirementId": "AC-PROVIDER-MIGRATION",
+      "cases": [
+        {
+          "caseId": "provider-migration-bare-healthy",
+          "job": "migrations",
+          "sourcePath": "services/api/migrations/versions/0003_provider_qualification_receipts.py",
+          "sourceSha256": "6c0a9d9537e692c4751f283e05a8eea6ad72715c3844c4f09e1d78664c770ea3",
+          "testPath": "services/api/tests/persistence/test_upgrade_migrations.py",
+          "testSha256": "876136a919ee06b689324621edc0a6b2b85c02c362f25e204b9cd477769d5d2a",
+          "testNodeId": "services/api/tests/persistence/test_upgrade_migrations.py::test_upgrade_archives_bare_unsigned_healthy_with_historical_runs",
+          "observedInRawLogSha256": "790b557dfec40bdf4d2d3be936833e4fd619ea0b67d86bf7a39fdef22a81bf31"
+        },
+        {
+          "caseId": "provider-migration-stamped-0003",
+          "job": "migrations",
+          "sourcePath": "services/api/migrations/versions/0004_provider_security.py",
+          "sourceSha256": "b0729d0025f631918bb1ac8038a65508f8f700cdfce9ee842181f222a7646d5a",
+          "testPath": "services/api/tests/persistence/test_upgrade_migrations.py",
+          "testSha256": "876136a919ee06b689324621edc0a6b2b85c02c362f25e204b9cd477769d5d2a",
+          "testNodeId": "services/api/tests/persistence/test_upgrade_migrations.py::test_upgrade_converges_from_an_already_stamped_0003_database",
+          "observedInRawLogSha256": "790b557dfec40bdf4d2d3be936833e4fd619ea0b67d86bf7a39fdef22a81bf31"
+        },
+        {
+          "caseId": "provider-migration-history-downgrade-refusal",
+          "job": "migrations",
+          "sourcePath": "services/api/migrations/versions/0004_provider_security.py",
+          "sourceSha256": "b0729d0025f631918bb1ac8038a65508f8f700cdfce9ee842181f222a7646d5a",
+          "testPath": "services/api/tests/persistence/test_migrations.py",
+          "testSha256": "2b8802b629cfa27724942b422a25b7461174552cec0af3c48506c76a73e3f3bc",
+          "testNodeId": "services/api/tests/persistence/test_migrations.py::test_downgrade_refuses_to_destroy_qualification_history",
+          "observedInRawLogSha256": "790b557dfec40bdf4d2d3be936833e4fd619ea0b67d86bf7a39fdef22a81bf31"
+        }
+      ]
+    }
+  ],
+  "verification": [
+    {
+      "command": "TASK8_COMPOSE_PROJECT=swb-provider-evidence-runtime-final3 make test-provider-runtime",
+      "exitCode": 0,
+      "result": "188 provider tests passed; Ruff, BasedPyright and Node checks passed; 43 RLS tests passed; RLS Ruff and BasedPyright checks passed",
+      "rawLog": "tools/evidence/provider-qualification-runtime.log",
+      "rawLogSha256": "813459e90b4bef4584dc04fc09b6ed2589ba053904d808d2e92ab2be743a24c2"
+    },
+    {
+      "command": "TASK8_COMPOSE_PROJECT=swb-provider-evidence-migrations-final2 make test-migrations",
+      "exitCode": 0,
+      "result": "39 migration and schema tests passed; Ruff and BasedPyright checks passed",
+      "rawLog": "tools/evidence/provider-qualification-migrations.log",
+      "rawLogSha256": "790b557dfec40bdf4d2d3be936833e4fd619ea0b67d86bf7a39fdef22a81bf31"
+    },
+    {
+      "command": "TASK8_COMPOSE_PROJECT=swb-provider-evidence-production-http-final2 PYTHONPATH=packages/contracts/python:packages/science:. PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest services/api/tests/persistence/test_artifact_production_http.py -v",
+      "exitCode": 0,
+      "result": "7 production composition, restart, CSRF bootstrap and bounded-server tests passed",
+      "rawLog": "tools/evidence/provider-qualification-production-http.log",
+      "rawLogSha256": "381f28cba15e157471951f17590da033a78f96193ad64b4a1f84c30dd10f289d"
+    }
+  ],
+  "externalBlocker": "No deployment live OpenAI Codex qualification is claimed. The last approved-runtime attempt stopped on the subscription usage limit before an external signed receipt was issued or adopted. Repository tests do not remove this release blocker."
+}
