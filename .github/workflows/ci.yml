@@ -9,16 +9,58 @@ permissions:
   contents: read
 
 jobs:
-  ci-contract:
-    runs-on: ubuntu-latest
+  validate:
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db
       - run: make bootstrap
-      - run: make ci-local
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        if: always()
-        with:
-          name: checksummed-ci-evidence
-          path: .ci/evidence/latest
+      - name: Run unprivileged CI validation
+        run: make ci-validate
+
+  attest:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: ci-attestation
+    permissions:
+      contents: none
+      id-token: write
+    steps:
+      - name: Request authority-owned execution and publication
+        shell: bash
+        env:
+          CI_AUTHORITY_AUDIENCE: ${{ vars.CI_AUTHORITY_AUDIENCE }}
+          CI_AUTHORITY_URL: ${{ vars.CI_AUTHORITY_URL }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKFLOW_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          test -n "${CI_AUTHORITY_AUDIENCE:-}"
+          test -n "${CI_AUTHORITY_URL:-}"
+          case "$CI_AUTHORITY_URL" in https://*) ;; *) exit 2 ;; esac
+          oidc_response="$(curl --fail --silent --show-error --proto '=https' --tlsv1.3 --max-time 15 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${CI_AUTHORITY_AUDIENCE}")"
+          oidc_token="$(jq -er 'if keys == ["value"] and (.value | type == "string" and length > 0) then .value else error("invalid OIDC response") end' <<<"$oidc_response")"
+          printf '::add-mask::%s\n' "$oidc_token"
+          request="$(jq -cn \
+            --arg repository "$SOURCE_REPOSITORY" \
+            --arg commit_sha "$SOURCE_SHA" \
+            --arg run_id "$WORKFLOW_RUN_ID" \
+            --arg run_attempt "$WORKFLOW_RUN_ATTEMPT" \
+            '{operation:"execute_and_publish",payload:{repository:$repository,commit_sha:$commit_sha,run_id:$run_id,run_attempt:$run_attempt}}')"
+          response="$(curl --fail --silent --show-error --proto '=https' --tlsv1.3 --max-time 30 \
+            -H "Authorization: Bearer $oidc_token" \
+            -H 'Content-Type: application/json' \
+            -H 'X-CI-Authority-Protocol: 2' \
+            --data-binary "$request" \
+            "$CI_AUTHORITY_URL")"
+          jq -e 'keys == ["manifest_sha256","ok"] and .ok == true and (.manifest_sha256 | test("^[0-9a-f]{64}$"))' <<<"$response" >/dev/null

@@ -1,6 +1,6 @@
 {
   "catalog": {
-    "catalog_root_sha256": "1eb099e179a62c5942f3565df69cc8a495051e876bf3c00b47120035699e38d0",
+    "catalog_root_sha256": "d9af9fa5b88902c265200a9da2b7927a63252fbf57c2f791bfbd4e5b8d2db574",
     "jobs": [
       {
         "analyzer_inventory_count": null,
@@ -22,11 +22,7 @@
         "job": "architecture",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F07",
-          "AC-F08",
-          "AC-F09"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -48,11 +44,7 @@
         "job": "artifact-contracts",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F13-D",
-          "AC-NFR",
-          "AC-SAFE"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -74,11 +66,7 @@
         "job": "artifact-ui",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "GS06",
-          "GS07",
-          "GS08"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -100,11 +88,7 @@
         "job": "artifacts",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "F13",
-          "GS01",
-          "GS02"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -126,11 +110,7 @@
         "job": "boundaries",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F04",
-          "AC-F04-B",
-          "AC-F05"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -152,11 +132,7 @@
         "job": "dry-lab",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "RV01",
-          "RV02",
-          "RV03"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -178,15 +154,11 @@
         "job": "generated-drift",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "NFR02",
-          "NFR03",
-          "NFR04"
-        ]
+        "requirement_ids": []
       },
       {
-        "analyzer_inventory_count": 213,
-        "analyzer_inventory_root_sha256": "d86e8e49d88b55408fcc1904ead753b19cea5066d85573628946d47f8ca79bc3",
+        "analyzer_inventory_count": 252,
+        "analyzer_inventory_root_sha256": "1e2c66dcba35b4c2b9186a42a8918f67fd8a74cc3404b9c344c7b7ab5986f535",
         "argv": [
           "<ruff>",
           "check",
@@ -249,11 +221,7 @@
         "job": "lint",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-COMPLIANCE",
-          "AC-DATA",
-          "AC-F01"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -275,11 +243,7 @@
         "job": "local-config",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-TENANT",
-          "F01",
-          "F02"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -301,11 +265,7 @@
         "job": "migrations",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "F03",
-          "F04",
-          "F05"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -327,11 +287,7 @@
         "job": "openapi",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F10",
-          "AC-F11",
-          "AC-F11-B"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -353,11 +309,7 @@
         "job": "performance",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "SEC11",
-          "SEC12",
-          "SEC13"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -379,11 +331,7 @@
         "job": "platform-tests",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F01-E",
-          "AC-F02",
-          "AC-F03"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -405,11 +353,7 @@
         "job": "product-ui",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "RV04",
-          "RV05",
-          "SEC01"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -431,11 +375,7 @@
         "job": "protocol-contracts",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F13",
-          "AC-F13-B",
-          "AC-F13-C"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -457,11 +397,7 @@
         "job": "provider-runtime",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "SEC02",
-          "SEC03",
-          "SEC04"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -483,11 +419,7 @@
         "job": "recovery",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "SEC08",
-          "SEC09",
-          "SEC10"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -509,11 +441,7 @@
         "job": "release",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "SEC14",
-          "SEC15",
-          "SEC16"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -535,11 +463,7 @@
         "job": "retention",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "GS09",
-          "GS10",
-          "NFR01"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -561,11 +485,7 @@
         "job": "rls",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "F06",
-          "F07",
-          "F08"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -587,11 +507,7 @@
         "job": "sbom",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "NFR05",
-          "NFR06",
-          "NFR07"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -613,11 +529,7 @@
         "job": "science",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "GS03",
-          "GS04",
-          "GS05"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -639,11 +551,7 @@
         "job": "secret-scan",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "NFR08",
-          "NFR09",
-          "NFR10"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -677,11 +585,7 @@
         "prerequisites": [
           "high-threat"
         ],
-        "requirement_ids": [
-          "SEC05",
-          "SEC06",
-          "SEC07"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -703,15 +607,11 @@
         "job": "spec",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F05-B",
-          "AC-F06",
-          "AC-F06-B"
-        ]
+        "requirement_ids": []
       },
       {
-        "analyzer_inventory_count": 213,
-        "analyzer_inventory_root_sha256": "d86e8e49d88b55408fcc1904ead753b19cea5066d85573628946d47f8ca79bc3",
+        "analyzer_inventory_count": 252,
+        "analyzer_inventory_root_sha256": "1e2c66dcba35b4c2b9186a42a8918f67fd8a74cc3404b9c344c7b7ab5986f535",
         "argv": [
           "<basedpyright>",
           "packages/contracts/python",
@@ -773,11 +673,7 @@
         "job": "typecheck",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F01-B",
-          "AC-F01-C",
-          "AC-F01-D"
-        ]
+        "requirement_ids": []
       },
       {
         "analyzer_inventory_count": null,
@@ -799,16 +695,100 @@
         "job": "upload",
         "parser_version": 1,
         "prerequisites": [],
-        "requirement_ids": [
-          "F09",
-          "F10",
-          "F11"
-        ]
+        "requirement_ids": []
       }
     ],
+    "requirement_case_bindings": [],
+    "requirements_sha256": "8d8c44f87a8c6b145991f5ecfb0727f58ef1edf133ae8785239d574b7a572779",
     "security_catalog_id": "high-threat-v1",
     "source_identity": "checked-in-ci-contract-v1",
-    "source_root_sha256": "5e3386da9c34f0e07eeee72635abba2ee547e29e609ac96bedff38ad3e8d1f9c",
+    "source_root_sha256": "c21018c24a0e55a43cefeb683bb512c0fae81cb5a185ea5887ff022fdf947fb9",
+    "unverified_requirement_ids": [
+      "AC-COMPLIANCE",
+      "AC-DATA",
+      "AC-F01",
+      "AC-F01-B",
+      "AC-F01-C",
+      "AC-F01-D",
+      "AC-F01-E",
+      "AC-F02",
+      "AC-F03",
+      "AC-F04",
+      "AC-F04-B",
+      "AC-F05",
+      "AC-F05-B",
+      "AC-F06",
+      "AC-F06-B",
+      "AC-F07",
+      "AC-F08",
+      "AC-F09",
+      "AC-F10",
+      "AC-F11",
+      "AC-F11-B",
+      "AC-F13",
+      "AC-F13-B",
+      "AC-F13-C",
+      "AC-F13-D",
+      "AC-NFR",
+      "AC-PROVIDER-AUTHORITY",
+      "AC-PROVIDER-MIGRATION",
+      "AC-PROVIDER-RUN-BINDING",
+      "AC-SAFE",
+      "AC-TENANT",
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07",
+      "F08",
+      "F09",
+      "F10",
+      "F11",
+      "F13",
+      "GS01",
+      "GS02",
+      "GS03",
+      "GS04",
+      "GS05",
+      "GS06",
+      "GS07",
+      "GS08",
+      "GS09",
+      "GS10",
+      "NFR01",
+      "NFR02",
+      "NFR03",
+      "NFR04",
+      "NFR05",
+      "NFR06",
+      "NFR07",
+      "NFR08",
+      "NFR09",
+      "NFR10",
+      "RV01",
+      "RV02",
+      "RV03",
+      "RV04",
+      "RV05",
+      "SEC01",
+      "SEC02",
+      "SEC03",
+      "SEC04",
+      "SEC05",
+      "SEC06",
+      "SEC07",
+      "SEC08",
+      "SEC09",
+      "SEC10",
+      "SEC11",
+      "SEC12",
+      "SEC13",
+      "SEC14",
+      "SEC15",
+      "SEC16"
+    ],
     "version": 1
   },
   "evidence": {
