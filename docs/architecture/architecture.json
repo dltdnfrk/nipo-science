@@ -10,7 +10,8 @@
     {"id": "opaque-per-user-runtime-homes", "adr": "decisions/ADR-0006-runtime-homes.md", "status": "accepted"},
     {"id": "application-sole-tool-executor", "adr": "decisions/ADR-0007-tool-execution.md", "status": "accepted"},
     {"id": "reviewer-non-reexecution", "adr": "decisions/ADR-0008-reviewer.md", "status": "accepted"},
-    {"id": "oauth-f13-state-separation", "adr": "decisions/ADR-0009-oauth-f13-separation.md", "status": "accepted"}
+    {"id": "oauth-f13-state-separation", "adr": "decisions/ADR-0009-oauth-f13-separation.md", "status": "accepted"},
+    {"id": "external-provider-qualification-authority", "adr": "decisions/ADR-0010-provider-qualification-authority.md", "status": "accepted"}
   ],
   "trust_boundaries": [
     {"id": "browser-to-same-origin-web", "owner": "identity-platform", "source": "browser", "target": "web", "data": ["auth_session", "csrf_token"]},
@@ -21,15 +22,41 @@
     {"id": "runner-manager-to-sandbox", "owner": "runner-security", "source": "runner-manager", "target": "isolated-sandbox", "data": ["code", "pinned_inputs"]},
     {"id": "output-watcher-to-artifact-service", "owner": "artifact-platform", "source": "output-watcher", "target": "artifact-service", "data": ["registered_output_ref", "checksum"]},
     {"id": "runtime-broker-to-provider-runtime", "owner": "runtime-platform", "source": "runtime-broker", "target": "provider-runtime", "data": ["opaque_runtime_home", "normalized_events"]},
+    {"id": "qualification-evaluator-to-external-authority", "owner": "runtime-security", "source": "qualification-evaluator", "target": "external-qualification-authority", "data": ["exact_qualification_claim", "signed_receipt"]},
+    {"id": "qualification-adopter-to-postgresql", "owner": "data-security", "source": "dedicated-qualification-login", "target": "science_workbench_qualification", "data": ["verified_signed_receipt", "exact_connection_cas"]},
+    {"id": "provider-dispatcher-to-postgresql", "owner": "runtime-platform", "source": "dedicated-dispatcher-login", "target": "science_workbench_dispatcher", "data": ["exact_current_qualification_binding", "queued_run"]},
+    {"id": "provider-cleanup-worker-to-state-and-runtime-home", "owner": "runtime-security", "source": "dedicated-provider-cleanup-login", "target": "science_workbench_provider_cleanup", "data": ["fixed_security_definer_due_candidate_and_validation_calls", "runtime_home_destruction", "fixed_completion_calls", "cleanup_receipt"]},
     {"id": "connector-broker-to-provider", "owner": "connector-platform", "source": "connector-broker", "target": "fixed-provider-host", "data": ["one_use_handle", "connector_response"]},
     {"id": "reviewer-to-read-model", "owner": "review-platform", "source": "reviewer", "target": "immutable-read-model", "data": ["pinned_versions", "executions", "sources"]},
     {"id": "export-worker-to-download-origin", "owner": "artifact-platform", "source": "export-worker", "target": "artifact-origin", "data": ["pinned_export"]}
   ],
   "contracts": {
     "transactional_event_log": {"atomic_with_state_change": true, "ordering": "per-run-monotonic-sequence", "replay_source": "postgresql-run-events"},
-    "artifact_provenance": {"versions_immutable": true, "required_hashes": ["content", "code", "environment", "inputs", "execution"]},
+    "artifact_provenance": {"versions_immutable": true, "required_hashes": ["content", "code", "environment", "inputs", "execution", "research_intent"]},
     "runner_parity": {"oracle": "scientific-output-checksum-and-denial-outcomes", "environments": ["local", "gke-gvisor"]},
-    "provider_runtime": {"home_scope": "one-requesting-user-and-provider-connection", "home_exposure": "broker-only", "silent_fallback": false},
+    "provider_runtime": {
+      "home_scope": "one-requesting-user-and-provider-connection",
+      "home_exposure": "broker-only",
+      "silent_fallback": false,
+      "qualification_issuer": "external-unix-socket-authority",
+      "private_signing_material_in_runtime": false,
+      "runtime_policy": "deployment-supplied-protected-exact-platform-policy-file-pinned-by-sha256",
+      "checked_in_darwin_policy": "development-and-test-example-only",
+      "receipt_history": "append-only-publicly-verifiable",
+      "verification_key_retention": "permanent-active-set-or-permanent-archive-verifier",
+      "receipt_publication": "ordered-profile-then-receipt-then-database-adoption-not-an-atomic-triple",
+      "adoption_failure": "non-authoritative-sidecars-no-database-receipt-or-pointer",
+      "adoption_snapshot": "cas-rechecks-runtime-home-account-models-selected-model-health-created-at-revision-and-subject",
+      "legacy_evidence": "append-only-unverified-never-authoritative",
+      "migration": {"fresh_upgrade": "0003-archives-observable-bare-healthy-before-pending", "security_convergence": "0004_provider_security", "stamped_older_0003_missing_evidence": "preserve-pending-never-fabricate-require-backup-remediation"},
+      "authority_process": "external-signer-without-database-credential",
+      "adoption": {"login": "deployment-managed-dedicated-noinherit-login", "capability_role": "science_workbench_qualification", "capability_role_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"]},
+      "dispatch": {"login": "deployment-managed-dedicated-noinherit-login", "capability_role": "science_workbench_dispatcher", "capability_role_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"]},
+      "cleanup": {"login": "deployment-managed-dedicated-noinherit-login", "capability_role": "science_workbench_provider_cleanup", "capability_role_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"], "scope": "fixed-cross-tenant-due-cleanup-only", "direct_table_access": false, "database_interface": "four-fixed-security-definer-functions-for-bounded-due-candidates-exact-due-validation-and-two-completion-mutations", "credential_residency": "cleanup-process-only"},
+      "ordinary_application_run_insert": false,
+      "run_binding": "atomic-exact-current-receipt-revision-selected-model-profile-runtime-executable",
+      "external_live_status": "blocked-until-fresh-deployment-qualification-succeeds"
+    },
     "tool_execution": {"executor": "application", "provider_builtin_tools": "disabled-and-probed", "model_role": "typed-action-proposal-only"},
     "reviewer": {
       "allowed_capabilities": [
@@ -47,4 +74,3 @@
     "isolation_acceptance": "outcome-tested-compensating-controls"
   }
 }
-
