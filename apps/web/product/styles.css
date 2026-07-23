@@ -616,3 +616,10 @@ ol.signal-trace::before {
   .signal-trace > ol, ol.signal-trace { gap: 3px; }
   .button, .version-button, .download-link, .resource-link { padding: 9px 10px; }
 }
+
+/* Technical tokens (artifact filenames, provider status codes) must be able to
+   break anywhere in an emergency: keep-all still protects CJK phrase flow, but
+   an unbreakable token wider than a 188px line wraps instead of overflowing. */
+.artifact-library-item h3 { overflow-wrap: anywhere; }
+.artifact-library-item h3 a { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.status { max-width: 100%; overflow-wrap: anywhere; }
