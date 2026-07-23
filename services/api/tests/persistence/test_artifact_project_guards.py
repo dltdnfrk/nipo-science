@@ -16,6 +16,10 @@ from services.api.tests.persistence.test_rls_contracts import (
     ARTIFACT,
     EXECUTION,
     PROVIDER,
+    RECEIPT,
+    RECEIPT_SHA,
+    RESEARCH_INTENT_SHA,
+    RESEARCH_INTENT_SQL,
     SHA,
     VERSION,
     seed_artifact_version,
@@ -42,13 +46,21 @@ def _seed_same_org_second_project() -> None:
         "INSERT INTO sessions (id, org_id, project_id, title) VALUES "
         f"('{SESSION_C}', '{ORG_A}', '{PROJECT_C}', 'Session C') "
         "ON CONFLICT DO NOTHING; INSERT INTO runs "
-        "(id, org_id, session_id, requester_id, provider_connection_id, status) "
+        "(id, org_id, session_id, requester_id, provider_connection_id, status, "
+        "qualification_receipt_id, qualification_receipt_sha256, "
+        "qualification_connection_revision, qualification_profile_sha256, "
+        "qualification_runtime_version, qualification_executable_sha256) "
         f"VALUES ('{RUN_C}', '{ORG_A}', '{SESSION_C}', '{USER_A}', '{PROVIDER}', "
-        "'running') ON CONFLICT DO NOTHING; INSERT INTO action_plans "
-        "(id, org_id, run_id, requester_id, version, tool, arguments, "
-        "arguments_hash, network_scope, secret_scope, reason, plan_digest) VALUES "
-        f"('{PLAN_C}', '{ORG_A}', '{RUN_C}', '{USER_A}', 1, 'python', '{{}}', "
-        f"'{SHA}', '{{}}', '{{}}', 'project-c', '{SHA}') "
+        f"'running', '{RECEIPT}', '{RECEIPT_SHA}', 2, '{SHA}', "
+        "'codex-cli-fixture', "
+        f"'{SHA}') ON CONFLICT DO NOTHING; INSERT INTO action_plans "
+        "(id, org_id, run_id, requester_id, research_intent, "
+        "research_intent_sha256, version, tool, arguments, arguments_hash, "
+        "network_scope, secret_scope, reason, plan_digest) VALUES "
+        f"('{PLAN_C}', '{ORG_A}', '{RUN_C}', '{USER_A}', "
+        f"'{RESEARCH_INTENT_SQL}', '{RESEARCH_INTENT_SHA}', 1, 'python', "
+        f"'{{}}', '{SHA}', "
+        f"'{{}}', '{{}}', 'project-c', '{SHA}') "
         "ON CONFLICT DO NOTHING; INSERT INTO executions "
         "(id, org_id, run_id, action_plan_id, status, attempt_token, result_ref) "
         f"VALUES ('{EXECUTION_C}', '{ORG_A}', '{RUN_C}', '{PLAN_C}', 'completed', "
@@ -168,7 +180,7 @@ def test_database_binds_runtime_provenance_to_the_producing_run(
         "INSERT INTO provider_connections "
         "(id, org_id, requester_user_id, adapter_id, encrypted_runtime_home_ref, "
         f"account_metadata, status) VALUES ('{PROVIDER_TWO}', '{ORG_A}', '{USER_A}', "
-        "'anthropic_claude_code', 'vault://runtime/second', '{}', 'healthy') "
+        "'anthropic_claude_code', 'vault://runtime/second', '{}', 'pending') "
         "ON CONFLICT DO NOTHING"
     )
     result = psql(

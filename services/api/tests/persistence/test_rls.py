@@ -9,6 +9,11 @@ import pytest
 
 from services.api.persistence.principal import TestPrincipal as Principal
 from services.api.persistence.principal import TestPrincipalAdapter as PrincipalAdapter
+from services.api.persistence.schema_inventory import (
+    APPEND_ONLY_TABLES,
+    GLOBAL_TABLES,
+    TENANT_TABLES,
+)
 from services.api.tests.persistence.postgres_harness import psql
 
 if TYPE_CHECKING:
@@ -200,16 +205,49 @@ def test_concurrent_owner_revocations_leave_one_owner() -> None:
 
 
 def test_every_tenant_table_has_forced_rls_when_schema_is_current() -> None:
-    policy_count = psql(
-        "SELECT count(*) FROM pg_policies WHERE schemaname = 'public' "
+    policy_tables = tuple(
+        psql(
+            "SELECT tablename FROM pg_policies WHERE schemaname = 'public' "
+            "AND policyname = 'tenant_isolation' ORDER BY tablename"
+        ).stdout.splitlines()
+    )
+    forced_tables = tuple(
+        psql(
+            "SELECT c.relname FROM pg_class c JOIN pg_namespace n "
+            "ON n.oid = c.relnamespace WHERE n.nspname = 'public' "
+            "AND c.relrowsecurity AND c.relforcerowsecurity ORDER BY c.relname"
+        ).stdout.splitlines()
+    )
+    global_status = tuple(
+        psql(
+            "SELECT c.relname || ':' || c.relrowsecurity::text || ':' || "
+            "c.relforcerowsecurity::text FROM pg_class c JOIN pg_namespace n "
+            "ON n.oid = c.relnamespace WHERE n.nspname = 'public' "
+            f"AND c.relname IN ({', '.join(repr(table) for table in GLOBAL_TABLES)}) "
+            "ORDER BY c.relname"
+        ).stdout.splitlines()
+    )
+    immutable_tables = tuple(
+        psql(
+            "SELECT c.relname FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid "
+            "JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' "
+            "AND NOT t.tgisinternal AND t.tgname = c.relname || '_immutable' "
+            "ORDER BY c.relname"
+        ).stdout.splitlines()
+    )
+    provider_policy = psql(
+        "SELECT coalesce(qual, '') || ' ' || coalesce(with_check, '') "
+        "FROM pg_policies WHERE schemaname = 'public' "
+        "AND tablename = 'provider_connections' "
         "AND policyname = 'tenant_isolation'"
     ).stdout.strip()
-    forced_count = psql(
-        "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
-        "WHERE n.nspname = 'public' AND c.relrowsecurity AND c.relforcerowsecurity"
-    ).stdout.strip()
-    assert policy_count == "39"
-    assert forced_count == "39"
+
+    assert policy_tables == tuple(sorted(TENANT_TABLES))
+    assert forced_tables == tuple(sorted(TENANT_TABLES))
+    assert global_status == tuple(f"{table}:false:false" for table in GLOBAL_TABLES)
+    assert immutable_tables == tuple(sorted(APPEND_ONLY_TABLES))
+    assert "requester_user_id" in provider_policy
+    assert "app.user_id" in provider_policy
 
 
 def test_monetary_schema_is_absent_when_catalog_is_inspected() -> None:

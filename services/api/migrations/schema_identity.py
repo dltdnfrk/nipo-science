@@ -87,6 +87,7 @@ def upgrade_identity() -> None:
         uuid_ref("requester_user_id"),
         sa.Column("adapter_id", sa.Text(), nullable=False),
         sa.Column("encrypted_runtime_home_ref", sa.Text(), nullable=False),
+        sa.Column("superseded_runtime_home_ref", sa.Text()),
         sa.Column(
             "account_metadata",
             postgresql.JSONB(astext_type=sa.Text()),
@@ -117,7 +118,7 @@ def upgrade_identity() -> None:
         ),
         sa.CheckConstraint(
             "status IN ('pending', 'healthy', 'reauth_required', 'revoked', "
-            "'unsupported_auth')",
+            "'unavailable', 'quota_exhausted', 'unsupported_auth')",
             name="provider_status",
         ),
         sa.CheckConstraint(
@@ -126,10 +127,67 @@ def upgrade_identity() -> None:
             "AND position('..' in encrypted_runtime_home_ref) = 0",
             name="provider_runtime_home_opaque_ref",
         ),
+        sa.CheckConstraint(
+            "superseded_runtime_home_ref IS NULL OR ("
+            "superseded_runtime_home_ref ~ "
+            "'^vault://runtime/[A-Za-z0-9][A-Za-z0-9._/-]*$' AND "
+            "position('..' in superseded_runtime_home_ref) = 0 AND "
+            "superseded_runtime_home_ref <> encrypted_runtime_home_ref)",
+            name="provider_superseded_runtime_home_opaque_ref",
+        ),
+    )
+    _ = op.create_table(
+        "provider_runtime_home_cleanups",
+        org_id(),
+        uuid_ref("requester_user_id"),
+        sa.Column("encrypted_runtime_home_ref", sa.Text(), nullable=False),
+        sa.Column("connection_id", postgresql.UUID(as_uuid=True)),
+        sa.Column("reason", sa.Text(), nullable=False),
+        sa.Column("status", sa.Text(), nullable=False),
+        sa.Column("requested_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("destroy_by", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("destroyed_at", sa.DateTime(timezone=True)),
+        sa.Column("evidence_sha256", sa.String(length=64)),
+        created_at(),
+        sa.PrimaryKeyConstraint(
+            "org_id", "requester_user_id", "encrypted_runtime_home_ref"
+        ),
+        sa.ForeignKeyConstraint(
+            ["org_id", "requester_user_id"],
+            ["memberships.org_id", "memberships.user_id"],
+        ),
+        sa.CheckConstraint(
+            "encrypted_runtime_home_ref ~ "
+            "'^vault://runtime/[A-Za-z0-9][A-Za-z0-9._/-]*$' AND "
+            "position('..' in encrypted_runtime_home_ref) = 0",
+            name="provider_cleanup_runtime_home_opaque_ref",
+        ),
+        sa.CheckConstraint(
+            "(reason = 'unbound' AND connection_id IS NULL) OR "
+            "(reason IN ('superseded', 'revoke') AND connection_id IS NOT NULL)",
+            name="provider_cleanup_reason_scope",
+        ),
+        sa.CheckConstraint(
+            "destroy_by > requested_at",
+            name="provider_cleanup_deadline",
+        ),
+        sa.CheckConstraint(
+            "(status = 'scheduled' AND destroyed_at IS NULL AND "
+            "evidence_sha256 IS NULL) OR (status = 'completed' AND "
+            "destroyed_at IS NOT NULL AND evidence_sha256 ~ '^[0-9a-f]{64}$')",
+            name="provider_cleanup_state_complete",
+        ),
     )
 
 
 def drop_identity() -> None:
+    op.execute("DROP TABLE IF EXISTS provider_runtime_home_cleanups")
+    op.execute(
+        "ALTER TABLE provider_connections DROP CONSTRAINT IF EXISTS "
+        "fk_provider_connections_current_qualification"
+    )
+    op.execute("DROP TABLE IF EXISTS provider_qualification_legacy_evidence")
+    op.execute("DROP TABLE IF EXISTS provider_qualification_receipts")
     for table in (
         "provider_connections",
         "consents",

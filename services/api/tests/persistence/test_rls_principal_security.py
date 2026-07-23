@@ -60,7 +60,7 @@ def test_provider_connection_is_visible_only_to_requester() -> None:
         "INSERT INTO provider_connections (id, org_id, requester_user_id, adapter_id, "
         "encrypted_runtime_home_ref, account_metadata, status) VALUES "
         f"('{provider_id}', '{ORG_A}', '{USER_A}', 'openai_codex', "
-        "'vault://runtime/requester-only', '{}', 'healthy') ON CONFLICT DO NOTHING"
+        "'vault://runtime/requester-only', '{}', 'pending') ON CONFLICT DO NOTHING"
     )
     count = psql(
         "SET ROLE science_workbench_app; "
@@ -84,7 +84,7 @@ def test_provider_connection_is_visible_only_to_requester() -> None:
     assert count == "0"
     assert requester_count == "1"
     assert mutation.returncode == 0
-    assert status == "healthy"
+    assert status == "pending"
 
 
 def test_owner_soft_revokes_member_without_deleting_history() -> None:
@@ -95,7 +95,7 @@ def test_owner_soft_revokes_member_without_deleting_history() -> None:
         f"('{ORG_A}', '{USER_D}', 'member'); INSERT INTO provider_connections "
         "(id, org_id, requester_user_id, adapter_id, encrypted_runtime_home_ref, "
         f"account_metadata, status) VALUES ('{PROVIDER_D}', '{ORG_A}', '{USER_D}', "
-        "'openai_codex', 'vault://runtime/revoked-history', '{}', 'healthy')"
+        "'openai_codex', 'vault://runtime/revoked-history', '{}', 'pending')"
     )
     revoked = psql(
         "SET ROLE science_workbench_app; "

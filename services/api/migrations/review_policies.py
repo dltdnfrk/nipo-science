@@ -46,17 +46,6 @@ def create_review_evidence_guards() -> None:
         "CREATE TRIGGER reviews_no_delete BEFORE DELETE ON reviews FOR EACH ROW "
         "EXECUTE FUNCTION protect_review_delete()"
     )
-    for table in (
-        "review_artifact_versions",
-        "review_execution_refs",
-        "review_finding_artifact_versions",
-        "review_finding_execution_refs",
-        "export_artifact_versions",
-    ):
-        op.execute(
-            f"CREATE TRIGGER {table}_immutable BEFORE UPDATE OR DELETE ON {table} "
-            "FOR EACH ROW EXECUTE FUNCTION protect_review_delete()"
-        )
     op.execute(
         "CREATE FUNCTION validate_review_pin_insert() RETURNS trigger LANGUAGE plpgsql "
         "AS $$ BEGIN IF EXISTS (SELECT 1 FROM reviews r WHERE r.org_id = NEW.org_id "

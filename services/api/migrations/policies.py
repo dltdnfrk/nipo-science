@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Final
-
 from alembic import op
 
 from services.api.migrations.export_policies import (
@@ -12,6 +10,7 @@ from services.api.migrations.integrity_policies import (
     create_last_owner_guard,
     create_membership_admin_guard,
     create_provider_metadata_guard,
+    create_provider_qualification_guards,
     drop_integrity_guards,
 )
 from services.api.migrations.principal_policies import (
@@ -24,115 +23,52 @@ from services.api.migrations.review_policies import (
     drop_review_evidence_guards,
 )
 from services.api.migrations.role_policies import create_roles
+from services.api.persistence.schema_inventory import (
+    APPEND_ONLY_TABLES,
+    TENANT_TABLE_POLICIES,
+    UUID7_ID_TABLES,
+)
 
-TENANT_TABLES: Final = (
-    "memberships",
-    "auth_sessions",
-    "consents",
-    "projects",
-    "sessions",
-    "provider_connections",
-    "runs",
-    "messages",
-    "run_events",
-    "action_plans",
-    "approval_requests",
-    "executions",
-    "execution_leases",
-    "uploaded_files",
-    "artifacts",
-    "artifact_versions",
-    "artifact_dependencies",
-    "session_artifact_versions",
-    "skills",
-    "run_skill_snapshots",
-    "connectors",
-    "connector_calls",
-    "credentials",
-    "tool_grants",
-    "reviews",
-    "review_artifact_versions",
-    "review_execution_refs",
-    "review_findings",
-    "review_finding_artifact_versions",
-    "review_finding_execution_refs",
-    "export_jobs",
-    "export_artifact_versions",
-    "idempotency_records",
-    "audit_logs",
-    "audit_outbox",
-    "deletion_requests",
-    "deletion_receipts",
-    "deletion_tombstones",
-    "legal_holds",
-)
-IMMUTABLE_TABLES: Final = (
-    "action_plans",
-    "artifact_dependencies",
-    "artifact_versions",
-    "audit_logs",
-    "audit_outbox",
-    "legal_holds",
-    "run_events",
-)
-ID_TABLES: Final = (
-    "organizations",
-    "users",
-    "auth_sessions",
-    "consents",
-    "projects",
-    "sessions",
-    "provider_connections",
-    "runs",
-    "messages",
-    "run_events",
-    "action_plans",
-    "approval_requests",
-    "executions",
-    "uploaded_files",
-    "artifacts",
-    "artifact_versions",
-    "skills",
-    "run_skill_snapshots",
-    "connectors",
-    "connector_calls",
-    "credentials",
-    "tool_grants",
-    "reviews",
-    "review_findings",
-    "export_jobs",
-    "idempotency_records",
-    "audit_logs",
-    "audit_outbox",
-    "deletion_requests",
-    "deletion_receipts",
-    "deletion_tombstones",
-    "legal_holds",
+_PROVIDER_QUALIFICATION_TABLES = frozenset(
+    {
+        "provider_qualification_receipts",
+        "provider_qualification_legacy_evidence",
+    }
 )
 
 
-def create_immutable_trigger() -> None:
+def create_immutable_trigger(*, include_provider_qualification: bool = True) -> None:
     op.execute(
         "CREATE FUNCTION reject_immutable_mutation() RETURNS trigger "
         "LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION "
         "'immutable table % rejects %', TG_TABLE_NAME, TG_OP "
         "USING ERRCODE = '55000'; END $$"
     )
-    for table in IMMUTABLE_TABLES:
+    for table in APPEND_ONLY_TABLES:
+        if (
+            not include_provider_qualification
+            and table in _PROVIDER_QUALIFICATION_TABLES
+        ):
+            continue
         op.execute(
             f"CREATE TRIGGER {table}_immutable BEFORE UPDATE OR DELETE ON {table} "
             "FOR EACH ROW EXECUTE FUNCTION reject_immutable_mutation()"
         )
 
 
-def create_uuid7_trigger() -> None:
+def create_uuid7_trigger(*, include_provider_qualification: bool = True) -> None:
     op.execute(
         "CREATE FUNCTION enforce_uuid7_id() RETURNS trigger LANGUAGE plpgsql AS $$ "
         "BEGIN IF uuid_extract_version(NEW.id) <> 7 THEN RAISE EXCEPTION "
         "'primary id must be UUIDv7' USING ERRCODE = '23514'; END IF; "
         "RETURN NEW; END $$"
     )
-    for table in ID_TABLES:
+    for table in UUID7_ID_TABLES:
+        if (
+            not include_provider_qualification
+            and table in _PROVIDER_QUALIFICATION_TABLES
+        ):
+            continue
         op.execute(
             f"CREATE TRIGGER {table}_uuid7 BEFORE INSERT OR UPDATE OF id ON {table} "
             "FOR EACH ROW EXECUTE FUNCTION enforce_uuid7_id()"
@@ -198,15 +134,21 @@ def create_artifact_version_scope_guard() -> None:
     )
 
 
-def apply_rls() -> None:
+def apply_rls(*, include_provider_qualification: bool = False) -> None:
     create_roles()
     create_principal_guard()
     principal = "org_id = current_principal_org()"
-    for table in TENANT_TABLES:
+    for table_policy in TENANT_TABLE_POLICIES:
+        table = table_policy.name
+        if (
+            not include_provider_qualification
+            and table in _PROVIDER_QUALIFICATION_TABLES
+        ):
+            continue
         table_principal = principal
-        if table == "provider_connections":
+        if table_policy.requester_column is not None:
             table_principal = (
-                f"({principal}) AND requester_user_id = "
+                f"({principal}) AND {table_policy.requester_column} = "
                 "NULLIF(current_setting('app.user_id', true), '')::uuid"
             )
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
@@ -224,9 +166,17 @@ def apply_rls() -> None:
         "REVOKE INSERT, UPDATE, DELETE ON audit_outbox, legal_holds "
         "FROM science_workbench_app"
     )
+    immutable_revoke = (
+        "action_plans, artifact_dependencies, artifact_versions, audit_logs, "
+        "run_events"
+    )
+    if include_provider_qualification:
+        immutable_revoke += (
+            ", provider_qualification_receipts, "
+            "provider_qualification_legacy_evidence"
+        )
     op.execute(
-        "REVOKE UPDATE, DELETE ON action_plans, artifact_dependencies, "
-        "artifact_versions, audit_logs, run_events FROM science_workbench_app"
+        f"REVOKE UPDATE, DELETE ON {immutable_revoke} FROM science_workbench_app"
     )
     op.execute("REVOKE ALL ON organizations, users FROM science_workbench_app")
     op.execute("GRANT USAGE ON SCHEMA public TO science_workbench_compliance")
@@ -236,11 +186,17 @@ def apply_rls() -> None:
         "REVOKE ALL ON alembic_version FROM science_workbench_app, "
         "science_workbench_compliance"
     )
-    create_uuid7_trigger()
-    create_immutable_trigger()
+    create_uuid7_trigger(
+        include_provider_qualification=include_provider_qualification
+    )
+    create_immutable_trigger(
+        include_provider_qualification=include_provider_qualification
+    )
     create_last_owner_guard()
     create_membership_admin_guard()
     create_provider_metadata_guard()
+    if include_provider_qualification:
+        create_provider_qualification_guards()
     create_artifact_version_scope_guard()
     create_review_evidence_guards()
     create_export_guards()

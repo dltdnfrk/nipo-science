@@ -7,12 +7,27 @@ from typing import Final
 
 ROOT: Final = Path(__file__).parents[4]
 POSTGRES_PORT: Final = os.environ.get("SWB_POSTGRES_PORT", "0")
+_DEFAULT_POSTGRES_PGDATA: Final = str(
+    Path("/", "dev", "shm", "science-workbench-postgres")
+)
+POSTGRES_PGDATA: Final = os.environ.get(
+    "TASK8_POSTGRES_PGDATA", _DEFAULT_POSTGRES_PGDATA
+)
+POSTGRES_SHM_SIZE: Final = os.environ.get("TASK8_POSTGRES_SHM_SIZE", "512mb")
 COMPOSE_PROJECT: Final = os.environ.get(
     "TASK8_COMPOSE_PROJECT", f"science-workbench-task8-{os.getpid()}"
 )
 ALEMBIC_BIN: Final = os.environ.get(
     "TASK8_ALEMBIC_BIN", str(ROOT / ".venv/bin/alembic")
 )
+
+
+def _compose_environment() -> dict[str, str]:
+    return os.environ | {
+        "SWB_POSTGRES_SHM_SIZE": POSTGRES_SHM_SIZE,
+        "SWB_POSTGRES_PGDATA": POSTGRES_PGDATA,
+        "SWB_POSTGRES_PORT": POSTGRES_PORT,
+    }
 
 
 def compose(arguments: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
@@ -27,20 +42,22 @@ def compose(arguments: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
             *arguments,
         ),
         cwd=ROOT,
-        env=os.environ | {"SWB_POSTGRES_PORT": POSTGRES_PORT},
+        env=_compose_environment(),
         check=True,
         capture_output=True,
         text=True,
     )
 
 
-def alembic(arguments: tuple[str, ...]) -> subprocess.CompletedProcess[str]:
+def alembic(
+    arguments: tuple[str, ...], *, check: bool = True
+) -> subprocess.CompletedProcess[str]:
     database_url = database_url_asyncpg()
     return subprocess.run(
         (ALEMBIC_BIN, "-c", "services/api/alembic.ini", *arguments),
         cwd=ROOT,
         env=os.environ | {"DATABASE_URL": database_url, "PYTHONPATH": str(ROOT)},
-        check=True,
+        check=check,
         capture_output=True,
         text=True,
     )
@@ -81,7 +98,7 @@ def psql(sql: str, *, check: bool = True) -> subprocess.CompletedProcess[str]:
             sql,
         ),
         cwd=ROOT,
-        env=os.environ | {"SWB_POSTGRES_PORT": POSTGRES_PORT},
+        env=_compose_environment(),
         check=check,
         capture_output=True,
         text=True,

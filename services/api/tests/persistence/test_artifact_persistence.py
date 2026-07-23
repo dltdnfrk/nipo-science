@@ -13,6 +13,7 @@ from services.api.artifacts import (
     ArtifactErrorCode,
     ArtifactScope,
     ArtifactService,
+    FileArtifactRecovery,
     OutputWatcher,
     PostgresArtifactStore,
     PrivateBlobStore,
@@ -87,6 +88,10 @@ def build_artifact_service(
                     UUID(RUNTIME_CONNECTION),
                 )
             }
+        ),
+        recovery=FileArtifactRecovery(
+            root.parent / f".{root.name}-artifact-recovery",
+            integrity_key=SIGNING_KEY,
         ),
     )
     return (
