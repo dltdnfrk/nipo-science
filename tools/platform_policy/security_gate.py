@@ -284,6 +284,26 @@ def security_case_bindings(
     return tuple(_case_binding(root, case) for case in SECURITY_CASES)
 
 
+def _tamper_stat_signature(
+    result: os.stat_result,
+) -> tuple[int, int, int, int, int, int]:
+    """Tamper signature for the read-back TOCTOU check, excluding access time.
+
+    Reading the source legitimately updates atime on relatime mounts (fresh CI
+    checkouts), and a full stat_result comparison misreported that as
+    tampering. Identity (dev/ino), link count, mode, size, and mtime still pin
+    replace/append/chmod races.
+    """
+    return (
+        result.st_dev,
+        result.st_ino,
+        result.st_mode,
+        result.st_nlink,
+        result.st_size,
+        result.st_mtime_ns,
+    )
+
+
 def _case_binding(root: Path, case: SecurityCase) -> RequiredSecurityCaseBinding:
     path_text, separator, node_text = case.node.partition("::")
     relative = PurePosixPath(path_text)
@@ -300,7 +320,8 @@ def _case_binding(root: Path, case: SecurityCase) -> RequiredSecurityCaseBinding
     if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
         raise ValueError(_CASE_SOURCE_UNSAFE)
     source = path.read_bytes()
-    if path.stat(follow_symlinks=False) != before:
+    after = path.stat(follow_symlinks=False)
+    if _tamper_stat_signature(after) != _tamper_stat_signature(before):
         raise ValueError(_CASE_SOURCE_CHANGED)
     try:
         syntax = ast.parse(source, filename=path_text)
