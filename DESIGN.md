@@ -1,6 +1,176 @@
 # Nipo Science Design Contract
 
-Status: frozen before G003 product-screen implementation  
+Status: active Nipo Labs redesign contract
+Decision date: 2026-07-22
+Direction: **Spectral Control Room**
+
+## 0. Research log
+
+- Embedded reference: `linear.app.md` for dark-native luminance hierarchy, compact controls, quiet borders, keyboard-first navigation, and persistent context. We intentionally do not copy Linear's violet, logo, typography weights, or product composition.
+- Layout reference: `layout-skill.md` for a fixed navigation shell, one owned main scroll region, intrinsic grids, `min-block-size: 0`, and overflow-safe mobile reflow.
+- Redesign audit: the previous warm paper, deep green, mineral vocabulary, and repeated bordered-card composition made an AI research platform read like an institutional geology notebook. The traceability model remains valuable; the metaphor does not.
+- UI/UX DB query: `AI science research evidence workspace premium precise operational dashboard`. Its liquid-glass recommendation was rejected because animated blur and translucent text reduce evidence density, contrast, and performance. Its dark operations palette, responsive, touch, and accessibility constraints were retained.
+- Live primary-source research, accessed 2026-07-22:
+  - Linear initiatives/projects/views: https://linear.app/docs/initiatives, https://linear.app/docs/projects, https://linear.app/docs/custom-views
+  - Elicit search/extraction tables: https://elicit.com/solutions/search and https://docs.elicit.com/
+  - Consensus filters and research agent: https://help.consensus.app/en/articles/9922799-advanced-search-filters and https://help.consensus.app/en/articles/12641232-research-agent
+  - Scite citation context and stance: https://scite.ai/ and https://api.scite.ai/docs
+  - NotebookLM source selection and citation jumps: https://support.google.com/notebooklm/answer/16215270 and https://support.google.com/notebooklm/answer/16179559
+- Product inference: separate human workflow status from machine freshness/quality signals; keep citations and exact evidence locations adjacent to claims; preserve configurable evidence views and query-to-table extraction; make agent steps inspectable rather than chat-hidden.
+
+## 1. Direction
+
+Nipo Science is the research operating system inside **Nipo Labs**. The atmosphere is a dark spectral control room: quiet near-black depth, calibrated mint light, fine coordinate grids, and dense evidence surfaces that feel measured rather than decorated. The signature material is **luminous graphite**: stacked charcoal surfaces defined by luminance, hairline cool borders, and a local mint rim only where an action or live state earns it.
+
+The memorable moment is the workspace's **evidence signal**. Project, run, and artifact counts form a restrained spectral trace that resolves into the primary action. It is not a looping decoration: it communicates that inputs travel through approval, execution, evidence, review, and export. Hover/focus exposes the same path without hiding content; reduced-motion users receive the final state immediately.
+
+Avoid:
+
+- minerals, paper notebooks, earth greens, laboratory stock imagery, clinical symbols, and diagnostic language;
+- purple/blue AI gradients, floating glass cards, glow on every surface, chat-first composition, and decorative orbit graphics;
+- equal-height card walls, pill overload, tiny Korean metadata, and status conveyed by color alone.
+
+## 2. Product principles and users
+
+Primary user: a Korean-first computational researcher who must inspect how an input became a result. Secondary user: an organization owner managing membership and requester-owned provider connections without gaining another researcher's approval authority or credentials.
+
+Principles:
+
+1. **Evidence before synthesis.** Every conclusion exposes its source object, immutable identifier, timestamp, and next inspectable action.
+2. **Human status, machine signal.** Approval and workflow state are explicit human-owned states; freshness, confidence, and evidence quality are distinct machine signals.
+3. **One decisive action per view.** Each route names one primary action; secondary actions remain visibly subordinate.
+4. **Dense, never cramped.** Operational detail may be compact, but Korean body copy stays 16px or larger and metadata never drops below 13px.
+5. **Failure remains legible.** Empty, error, forbidden, expired, unavailable, and incomplete states keep context and a recovery path.
+6. **No tenant theatre.** The server owns organization identity. The UI displays **Nipo Labs** and never exposes tenant IDs or credential material.
+
+## 3. Information architecture and scroll ownership
+
+Primary navigation:
+
+1. **워크스페이스** — projects, live research signal, recent runs, and the next action;
+2. **새 연구** — upload, ResearchIntent, execution target, validation, and ActionPlan creation;
+3. **아티팩트** — immutable versions, checksum, lineage, preview, and safe download;
+4. **연결** — requester-owned provider connection, qualification, explicit model selection, and cleanup receipts.
+
+Run, Approval, Review, and Export remain server-ID-addressed objects beneath the workspace parent. No fake demo IDs enter the global navigation.
+
+Desktop shell:
+
+- `AppShell`: 248px fixed navigation rail + `minmax(0, 1fr)` work region, bounded by `100dvh`;
+- `GlobalNav` and `WorkspaceBar` stay fixed; `MainScroll` is the single vertical scroll owner and has `min-block-size: 0`;
+- content max-width is 1184px, aligned to a 12-column reading grid;
+- evidence detail is inline or a 340–384px support column only when the content warrants it.
+
+Tablet (768–1023px): 208px rail, one main scroll owner, support columns collapse beneath the primary object. Mobile (<768px): compact top brand row + horizontally scrollable labeled navigation + single content column. No page-level horizontal overflow is allowed; data tables switch to structured cards.
+
+## 4. Design tokens
+
+### Color: one spectral mint story
+
+Canvas and graphite:
+
+- `--canvas: #07090d`; `--canvas-ambient: #09111a`; `--nav: #0a0d12`;
+- `--surface-1: #0f141c`; `--surface-2: #151c27`; `--surface-3: #1b2431`; `--surface-hover: #202b39`;
+- `--text-strong: #f4f7fb`; `--text: #d2dae5`; `--text-muted: #91a0b2`; `--text-faint: #8291a5`;
+- `--line-subtle: rgba(213, 231, 255, 0.08)`; `--line: rgba(213, 231, 255, 0.14)`; `--line-strong: rgba(213, 231, 255, 0.24)`.
+
+Spectral mint ramp:
+
+- `--signal-100: #d7fff3`; `--signal-300: #82f2cc`; `--signal-500: #39d9ac`; `--signal-700: #16866b`; `--signal-900: #0d3d33`;
+- `--signal-wash: rgba(57, 217, 172, 0.10)`; `--signal-glow: rgba(57, 217, 172, 0.22)`.
+
+Functional exceptions:
+
+- `--attention: #f2c66d`; `--attention-wash: rgba(242, 198, 109, 0.10)`;
+- `--danger: #ff8a84`; `--danger-wash: rgba(255, 138, 132, 0.10)`;
+- `--info: #89c7ff`; `--info-wash: rgba(137, 199, 255, 0.10)`.
+
+Every pairing must meet WCAG 2.2 AA. Signal/status never relies on color alone.
+
+### Typography
+
+- UI/CJK: `Pretendard Variable`, `Pretendard`, `SUIT Variable`, `SUIT`, `Apple SD Gothic Neo`, system-ui, sans-serif;
+- technical: `SFMono-Regular`, `Cascadia Code`, `Roboto Mono`, ui-monospace, monospace;
+- display: 40/44 desktop, 32/38 tablet, 28/34 mobile, 650 weight, negative tracking;
+- h1: 32/38 desktop to 26/32 mobile, 650; h2: 19/26, 620; h3: 16/24, 620;
+- body: 16/26, 400–500; metadata: 13–14/20; technical values: 12–13/20 with tabular numerals and anywhere wrap;
+- labels use sentence case or short Korean nouns; avoid all-caps except the `NIPO LABS` brand signature and technical overlines.
+
+### Spacing, shape, focus, z-index
+
+- base 4px; scale 4/8/12/16/20/24/32/40/48/64;
+- radius 4px micro, 8px control, 12px panel, 16px hero; no pill content cards;
+- z-index 0 canvas, 10 sticky, 30 overlay, 50 dialog, 100 skip link;
+- focus: 2px `--signal-300` ring with 3px canvas separation;
+- touch targets: 44px minimum; buttons use 44–48px height.
+
+## 5. Reusable primitives and required states
+
+Primitive showcase: `apps/web/product/showcase.html` is the equivalent state harness. It must render before route composition and be captured at 375, 768, and 1280.
+
+- `NipoMark`: custom four-node spectral glyph, wordmark, `NIPO LABS` signature;
+- `AppShell`, `GlobalNav`, `NavItem`, `OrganizationCard`, `WorkspaceBar`, `MainScroll`;
+- `PageHeader`: eyebrow/breadcrumb, one h1, descriptive lede, optional primary action;
+- `WorkspaceHero`, `SignalTrace`, `MetricStrip`;
+- `Panel`, `EvidencePanel`, `ObjectSummary`, `KeyValueList`, `HashValue`, `Timestamp`;
+- `StatusBadge`: icon + text for neutral/positive/attention/danger;
+- `Button`, `TextLink`, `IconButton`: default/hover/focus/active/disabled/busy;
+- `Field`, `Select`, `FilePicker`: default/focus/filled/invalid/disabled/help;
+- `RunTimeline`, `ArtifactTable`, `ArtifactCard`, `FindingList`, `ProviderCard`;
+- `InlineError`, `EmptyState`, `LoadingState`, `Toast`, `Dialog`, `SkipLink`.
+
+Material recipe:
+
+- base panel: `--surface-1` + 1px `--line-subtle` + inset top highlight;
+- raised panel: `--surface-2` + `--line` + one cool ambient shadow;
+- active evidence: local `--signal-wash` background, signal edge, and small glow only around the active affordance;
+- overlays: opaque enough for text contrast; blur is optional support, never the only separation.
+
+## 6. Motion and interaction
+
+- duration tokens 120ms press, 180ms state, 260ms route/content reveal; transform and opacity only;
+- hover raises interactive surfaces by at most 2px; active returns to 0 and scales to 0.985;
+- navigation active indicator and evidence trace communicate location/progression; no perpetual decorative animation;
+- form submissions expose busy text/ARIA and keep controls stable; errors focus the relevant control;
+- `prefers-reduced-motion: reduce` removes travel and delivers the final state immediately.
+
+## 7. Route contracts
+
+- `/workspace`: Nipo Labs identity, research signal, project/run metrics, primary `새 연구 시작`, project list, recent run actions.
+- `/upload`: visible step framing, upload validation, complete ResearchIntent, execution target, bounded preview, atomic Run + ActionPlan creation.
+- `/runs/:id/approval`: immutable digest, scope, expiry, approve/reject/cancel with no optimistic success.
+- `/runs/:id`: current status, ordered progress, recovery language, provider boundary, artifact links.
+- `/artifacts`: evidence library with type/version/checksum and empty/error states.
+- `/artifacts/:id`: immutable versions, selected evidence, lineage, preview/download separation, session attachment.
+- `/reviews/:id`: pinned evidence and findings, no re-execution affordance.
+- `/exports/:id`: selected paths, manifest/checksum, cleanup impact/confirmation/receipt.
+- `/settings/providers`: requester-owned connection, explicit model, qualification, no fallback, safe authorization, cleanup receipt.
+- unknown/foreign resources: one non-disclosing 404 surface with a workspace recovery action.
+
+## 8. Accessibility and QA contract
+
+- semantic landmarks, one h1, skip link, route-change focus, keyboard-only completion, focus restoration;
+- visible labels, descriptive names for icon controls, polite live updates, alert errors, no color-only status;
+- 200% zoom, 375/768/1280, long Korean, long hashes/URLs, empty/error/offline/expired, reduced motion;
+- no horizontal page scroll, hidden provenance, clipped controls, or nested unnamed scroll regions;
+- zero serious/critical accessibility findings and zero browser console errors caused by the app;
+- fresh all-route captures reviewed by two independent visual oracles after objective visual QA.
+
+## 9. Implementation order
+
+1. Capture the RED organization identity and current Mineral Notebook baseline.
+2. Freeze this active contract and build/capture the primitive showcase.
+3. Implement shell and global tokens while preserving the existing SPA/API/security contracts.
+4. Compose workspace and route surfaces from the accepted primitives.
+5. Run focused contracts, real-browser journeys, all-route captures, independent review, and cleanup.
+
+No deployment is requested. The deployment qualification notes below remain a non-UI historical operational record and do not override this active visual contract.
+
+---
+
+## Superseded historical UI contract
+
+Status: archived; retained only to preserve prior decision history. Its Mineral Notebook direction and tokens are non-normative.
 Decision date: 2026-07-13  
 Selected generated reference: `docs/design/reference-mineral-notebook.svg`
 
@@ -43,15 +213,18 @@ Selection reasons:
 
 ## Information architecture
 
-Global destinations, in order:
+Global collection destinations, in order:
 
 1. 워크스페이스 — active Organization, Projects, recent Sessions and Runs;
 2. 업로드 — validated research inputs and bounded previews;
-3. 실행 기록 — ActionPlan, approval, ordered events, cancellation and recovery;
-4. 아티팩트 — immutable versions, checksums, lineage and safe downloads;
-5. 검토 결과 — persisted Review, pinned evidence and Findings;
-6. 내보내기 — selected versions, manifest and reproducibility status;
-7. 제공자 설정 — requester-owned connections, explicit selection and disabled GLM explanation.
+3. 아티팩트 — immutable versions, checksums, lineage and safe downloads;
+4. 제공자 설정 — requester-owned connections, explicit selection and disabled GLM explanation.
+
+Run, Review, and Export are ID-addressed research objects rather than global
+collections. Their real server-issued links appear in Workspace activity and related
+object views; `/runs/:id`, `/reviews/:id`, and `/exports/:id` therefore keep
+워크스페이스 as their active navigation parent. Placeholder or demo IDs are never
+added merely to fill the global navigation.
 
 The desktop shell uses a 232px navigation rail, a fluid primary canvas, and an optional 360–400px evidence rail. At 768px the navigation becomes a compact top/side control and evidence follows the main object. At 375px all content is one column; the current object, status, and primary action precede supporting evidence. No horizontal page scroll is allowed.
 
@@ -59,11 +232,16 @@ The desktop shell uses a 232px navigation rail, a fluid primary canvas, and an o
 
 ### Color
 
-- `--ink-strong: #23352d`; `--ink: #34483d`; `--ink-muted: #68736c`;
-- `--paper: #fbfaf5`; `--paper-warm: #f3f0e7`; `--paper-accent: #eef2e8`;
+- `--ink-strong: #23352d`; `--ink: #34483d`; `--ink-muted: #59665e`;
+- `--paper: #fbfaf5`; `--paper-warm: #f3f0e7`; `--paper-accent: #eef2e8`; `--paper-danger: #fff7f5`;
 - `--rule: #c9c5b7`; `--rule-strong: #8da795`;
 - `--positive: #345e48`; `--attention: #8a641e`; `--danger: #9a3434`;
+- `--on-ink: #fff`; `--on-ink-muted: #d9e1d5`;
+- `--focus-on-ink: #f6d365`; `--rule-on-ink: #789080`;
 - every text/background pairing must meet WCAG 2.2 AA; status never relies on color alone.
+
+The earlier muted token `#68736c` is rejected because it does not preserve the
+required contrast on the warm paper surfaces at metadata sizes.
 
 ### Typography
 
@@ -98,7 +276,7 @@ All interactive controls must support keyboard activation and visible focus. Dia
 ## Product-route contract
 
 - `/workspace`: Organization and Project context, recent activity, empty/loading/error states.
-- `/upload`: format/size guidance, validated preview, scan state, atomic rejection.
+- `/upload`: user-authored ResearchIntent, CSV format/size guidance, validated preview, scan state, and atomic Run plus ActionPlan creation or rejection.
 - `/runs/:id/approval`: immutable digest, exact scope, approve/reject and expiry.
 - `/runs/:id`: ordered progress, reconnect/recovery, cancel, Artifact links.
 - `/artifacts/:id`: versions, checksum, lineage, preview/download separation.
@@ -107,6 +285,10 @@ All interactive controls must support keyboard activation and visible focus. Dia
 - `/settings/providers`: requester-owned connection state, explicit account/model selection, no fallback, disabled GLM explanation.
 
 Every route must render meaningful Korean text at 375, 768 and 1280 CSS pixels, preserve content at 200% zoom, and expose no credential, raw token, tenant ID control, or clinical/diagnostic claim.
+
+### Design-decision amendment: ResearchIntent authority
+
+The requirements and specification adopted after the initial visual freeze make a complete human-authored ResearchIntent mandatory at every public Run and ActionPlan boundary. The upload surface therefore collects the research question, rationale, intended benefit, success criteria, constraints, stop conditions, research mode, data origin, and distinct generator/validator references when applicable. `POST /api/v1/runs` validates that object and atomically creates the Run and its immutable ActionPlan; no session-scoped shortcut may create a queued Run outside the upload → plan → approval → execution → review → export chain. The server-owned ResearchIntent digest remains visible through Run, provenance, Review, and Export evidence. This amendment is verified by the OpenAPI, product HTTP, browser journey, persistence, and migration gates.
 
 ## Authentication and tenancy presentation
 

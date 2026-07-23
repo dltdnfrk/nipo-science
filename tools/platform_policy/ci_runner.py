@@ -32,6 +32,8 @@ from .ci_contract import (
     CiExecutionLease,
     CiGenerationManifestAuthority,
     CiJob,
+    CiRequirementCaseBinding,
+    CiRequirementCaseObservation,
     CiRunState,
     CountKindValue,
     EvidenceIntegrityError,
@@ -45,6 +47,8 @@ from .ci_contract import (
     atomic_rename_no_replace,
     canonical_ci_manifest,
     canonical_security_catalog_bytes,
+    ci_requirement_case_attachment_sha256,
+    ci_requirement_case_marker_bytes,
     open_confined_directory,
     parse_security_evidence_output,
     persist_task_attempt_bundle,
@@ -54,6 +58,7 @@ from .ci_contract import (
     resolve_ci_control_catalog,
     resolve_security_catalog,
     task_attempt_root,
+    verify_ci_requirement_case_output,
     verify_evidence,
     verify_execution_attestations,
     verify_records_against_catalog,
@@ -259,6 +264,139 @@ def run_bounded_process(argv: tuple[str, ...], root: Path) -> tuple[int, bytes]:
 RUN_PROCESS = run_bounded_process
 
 
+def _require_parent_owned_requirement_output(output: bytes, job: CiJob) -> None:
+    """Reject reserved requirement records emitted by any child process."""
+    if any(
+        line.startswith(ci_contract.CI_REQUIREMENT_CASE_PREFIX)
+        for line in output.splitlines()
+    ):
+        raise EvidenceIntegrityError(
+            job,
+            "CI requirement case evidence must be parent-owned",
+        )
+
+
+def _verify_requirement_case_files(
+    root: Path,
+    bindings: tuple[CiRequirementCaseBinding, ...],
+) -> None:
+    """Match authority-pinned source and test bytes at the execution boundary."""
+    for binding in bindings:
+        try:
+            source_sha256 = hashlib.sha256(
+                (root / binding.source_path).read_bytes()
+            ).hexdigest()
+            test_sha256 = hashlib.sha256(
+                (root / binding.test_path).read_bytes()
+            ).hexdigest()
+        except OSError:
+            raise EvidenceIntegrityError(
+                binding.job,
+                "CI requirement case source is unavailable",
+            ) from None
+        if (
+            source_sha256 != binding.source_sha256
+            or test_sha256 != binding.test_sha256
+            or hashlib.sha256(
+                ci_contract.ci_requirement_case_evidence_bytes(binding)
+            ).hexdigest()
+            != binding.observation_sha256
+        ):
+            raise EvidenceIntegrityError(
+                binding.job,
+                "CI requirement case source does not match its authority binding",
+            )
+
+
+def execute_ci_requirement_cases(
+    root: Path,
+    bindings: tuple[CiRequirementCaseBinding, ...],
+) -> tuple[CiRequirementCaseObservation, ...]:
+    """Execute exact bound pytest nodes and return parent-owned observations."""
+    if not bindings:
+        return ()
+    ordered = tuple(
+        sorted(bindings, key=lambda item: (item.requirement_id, item.case_id))
+    )
+    _verify_requirement_case_files(root, ordered)
+    argv = (
+        sys.executable,
+        "-m",
+        "pytest",
+        "--color=no",
+        "-vv",
+        "--tb=no",
+        "--",
+        *(binding.test_node_id for binding in ordered),
+    )
+    started_at = _utc_now()
+    try:
+        return_code, captured_output = RUN_PROCESS(argv, root)
+    except (OSError, OverflowError, RuntimeError, TimeoutError) as error:
+        raise MissingExecutedCountError(
+            ordered[0].job,
+            f"{type(error).__name__}\n".encode(),
+            argv,
+            started_at,
+            _utc_now(),
+        ) from error
+    raw_output = _redact_raw_output(captured_output)
+    _require_parent_owned_requirement_output(raw_output, ordered[0].job)
+    if return_code != 0:
+        raise CiJobFailedError(
+            ordered[0].job,
+            return_code,
+            raw_output,
+            argv,
+            started_at,
+            _utc_now(),
+        )
+    command = CiCommand(ordered[0].job, argv, CountKind.PYTEST)
+    try:
+        executed_count = _parse_executed_count(
+            command,
+            raw_output.decode(errors="replace"),
+        )
+    except MissingExecutedCountError as error:
+        raise MissingExecutedCountError(
+            ordered[0].job,
+            raw_output,
+            argv,
+            started_at,
+            _utc_now(),
+        ) from error
+    lines = raw_output.decode(errors="replace").splitlines()
+    if executed_count != len(ordered) or any(
+        sum(line.startswith(f"{binding.test_node_id} PASSED") for line in lines) != 1
+        for binding in ordered
+    ):
+        raise MissingExecutedCountError(
+            ordered[0].job,
+            raw_output,
+            argv,
+            started_at,
+            _utc_now(),
+        )
+    _verify_requirement_case_files(root, ordered)
+    output_sha256 = hashlib.sha256(raw_output).hexdigest()
+    return tuple(
+        CiRequirementCaseObservation(
+            requirement_id=binding.requirement_id,
+            job=binding.job,
+            case_id=binding.case_id,
+            source_path=binding.source_path,
+            source_sha256=binding.source_sha256,
+            test_path=binding.test_path,
+            test_sha256=binding.test_sha256,
+            test_node_id=binding.test_node_id,
+            execution_output_sha256=output_sha256,
+            case_executed_count=1,
+            outcome="passed",
+        )
+        for binding in ordered
+    )
+
+
 def _verify_execution_binding(
     command: CiCommand, root: Path, binding: CiExecutionBinding, *, consume: bool
 ) -> None:
@@ -339,6 +477,7 @@ def execute_job(
         ) from error
     finished_at = _utc_now()
     raw_output = _redact_raw_output(captured_output)
+    _require_parent_owned_requirement_output(raw_output, command.job)
     if return_code != 0:
         raise CiJobFailedError(
             command.job,
@@ -361,10 +500,28 @@ def execute_job(
         raise MissingExecutedCountError(
             command.job, raw_output, command.argv, started_at, finished_at
         ) from error
+    requirement_bindings = tuple(
+        binding
+        for binding in catalog.requirement_case_bindings
+        if binding.job is command.job
+    )
+    observations = execute_ci_requirement_cases(root, requirement_bindings)
+    if observations:
+        if raw_output and not raw_output.endswith(b"\n"):
+            raw_output += b"\n"
+        raw_output += b"".join(
+            ci_requirement_case_marker_bytes(observation)
+            for observation in observations
+        )
+    verify_ci_requirement_case_output(raw_output, requirement_bindings)
+    finished_at = _utc_now()
     inventory_root = (
         inventory_root_sha256(command.inventory, root)
         if command.count_kind is CountKind.ANALYZER_INVENTORY
         else None
+    )
+    requirement_attachment_sha256 = ci_requirement_case_attachment_sha256(
+        requirement_bindings
     )
     record = GateResult(
         job=command.job,
@@ -404,8 +561,9 @@ def execute_job(
         security_evidence_roots=tuple(
             item.evidence_root_sha256 for item in security_mappings
         ),
-        attachment_sha256=tuple(
-            item.evidence_root_sha256 for item in security_mappings
+        attachment_sha256=(
+            *requirement_attachment_sha256,
+            *(item.evidence_root_sha256 for item in security_mappings),
         ),
         started_at=started_at,
         finished_at=finished_at,
@@ -507,6 +665,26 @@ def _require_catalog_bound_records(
         for record in records
     ):
         raise EvidenceIntegrityError(None, "CI result is not catalog-bound")
+    for record in records:
+        requirement_roots = ci_requirement_case_attachment_sha256(
+            tuple(
+                binding
+                for binding in catalog.requirement_case_bindings
+                if binding.job is record.job
+            )
+        )
+        if record.job is CiJob.SECURITY:
+            expected_attachments = (
+                *requirement_roots,
+                *record.security_evidence_roots,
+            )
+        else:
+            expected_attachments = requirement_roots
+        if record.attachment_sha256 != expected_attachments:
+            raise EvidenceIntegrityError(
+                record.job,
+                "CI requirement attachments are not authority-bound",
+            )
     _ = verify_evidence(records)
     security = next(record for record in records if record.job is CiJob.SECURITY)
     if (
@@ -738,6 +916,42 @@ def run_ci(
     return records
 
 
+def archive_legacy_ci_latest(root: Path) -> None:
+    """Preserve a pre-generation latest directory before creating the pointer."""
+    evidence_fd = open_confined_directory(root / ".ci/evidence", create=True)
+    try:
+        try:
+            status = os.stat("latest", dir_fd=evidence_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return
+        if stat.S_ISLNK(status.st_mode):
+            return
+        if not stat.S_ISDIR(status.st_mode):
+            message = "legacy CI latest entry is unsafe"
+            raise RuntimeError(message)
+        archive_name = f".legacy-latest-{secrets.token_hex(16)}"
+        os.rename(
+            "latest",
+            archive_name,
+            src_dir_fd=evidence_fd,
+            dst_dir_fd=evidence_fd,
+        )
+        archived = os.stat(
+            archive_name,
+            dir_fd=evidence_fd,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISDIR(archived.st_mode) or (archived.st_dev, archived.st_ino) != (
+            status.st_dev,
+            status.st_ino,
+        ):
+            message = "legacy CI latest entry changed during archival"
+            raise RuntimeError(message)
+        fsync_generation(evidence_fd)
+    finally:
+        os.close(evidence_fd)
+
+
 def _require_active_publication_run(binding: CiPublicationBinding) -> None:
     """Require the authority's current run to be this exact active invocation."""
     try:
@@ -832,6 +1046,7 @@ def _verify_publication_authorities(
         binding.source_tree_sha256,
         binding.current_run.run_id,
     )
+    _verify_requirement_case_files(root, catalog.requirement_case_bindings)
     verify_records_against_catalog(records, catalog, binding.current_run.run_id)
     _ = verify_execution_attestations(binding.authority, records, binding.current_run)
     security_catalog = _resolve_run_security_catalog(
@@ -854,14 +1069,29 @@ def _verify_publication_authorities(
         if hashlib.sha256(output).hexdigest() != record.output_sha256:
             raise EvidenceIntegrityError(record.job, "CI output checksum drift")
         rederive_gate_count(record, output)
+        verify_ci_requirement_case_output(
+            output,
+            tuple(
+                case
+                for case in catalog.requirement_case_bindings
+                if case.job is record.job
+            ),
+        )
     security, output = evidence[CiJob.SECURITY]
     mappings = parse_security_evidence_output(security_catalog, output)
     mapped_ids = tuple(item.threat_id for item in mappings)
     evidence_roots = tuple(item.evidence_root_sha256 for item in mappings)
+    requirement_roots = ci_requirement_case_attachment_sha256(
+        tuple(
+            case
+            for case in catalog.requirement_case_bindings
+            if case.job is CiJob.SECURITY
+        )
+    )
     if (
         security.security_threat_ids != mapped_ids
         or security.security_evidence_roots != evidence_roots
-        or security.attachment_sha256 != evidence_roots
+        or security.attachment_sha256 != (*requirement_roots, *evidence_roots)
     ):
         raise EvidenceIntegrityError(
             CiJob.SECURITY,
@@ -965,6 +1195,7 @@ def publish_ci_generation(
     pointer_switched = False
     finalized = False
     try:
+        archive_legacy_ci_latest(root)
         _verify_publication_authorities(root, records, outputs, binding)
         manifest_bytes = _stage_and_publish_generation(
             evidence_fd,
@@ -1363,7 +1594,13 @@ def inventory_root_sha256(inventory: tuple[Path, ...], root: Path) -> str:
 
 def _redact_raw_output(raw_output: bytes) -> bytes:
     """Apply the centralized evidence sanitizer before hashing or persistence."""
-    return redact_evidence_bytes(raw_output)
+    redacted = redact_evidence_bytes(raw_output)
+    return re.sub(rb"[ \t]+(?=\r?$)", b"", redacted, flags=re.MULTILINE)
+
+
+def redact_raw_output(raw_output: bytes) -> bytes:
+    """Public sanitizer entry point for sibling CI tools (e.g. ci_validation)."""
+    return _redact_raw_output(raw_output)
 
 
 def _utc_now() -> str:
@@ -1589,6 +1826,8 @@ def configured_ci_generation_manifest_authority() -> CiGenerationManifestAuthori
         )
     except (AttributeError, ImportError) as error:
         raise ValueError(CI_AUTHORITY_REQUIRED_ERROR) from error
+    if callable(authority):
+        authority = authority()
     if not isinstance(authority, CiGenerationManifestAuthority):
         raise TypeError(CI_AUTHORITY_REQUIRED_ERROR)
     return authority

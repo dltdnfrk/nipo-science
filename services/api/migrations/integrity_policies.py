@@ -55,9 +55,15 @@ def create_provider_metadata_guard() -> None:
         "FROM jsonb_each(payload) LOOP "
         "normalized_key := regexp_replace(lower(normalize(entry.key, NFKC)), "
         "'[^a-z0-9]', '', 'g'); "
-        "IF normalized_key <> ALL (ARRAY['accountid','accountname','displayname',"
-        "'email','lastverifiedat','model','models','provider','subscriptiontier',"
-        "'username','workspaceid']::text[]) OR "
+        "IF normalized_key <> ALL (ARRAY['accountid','accountname','adoptionstatus',"
+        "'cleanuprequestedat','cleanupstatus','destroyby','destroyedat',"
+        "'displayname','email',"
+        "'evidencesha256','lastverifiedat','model','models','provider','revision',"
+        "'qualificationexecutablesha256','qualificationprofilesha256',"
+        "'qualificationreceiptid','qualificationruntimeversion','stagingleaseid',"
+        "'stagingleasedestroyby',"
+        "'subscriptiontier','username',"
+        "'workspaceid']::text[]) OR "
         "public.jsonb_contains_secret(entry.value) "
         "THEN RETURN true; "
         "END IF; END LOOP; WHEN 'array' THEN FOR entry IN SELECT value FROM "
@@ -88,8 +94,78 @@ def create_provider_metadata_guard() -> None:
     )
 
 
+def create_provider_qualification_guards() -> None:
+    op.execute(
+        "CREATE FUNCTION validate_provider_qualification_pointer() RETURNS trigger "
+        "LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$ BEGIN IF "
+        "current_user = "
+        "'science_workbench_app' AND NEW.qualification_receipt_id IS NOT NULL "
+        "AND NEW.qualification_receipt_id IS DISTINCT FROM "
+        "OLD.qualification_receipt_id THEN RAISE EXCEPTION "
+        "'provider qualification requires adopter authority' USING ERRCODE = "
+        "'42501'; END IF; IF (NEW.qualified_at IS NULL) <> "
+        "(NEW.qualification_receipt_id IS NULL) THEN RAISE EXCEPTION "
+        "'provider qualification pointer mismatch' USING ERRCODE = '23514'; "
+        "END IF; IF NEW.qualification_receipt_id IS NOT NULL AND "
+        "NEW.qualification_receipt_id IS DISTINCT FROM OLD.qualification_receipt_id "
+        "AND NOT EXISTS (SELECT 1 FROM public.provider_qualification_receipts q "
+        "WHERE "
+        "q.org_id = NEW.org_id AND q.requester_user_id = NEW.requester_user_id "
+        "AND q.provider_connection_id = NEW.id AND "
+        "q.id = NEW.qualification_receipt_id AND q.connection_revision = "
+        "(NEW.account_metadata ->> 'revision')::bigint AND "
+        "q.adapter_id = NEW.adapter_id) THEN RAISE EXCEPTION "
+        "'provider qualification pointer is stale' USING ERRCODE = '23514'; "
+        "END IF; RETURN NEW; END $$"
+    )
+    op.execute(
+        "CREATE TRIGGER provider_connections_qualification_pointer BEFORE UPDATE OF "
+        "qualified_at, qualification_receipt_id ON provider_connections FOR EACH "
+        "ROW EXECUTE FUNCTION validate_provider_qualification_pointer()"
+    )
+    op.execute(
+        "REVOKE ALL ON FUNCTION validate_provider_qualification_pointer() FROM PUBLIC"
+    )
+    op.execute(
+        "CREATE FUNCTION validate_run_qualification_binding() RETURNS trigger "
+        "LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$ DECLARE "
+        "current_receipt uuid; BEGIN IF "
+        "TG_OP = 'UPDATE' THEN IF "
+        "ROW(NEW.requester_id, NEW.provider_connection_id, "
+        "NEW.qualification_receipt_id, NEW.qualification_receipt_sha256, "
+        "NEW.qualification_connection_revision, NEW.qualification_profile_sha256, "
+        "NEW.qualification_runtime_version, NEW.qualification_executable_sha256) "
+        "IS DISTINCT FROM ROW(OLD.requester_id, OLD.provider_connection_id, "
+        "OLD.qualification_receipt_id, OLD.qualification_receipt_sha256, "
+        "OLD.qualification_connection_revision, OLD.qualification_profile_sha256, "
+        "OLD.qualification_runtime_version, OLD.qualification_executable_sha256) "
+        "THEN RAISE EXCEPTION 'run qualification binding is immutable' "
+        "USING ERRCODE = '55000'; END IF; RETURN NEW; END IF; SELECT "
+        "p.qualification_receipt_id INTO current_receipt FROM "
+        "public.provider_connections p WHERE p.org_id = NEW.org_id AND "
+        "p.requester_user_id = NEW.requester_id AND "
+        "p.id = NEW.provider_connection_id FOR UPDATE; IF NOT FOUND OR "
+        "current_receipt IS NULL OR NEW.qualification_receipt_id IS NULL OR "
+        "NEW.qualification_receipt_id IS DISTINCT FROM current_receipt THEN "
+        "RAISE EXCEPTION "
+        "'run requires current provider qualification' USING ERRCODE = '23514'; "
+        "END IF; RETURN NEW; END $$"
+    )
+    op.execute(
+        "CREATE TRIGGER runs_qualification_binding BEFORE INSERT OR UPDATE ON runs "
+        "FOR EACH ROW EXECUTE FUNCTION validate_run_qualification_binding()"
+    )
+    op.execute(
+        "REVOKE ALL ON FUNCTION validate_run_qualification_binding() FROM PUBLIC"
+    )
+
+
 def drop_integrity_guards() -> None:
-    op.execute("DROP FUNCTION reject_provider_metadata_secret() CASCADE")
-    op.execute("DROP FUNCTION jsonb_contains_secret(jsonb) CASCADE")
-    op.execute("DROP FUNCTION require_owner_membership_mutation() CASCADE")
-    op.execute("DROP FUNCTION protect_last_owner() CASCADE")
+    op.execute("DROP FUNCTION IF EXISTS validate_run_qualification_binding() CASCADE")
+    op.execute(
+        "DROP FUNCTION IF EXISTS validate_provider_qualification_pointer() CASCADE"
+    )
+    op.execute("DROP FUNCTION IF EXISTS reject_provider_metadata_secret() CASCADE")
+    op.execute("DROP FUNCTION IF EXISTS jsonb_contains_secret(jsonb) CASCADE")
+    op.execute("DROP FUNCTION IF EXISTS require_owner_membership_mutation() CASCADE")
+    op.execute("DROP FUNCTION IF EXISTS protect_last_owner() CASCADE")

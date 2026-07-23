@@ -1,22 +1,22 @@
 from pathlib import Path
 
 import pytest
-from tools.platform_policy.static_checks import (
-    StaticCheckError,
-    check_secrets,
-    check_workflow_actions,
-)
+from tools.platform_policy.static_check_types import StaticCheckError
+from tools.platform_policy.static_checks import check_secrets
+from tools.platform_policy.workflow_policy import check_workflow_actions
 
 
 def test_security_floating_workflow_action_is_rejected(tmp_path: Path) -> None:
     # Given
     workflow = tmp_path / ".github/workflows/ci.yml"
     workflow.parent.mkdir(parents=True)
-    _ = workflow.write_text("steps:\n  - uses: actions/checkout@v4\n")
+    content = "steps:\n  - uses: actions/checkout@v4\n"
+    _ = workflow.write_text(content)
 
     # When / Then
     with pytest.raises(StaticCheckError, match="unpinned-workflow-action"):
         _ = check_workflow_actions(tmp_path)
+    assert workflow.read_text() == content
 
 
 def test_unit_full_sha_workflow_action_is_counted(tmp_path: Path) -> None:
@@ -74,6 +74,84 @@ def test_unit_yml_and_yaml_actions_are_not_double_counted(tmp_path: Path) -> Non
 
     # Then
     assert count == 2
+
+
+def test_security_ci_runner_without_external_authority_is_rejected(
+    tmp_path: Path,
+) -> None:
+    workflow = tmp_path / ".github/workflows/ci.yml"
+    workflow.parent.mkdir(parents=True)
+    sha = "34e114876b0b11c390a56381ad16ebd13914f8d5"
+    _ = workflow.write_text(
+        "permissions:\n"
+        "  contents: read\n"
+        "jobs:\n"
+        "  rogue:\n"
+        "    runs-on: ubuntu-24.04\n"
+        "    steps:\n"
+        f"      - uses: actions/checkout@{sha}\n"
+        "      - run: make ci-local\n"
+    )
+
+    with pytest.raises(StaticCheckError, match="missing-external-ci-authority"):
+        _ = check_workflow_actions(tmp_path)
+
+
+def test_ci_validation_without_authority_owned_publication_is_rejected(
+    tmp_path: Path,
+) -> None:
+    workflow = tmp_path / ".github/workflows/ci.yml"
+    workflow.parent.mkdir(parents=True)
+    sha = "34e114876b0b11c390a56381ad16ebd13914f8d5"
+    _ = workflow.write_text(
+        "permissions:\n"
+        "  contents: read\n"
+        "jobs:\n"
+        "  validate:\n"
+        "    runs-on: ubuntu-24.04\n"
+        "    steps:\n"
+        f"      - uses: actions/checkout@{sha}\n"
+        "        with:\n"
+        "          persist-credentials: false\n"
+        "      - run: make ci-validate\n"
+    )
+
+    with pytest.raises(StaticCheckError, match="missing-external-ci-authority"):
+        _ = check_workflow_actions(tmp_path)
+
+
+def test_inert_authority_strings_do_not_count_as_owned_execution(
+    tmp_path: Path,
+) -> None:
+    workflow = tmp_path / ".github/workflows/ci.yml"
+    workflow.parent.mkdir(parents=True)
+    sha = "34e114876b0b11c390a56381ad16ebd13914f8d5"
+    _ = workflow.write_text(
+        "permissions:\n"
+        "  contents: read\n"
+        "jobs:\n"
+        "  validate:\n"
+        "    steps:\n"
+        f"      - uses: actions/checkout@{sha}\n"
+        "        with:\n"
+        "          persist-credentials: false\n"
+        "      - run: make ci-validate\n"
+        "  attest:\n"
+        "    environment: ci-attestation\n"
+        "    permissions:\n"
+        "      contents: none\n"
+        "      id-token: write\n"
+        "    steps:\n"
+        "      - env:\n"
+        "          CI_AUTHORITY_AUDIENCE: ${{ vars.CI_AUTHORITY_AUDIENCE }}\n"
+        "          CI_AUTHORITY_URL: ${{ vars.CI_AUTHORITY_URL }}\n"
+        "        run: |\n"
+        "          request='{operation:\"execute_and_publish\"}'\n"
+        "          header='X-CI-Authority-Protocol: 2'\n"
+    )
+
+    with pytest.raises(StaticCheckError, match="missing-external-ci-authority"):
+        _ = check_workflow_actions(tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -157,7 +235,6 @@ def test_unit_secret_scan_allows_long_credential_named_variables(
         ".tools/runtime/leak",
         ".venv/bin/activate",
         ".ci/evidence/latest/leak.sh",
-        "tools/evidence/leak.sh",
         "dist/leak.js",
         "__pycache__/leak.py",
     ],

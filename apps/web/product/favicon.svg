@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Nipo Labs</title>
+  <desc id="desc">A four-node spectral mark in mint on a graphite field.</desc>
+  <rect width="64" height="64" rx="14" fill="#07090d" />
+  <path d="M16 18 32 9l16 9v28l-16 9-16-9z" fill="none" stroke="#39d9ac" stroke-width="2" />
+  <path d="M16 18 32 28l16-10M32 28v27" fill="none" stroke="#82f2cc" stroke-width="2" />
+  <circle cx="16" cy="18" r="5" fill="#d7fff3" />
+  <circle cx="48" cy="18" r="5" fill="#82f2cc" />
+  <circle cx="32" cy="28" r="5" fill="#39d9ac" />
+  <circle cx="32" cy="55" r="5" fill="#16866b" />
+</svg>

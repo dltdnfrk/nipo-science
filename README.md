@@ -3,7 +3,9 @@
 The current foundation establishes an isolated monorepo, reproducible toolchain,
 shared Python/TypeScript contracts, local services, the PostgreSQL persistence
 schema, and a test-principal Korean Artifact inspection slice. Production public
-identity and provider routes remain gated to their later implementation waves.
+provider connection and OAuth surfaces remain gated to later implementation
+waves; production database sessions and qualified provider Run dispatch are
+already wired through their restricted service boundaries.
 
 ## Skeleton
 
@@ -30,6 +32,12 @@ not dependencies in Wave 0.
 The 2026-07-13 official-stack review superseded the plan's earlier pnpm 10 and
 PostgreSQL 16 examples. The plan, normative v0.4 specification, and this target
 now agree on pnpm 11.12.0 and PostgreSQL 18.4.
+
+The `0.0.0` values in the private Node and non-package Python manifests are an
+intentional non-release sentinel, not the product or deployment version. Release,
+SBOM, and provenance identity come from the source commit and the external
+release authority; publishing either workspace manifest as a package is outside
+this repository's current contract.
 
 ## Bootstrap
 
@@ -121,6 +129,42 @@ Blobs are fsynced before atomic publication, while filesystem or metadata failur
 compensates unreferenced content under a per-address database lock. The
 deterministic in-memory adapter remains for isolated tests.
 
+The production Artifact HTTP composition is available through
+`python -m services.api.artifact_production_app`. It consumes persisted opaque
+sessions, derives organization and requester identity server-side, resolves
+Artifact Project scope under forced RLS, and composes PostgreSQL metadata with
+owner-private blob and recovery roots. The environment contract, role grant,
+trusted execution binding, TLS/origin requirements, and exact invocation are in
+[docs/operations/artifact-service.md](docs/operations/artifact-service.md).
+
+## Provider qualification boundary
+
+Run `make test-provider-runtime` to verify the external-authority client,
+public receipt verifier, durable adoption, qualified Run dispatch, cleanup,
+migration, and PostgreSQL privilege code paths. Qualification authority,
+adopter, dispatcher, and cleanup worker are separate credentialed processes.
+`science_workbench_qualification` and `science_workbench_dispatcher` are
+`NOLOGIN`, `NOINHERIT`, `NOBYPASSRLS` capability roles assumed by separate deployment-managed
+`NOINHERIT` LOGINs; the ordinary application role cannot insert Runs. The
+`science_workbench_provider_cleanup` capability role is also `NOLOGIN` and
+`NOINHERIT` with `NOBYPASSRLS`; its dedicated LOGIN has no direct provider-table
+access and may execute only four fixed due-candidate, validation, and completion
+functions. It is never resident in the ordinary application or provider runtime.
+
+Production supplies a protected exact runtime-policy file for its deployed
+platform and pins the file's SHA-256. The
+Darwin arm64 policy checked into `config/provider-runtime-policies.json` is a
+development/test example only. A fresh upgrade archives observable bare legacy
+`healthy` state before normalization. `0004_provider_security` converges a
+stale-0003 deployment but never fabricates evidence already lost by an older
+0003; that case requires pre-0003 backup remediation or new qualification. The code-path
+gates are not external live qualification: the current external attempt is
+blocked by the provider subscription usage limit, no deployment-signed or
+adopted live qualification is claimed, and release remains blocked until a fresh
+external attempt succeeds. Deployment, rotation, recovery, and rollback are
+documented in
+[docs/operations/provider-qualification.md](docs/operations/provider-qualification.md).
+
 ## Deterministic Dry-Lab Science
 
 Run `make test-science` to verify the pure research-support analysis package.
@@ -156,11 +200,13 @@ sandboxed and accepts only the server-declared Artifact origin.
 ## Deterministic Dry-Lab Fixture Vertical
 
 Run `make test-dry-lab` to verify the live loopback fixture. The ordered flow
-validates a calibrated CSV upload, freezes an ActionPlan digest, consumes one
-approval, runs a fixed normalizer in an isolated Python child, emits immutable
-CSV, PNG, Markdown, evidence-ledger, and provenance artifacts, persists a
-read-only hash Review, creates a safe relative-path Export receipt, and records
-runtime cleanup.
+validates a calibrated CSV upload and complete human-authored ResearchIntent,
+freezes both into the ActionPlan digest, consumes one approval, runs a fixed
+normalizer in an isolated Python child, emits immutable CSV, PNG, Markdown,
+evidence-ledger, and provenance artifacts, persists a read-only hash Review,
+creates a safe relative-path Export receipt, and records runtime cleanup. The
+ResearchIntent and its digest remain bound through approval, provenance, Review,
+and Export; a missing or incomplete intent is rejected before planning.
 
 The fixture rejects malformed or uncalibrated data, unsafe paths, network and
 package-install requests, stale leases, approval replay, cancellation, and
@@ -168,3 +214,13 @@ Kernel loss without retrying side effects. It is a bounded research-only
 acceptance surface, not the production identity or product UI delivered in
 later waves. Start `services.api.dry_lab_fixture.run_server()` to serve the
 accessible Korean browser fixture from `apps/web/g002-fixture.html`.
+
+The authenticated ProductServer journey is also an explicit process-local
+browser fixture. `ProductDryLabService` can be composed only with
+`authenticated_fixture=True`; a normal server starts without demo identities,
+Runs, or Artifacts. Its reload and multi-Run checks are UI/API acceptance
+evidence, not PostgreSQL restart or production persistence evidence. Durable
+Artifact creation, Version reads, and downloads now use the production
+composition documented above. Production Run, approval, execution, Review, and
+Export durability remains bound to the normalized PostgreSQL graph and still
+requires its own principal-scoped service composition before release.

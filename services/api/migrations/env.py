@@ -14,13 +14,15 @@ if TYPE_CHECKING:
 
 
 class MissingDatabaseUrlError(Exception):
-    pass
+    def __init__(self) -> None:
+        super().__init__(
+            "DATABASE_URL must be set explicitly before running migrations"
+        )
 
 
 def database_url() -> str:
-    configured = context.config.get_main_option("sqlalchemy.url")
-    selected = os.environ.get("DATABASE_URL", configured)
-    if selected is None:
+    selected = os.environ.get("DATABASE_URL", "").strip()
+    if not selected:
         raise MissingDatabaseUrlError
     return selected
 

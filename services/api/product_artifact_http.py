@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from services.api.product_artifact_views import JsonObject
     from services.api.product_artifacts import ProductArtifactService
 
-_ORGANIZATION_ID = "org-mineral"
 _ENVIRONMENT_SHA256 = "e" * 64
 _DETAIL_PARTS = 4
 _VERSION_PARTS = 6
@@ -43,6 +42,8 @@ class ArtifactHttpContext:
 
     artifacts: ProductArtifactService
     artifact_origin: str
+    organization_id: str
+    session_ids: frozenset[str]
 
 
 def artifact_get(
@@ -56,7 +57,7 @@ def artifact_get(
         send_json(
             handler,
             HTTPStatus.OK,
-            artifact_list_json(context.artifacts.list_latest(_ORGANIZATION_ID)),
+            artifact_list_json(context.artifacts.list_latest(context.organization_id)),
         )
         return
     if parts[:3] != _ARTIFACT_BASE:
@@ -73,7 +74,7 @@ def artifact_get(
         and parts[4] == "versions"
         and parts[6] == "download"
     ):
-        _download(handler, context.artifacts, parts[3], parts[5])
+        _download(handler, context, parts[3], parts[5])
         return
     send_bytes(handler, HTTPStatus.NOT_FOUND, NOT_FOUND)
 
@@ -89,7 +90,7 @@ def create_artifact_version(
     name = body.get("name") if body else None
     media_type = body.get("media_type") if body else None
     content = body.get("content") if body else None
-    current = context.artifacts.detail(_ORGANIZATION_ID, artifact_id)
+    current = context.artifacts.detail(context.organization_id, artifact_id)
     if (
         current is None
         or type(base) is not int
@@ -102,7 +103,7 @@ def create_artifact_version(
     try:
         created = context.artifacts.create_version(
             ArtifactVersionDraft(
-                organization_id=_ORGANIZATION_ID,
+                organization_id=context.organization_id,
                 artifact_id=artifact_id,
                 name=name,
                 media_type=media_type,
@@ -133,18 +134,20 @@ def mutate_artifact_attachment(
     """Mutate only the Version named in the tenant-scoped route."""
     artifact_id, version_id = parts[3], parts[5]
     session_id = body.get("session_id") if body else None
-    selected = context.artifacts.detail(_ORGANIZATION_ID, artifact_id, version_id)
+    selected = context.artifacts.detail(
+        context.organization_id, artifact_id, version_id
+    )
     if (
         not isinstance(session_id, str)
-        or session_id != "session-demo"
+        or session_id not in context.session_ids
         or selected is None
     ):
         send_bytes(handler, HTTPStatus.NOT_FOUND, NOT_FOUND)
         return
     sessions = (
-        context.artifacts.attach(_ORGANIZATION_ID, version_id, session_id)
+        context.artifacts.attach(context.organization_id, version_id, session_id)
         if attach
-        else context.artifacts.detach(_ORGANIZATION_ID, version_id, session_id)
+        else context.artifacts.detach(context.organization_id, version_id, session_id)
     )
     send_json(
         handler,
@@ -161,7 +164,7 @@ def _detail(
     *,
     status: HTTPStatus = HTTPStatus.OK,
 ) -> None:
-    detail = context.artifacts.detail(_ORGANIZATION_ID, artifact_id, version_id)
+    detail = context.artifacts.detail(context.organization_id, artifact_id, version_id)
     if detail is None:
         send_bytes(handler, HTTPStatus.NOT_FOUND, NOT_FOUND)
         return
@@ -174,11 +177,11 @@ def _detail(
 
 def _download(
     handler: BaseHTTPRequestHandler,
-    artifacts: ProductArtifactService,
+    context: ArtifactHttpContext,
     artifact_id: str,
     version_id: str,
 ) -> None:
-    version = artifacts.download(_ORGANIZATION_ID, version_id)
+    version = context.artifacts.download(context.organization_id, version_id)
     if version is None or version.artifact_id != artifact_id:
         send_bytes(handler, HTTPStatus.NOT_FOUND, NOT_FOUND)
         return

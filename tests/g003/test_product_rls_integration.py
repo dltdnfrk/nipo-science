@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from http.client import HTTPConnection
+from socket import AF_INET, AF_INET6
+from typing import cast
 
 from services.api.product_app import (
     Principal,
@@ -22,6 +24,17 @@ from services.api.tests.persistence.test_rls import (
 )
 
 pytest_plugins = ("services.api.tests.persistence.conftest",)
+_UNSUPPORTED_ADDRESS = "unsupported address family"
+
+
+def _server_host_port(server: ProductServer) -> tuple[str, int]:
+    address = server.server_address
+    if server.address_family == AF_INET:
+        return cast("tuple[str, int]", address)
+    if server.address_family == AF_INET6:
+        host, port, _, _ = cast("tuple[str, int, int, int]", address)
+        return host, port
+    raise ValueError(_UNSUPPORTED_ADDRESS)
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,14 +52,14 @@ class _Response:
 def _request(
     server: ProductServer, method: str, path: str, *, headers: dict[str, str]
 ) -> _Response:
-    connection = HTTPConnection(server.server_name, server.server_port)
+    host, port = _server_host_port(server)
+    connection = HTTPConnection(host, port)
     try:
         connection.request(method, path, headers=headers)
         response = connection.getresponse()
         return _Response(response.status, response.read())
     finally:
         connection.close()
-
 
 
 def test_product_http_reads_use_forced_postgres_rls(migrated_database: None) -> None:
@@ -90,9 +103,13 @@ def test_product_http_reads_use_forced_postgres_rls(migrated_database: None) -> 
         assert b"Project A" in own.read()
         assert b"Project B" not in workspace.read()
         assert b"Project B" not in own.read()
-        assert (foreign.status, foreign.read()) == (missing.status, missing.read()) == (
-            404,
-            b'{"error":"not_found"}',
+        assert (
+            (foreign.status, foreign.read())
+            == (missing.status, missing.read())
+            == (
+                404,
+                b'{"error":"not_found"}',
+            )
         )
     finally:
         server.shutdown()

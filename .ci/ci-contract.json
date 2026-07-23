@@ -1,10 +1,14 @@
 {
   "catalog": {
-    "catalog_root_sha256": "1eb099e179a62c5942f3565df69cc8a495051e876bf3c00b47120035699e38d0",
+    "version": 1,
+    "source_identity": "checked-in-ci-contract-v1",
+    "requirements_sha256": "8d8c44f87a8c6b145991f5ecfb0727f58ef1edf133ae8785239d574b7a572779",
+    "source_root_sha256": "7a6fccda2c1f1a648a1016918f6a83830bb5184d72fb5a6aed4f9ecfef5e2d13",
+    "catalog_root_sha256": "43c39f6c42c2528f0482c68c944fceaeaba3eb439f8ba62fcb907c287dc5eec8",
+    "security_catalog_id": "high-threat-v1",
     "jobs": [
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "architecture",
         "argv": [
           "make",
           "--no-print-directory",
@@ -12,25 +16,21 @@
           "<root>",
           "verify-architecture"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-006"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "architecture",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F07",
-          "AC-F08",
-          "AC-F09"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "artifact-contracts",
         "argv": [
           "make",
           "--no-print-directory",
@@ -38,25 +38,21 @@
           "<root>",
           "test-artifact-contracts"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-009"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "artifact-contracts",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F13-D",
-          "AC-NFR",
-          "AC-SAFE"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "artifact-ui",
         "argv": [
           "make",
           "--no-print-directory",
@@ -64,25 +60,21 @@
           "<root>",
           "test-e2e-artifacts"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-016"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "artifact-ui",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "GS06",
-          "GS07",
-          "GS08"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "artifacts",
         "argv": [
           "make",
           "--no-print-directory",
@@ -90,25 +82,21 @@
           "<root>",
           "test-artifacts"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-014"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "artifacts",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "F13",
-          "GS01",
-          "GS02"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "boundaries",
         "argv": [
           "make",
           "--no-print-directory",
@@ -116,25 +104,21 @@
           "<root>",
           "test-boundaries"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-004"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "boundaries",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F04",
-          "AC-F04-B",
-          "AC-F05"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "dry-lab",
         "argv": [
           "make",
           "--no-print-directory",
@@ -142,25 +126,21 @@
           "<root>",
           "test-dry-lab"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-021"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "dry-lab",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "RV01",
-          "RV02",
-          "RV03"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "generated-drift",
         "argv": [
           "make",
           "--no-print-directory",
@@ -168,25 +148,21 @@
           "<root>",
           "check-generated-contracts"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-018"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "generated-drift",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "NFR02",
-          "NFR03",
-          "NFR04"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": 213,
-        "analyzer_inventory_root_sha256": "d86e8e49d88b55408fcc1904ead753b19cea5066d85573628946d47f8ca79bc3",
+        "job": "lint",
         "argv": [
           "<ruff>",
           "check",
@@ -214,6 +190,7 @@
           "tools/verify_spec.py",
           "tools/tests/test_verify_spec.py",
           "tools/architecture_contract.py",
+          "tools/architecture_evidence.py",
           "tools/architecture_manifest.py",
           "tools/verify_architecture.py",
           "tests/test_architecture.py",
@@ -239,25 +216,21 @@
           "tools/run_artifact_ui_fixture.py",
           "tests/artifact_ui"
         ],
-        "blockers": [],
+        "count_kind": "analyzer-inventory",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": "00a429ec027a1f312a72644bfc86117d0ee2c04d815aee0721fb6230c7221018",
+        "analyzer_inventory_count": 272,
         "category": "quality",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-001"
         ],
-        "count_kind": "analyzer-inventory",
-        "environment_profile": "local-ci",
-        "job": "lint",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-COMPLIANCE",
-          "AC-DATA",
-          "AC-F01"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "local-config",
         "argv": [
           "make",
           "--no-print-directory",
@@ -265,25 +238,21 @@
           "<root>",
           "test-local-config"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-010"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "local-config",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-TENANT",
-          "F01",
-          "F02"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "migrations",
         "argv": [
           "make",
           "--no-print-directory",
@@ -291,25 +260,21 @@
           "<root>",
           "test-migrations"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-011"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "migrations",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "F03",
-          "F04",
-          "F05"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "openapi",
         "argv": [
           "make",
           "--no-print-directory",
@@ -317,25 +282,21 @@
           "<root>",
           "test-openapi"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-007"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "openapi",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F10",
-          "AC-F11",
-          "AC-F11-B"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "performance",
         "argv": [
           "<python>",
           "-m",
@@ -343,25 +304,21 @@
           "-q",
           "tests/platform/test_deployment_contract.py"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-026"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "performance",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "SEC11",
-          "SEC12",
-          "SEC13"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "platform-tests",
         "argv": [
           "<python>",
           "-m",
@@ -369,25 +326,21 @@
           "-q",
           "tests/platform"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-003"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "platform-tests",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F01-E",
-          "AC-F02",
-          "AC-F03"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "product-ui",
         "argv": [
           "make",
           "--no-print-directory",
@@ -395,25 +348,21 @@
           "<root>",
           "test-product-ui"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-022"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "product-ui",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "RV04",
-          "RV05",
-          "SEC01"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "protocol-contracts",
         "argv": [
           "make",
           "--no-print-directory",
@@ -421,25 +370,21 @@
           "<root>",
           "test-protocol-contracts"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-008"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "protocol-contracts",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F13",
-          "AC-F13-B",
-          "AC-F13-C"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "provider-runtime",
         "argv": [
           "make",
           "--no-print-directory",
@@ -447,25 +392,21 @@
           "<root>",
           "test-provider-runtime"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-023"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "provider-runtime",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "SEC02",
-          "SEC03",
-          "SEC04"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "recovery",
         "argv": [
           "<python>",
           "-m",
@@ -473,25 +414,21 @@
           "-q",
           "tests/platform/test_g005_recovery_contract.py"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-025"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "recovery",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "SEC08",
-          "SEC09",
-          "SEC10"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "release",
         "argv": [
           "<python>",
           "-m",
@@ -499,25 +436,21 @@
           "-q",
           "tests/platform/test_release_contract.py"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "release",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-027"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "release",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "SEC14",
-          "SEC15",
-          "SEC16"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "retention",
         "argv": [
           "make",
           "--no-print-directory",
@@ -525,25 +458,21 @@
           "<root>",
           "test-retention"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-017"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "retention",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "GS09",
-          "GS10",
-          "NFR01"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "rls",
         "argv": [
           "make",
           "--no-print-directory",
@@ -551,25 +480,21 @@
           "<root>",
           "test-rls"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-012"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "rls",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "F06",
-          "F07",
-          "F08"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "sbom",
         "argv": [
           "<python>",
           "-m",
@@ -577,25 +502,21 @@
           "sbom",
           "<root>"
         ],
-        "blockers": [],
+        "count_kind": "checks",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "security",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-019"
         ],
-        "count_kind": "checks",
-        "environment_profile": "local-ci",
-        "job": "sbom",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "NFR05",
-          "NFR06",
-          "NFR07"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "science",
         "argv": [
           "make",
           "--no-print-directory",
@@ -603,25 +524,21 @@
           "<root>",
           "test-science"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "test",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-015"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "science",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "GS03",
-          "GS04",
-          "GS05"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "secret-scan",
         "argv": [
           "<python>",
           "-m",
@@ -629,32 +546,32 @@
           "secret-scan",
           "<root>"
         ],
-        "blockers": [],
+        "count_kind": "checks",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "security",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-020"
         ],
-        "count_kind": "checks",
-        "environment_profile": "local-ci",
-        "job": "secret-scan",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "NFR08",
-          "NFR09",
-          "NFR10"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "security",
         "argv": [
           "<python>",
           "-m",
           "tools.platform_policy.security_gate"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "security",
+        "environment_profile": "local-ci",
         "control_ids": [
           "T01",
           "T02",
@@ -670,22 +587,14 @@
           "T12",
           "T13"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "security",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [
           "high-threat"
         ],
-        "requirement_ids": [
-          "SEC05",
-          "SEC06",
-          "SEC07"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "spec",
         "argv": [
           "make",
           "--no-print-directory",
@@ -693,25 +602,21 @@
           "<root>",
           "verify-spec"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-005"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "spec",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F05-B",
-          "AC-F06",
-          "AC-F06-B"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": 213,
-        "analyzer_inventory_root_sha256": "d86e8e49d88b55408fcc1904ead753b19cea5066d85573628946d47f8ca79bc3",
+        "job": "typecheck",
         "argv": [
           "<basedpyright>",
           "packages/contracts/python",
@@ -738,6 +643,7 @@
           "tools/verify_spec.py",
           "tools/tests/test_verify_spec.py",
           "tools/architecture_contract.py",
+          "tools/architecture_evidence.py",
           "tools/architecture_manifest.py",
           "tools/verify_architecture.py",
           "tests/test_architecture.py",
@@ -763,25 +669,21 @@
           "tools/run_artifact_ui_fixture.py",
           "tests/artifact_ui"
         ],
-        "blockers": [],
+        "count_kind": "analyzer-inventory",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": "00a429ec027a1f312a72644bfc86117d0ee2c04d815aee0721fb6230c7221018",
+        "analyzer_inventory_count": 272,
         "category": "quality",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-002"
         ],
-        "count_kind": "analyzer-inventory",
-        "environment_profile": "local-ci",
-        "job": "typecheck",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "AC-F01-B",
-          "AC-F01-C",
-          "AC-F01-D"
-        ]
+        "blockers": []
       },
       {
-        "analyzer_inventory_count": null,
-        "analyzer_inventory_root_sha256": null,
+        "job": "upload",
         "argv": [
           "make",
           "--no-print-directory",
@@ -789,27 +691,107 @@
           "<root>",
           "test-upload"
         ],
-        "blockers": [],
+        "count_kind": "pytest",
+        "parser_version": 1,
+        "analyzer_inventory_root_sha256": null,
+        "analyzer_inventory_count": null,
         "category": "contract",
+        "environment_profile": "local-ci",
         "control_ids": [
           "CI-013"
         ],
-        "count_kind": "pytest",
-        "environment_profile": "local-ci",
-        "job": "upload",
-        "parser_version": 1,
+        "requirement_ids": [],
         "prerequisites": [],
-        "requirement_ids": [
-          "F09",
-          "F10",
-          "F11"
-        ]
+        "blockers": []
       }
     ],
-    "security_catalog_id": "high-threat-v1",
-    "source_identity": "checked-in-ci-contract-v1",
-    "source_root_sha256": "5e3386da9c34f0e07eeee72635abba2ee547e29e609ac96bedff38ad3e8d1f9c",
-    "version": 1
+    "requirement_case_bindings": [],
+    "unverified_requirement_ids": [
+      "AC-COMPLIANCE",
+      "AC-DATA",
+      "AC-F01",
+      "AC-F01-B",
+      "AC-F01-C",
+      "AC-F01-D",
+      "AC-F01-E",
+      "AC-F02",
+      "AC-F03",
+      "AC-F04",
+      "AC-F04-B",
+      "AC-F05",
+      "AC-F05-B",
+      "AC-F06",
+      "AC-F06-B",
+      "AC-F07",
+      "AC-F08",
+      "AC-F09",
+      "AC-F10",
+      "AC-F11",
+      "AC-F11-B",
+      "AC-F13",
+      "AC-F13-B",
+      "AC-F13-C",
+      "AC-F13-D",
+      "AC-NFR",
+      "AC-PROVIDER-AUTHORITY",
+      "AC-PROVIDER-MIGRATION",
+      "AC-PROVIDER-RUN-BINDING",
+      "AC-SAFE",
+      "AC-TENANT",
+      "F01",
+      "F02",
+      "F03",
+      "F04",
+      "F05",
+      "F06",
+      "F07",
+      "F08",
+      "F09",
+      "F10",
+      "F11",
+      "F13",
+      "GS01",
+      "GS02",
+      "GS03",
+      "GS04",
+      "GS05",
+      "GS06",
+      "GS07",
+      "GS08",
+      "GS09",
+      "GS10",
+      "NFR01",
+      "NFR02",
+      "NFR03",
+      "NFR04",
+      "NFR05",
+      "NFR06",
+      "NFR07",
+      "NFR08",
+      "NFR09",
+      "NFR10",
+      "RV01",
+      "RV02",
+      "RV03",
+      "RV04",
+      "RV05",
+      "SEC01",
+      "SEC02",
+      "SEC03",
+      "SEC04",
+      "SEC05",
+      "SEC06",
+      "SEC07",
+      "SEC08",
+      "SEC09",
+      "SEC10",
+      "SEC11",
+      "SEC12",
+      "SEC13",
+      "SEC14",
+      "SEC15",
+      "SEC16"
+    ]
   },
   "evidence": {
     "aggregate": "sha256",

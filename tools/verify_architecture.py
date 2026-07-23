@@ -20,10 +20,12 @@ from typing import Final
 
 if __package__:
     import tools.architecture_contract as _contract
+    import tools.architecture_evidence as _evidence
     import tools.architecture_manifest as _manifest
 else:
     sys.path.insert(0, str(Path(__file__).parents[1]))
     import tools.architecture_contract as _contract
+    import tools.architecture_evidence as _evidence
     import tools.architecture_manifest as _manifest
 
 PLACEHOLDER_RE: Final = re.compile(r"\b(?:TODO|TBD|FIXME|PLACEHOLDER)\b", re.IGNORECASE)
@@ -113,6 +115,7 @@ def _check_capabilities(
 
 
 def _check_threats(
+    project_root: Path,
     document: _manifest.JsonObject,
     violations: list[str],
 ) -> None:
@@ -136,9 +139,11 @@ def _check_threats(
         test = threat.get("executable_test")
         if not isinstance(test, str) or not test.startswith("make "):
             violations.append(f"untested-high-threat:{threat_id}")
-        evidence = threat.get("evidence_path")
-        if not isinstance(evidence, str) or not evidence.startswith("tools/evidence/"):
-            violations.append(f"missing-evidence-path:{threat_id}")
+        violation = _evidence.check_evidence_reference(
+            project_root, threat.get("evidence_path"), threat_id
+        )
+        if violation is not None:
+            violations.append(violation)
     oauth = next(
         (item for item in threats if item.get("name") == "oauth-token-theft"),
         None,
@@ -182,7 +187,11 @@ def _verify(root: Path) -> tuple[str, ...]:
     violations: list[str] = []
     architecture = _manifest.read_manifest(root / "architecture.json")
     _check_architecture(root, architecture, violations)
-    _check_threats(_manifest.read_manifest(root / "threat-model.json"), violations)
+    _check_threats(
+        root.parents[1],
+        _manifest.read_manifest(root / "threat-model.json"),
+        violations,
+    )
     _check_data(
         _manifest.read_manifest(root / "data-classification.json"),
         violations,
@@ -218,7 +227,19 @@ def _main(arguments: list[str]) -> int:
         for violation in violations:
             _ = sys.stdout.write(f"ARCHITECTURE VIOLATION [{violation}]\n")
         return 1
-    counts = "9 decisions, 11 boundaries, 13 High threats, 8 classified fields"
+    architecture = _manifest.read_manifest(root / "architecture.json")
+    threats = _manifest.read_manifest(root / "threat-model.json")
+    data = _manifest.read_manifest(root / "data-classification.json")
+    decisions = architecture.get("decisions")
+    boundaries = architecture.get("trust_boundaries")
+    threat_items = threats.get("threats")
+    fields = data.get("fields")
+    counts = (
+        f"{len(decisions) if isinstance(decisions, list) else 0} decisions, "
+        f"{len(boundaries) if isinstance(boundaries, list) else 0} boundaries, "
+        f"{len(threat_items) if isinstance(threat_items, list) else 0} High threats, "
+        f"{len(fields) if isinstance(fields, list) else 0} classified fields"
+    )
     report = f"architecture-check: PASS ({counts})"
     _ = sys.stdout.write(f"{report}\n")
     return 0

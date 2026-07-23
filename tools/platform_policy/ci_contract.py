@@ -14,7 +14,7 @@ from collections.abc import Callable, Mapping
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import (
     Annotated,
@@ -38,6 +38,8 @@ type CountKindValue = Literal["analyzer-inventory", "pytest", "checks"]
 
 SHA256_LENGTH: Final = 64
 EVIDENCE_BUNDLE_VERSION: Final = 1
+CI_REQUIREMENT_CASE_PREFIX: Final = b"CI_REQUIREMENT_CASE="
+CI_REQUIREMENT_CASE_ERROR: Final = "CI requirement case evidence mismatch"
 TRUSTED_REQUIREMENT_IDS: Final[frozenset[str]] = frozenset(
     (
         "AC-COMPLIANCE",
@@ -66,6 +68,9 @@ TRUSTED_REQUIREMENT_IDS: Final[frozenset[str]] = frozenset(
         "AC-F13-C",
         "AC-F13-D",
         "AC-NFR",
+        "AC-PROVIDER-AUTHORITY",
+        "AC-PROVIDER-MIGRATION",
+        "AC-PROVIDER-RUN-BINDING",
         "AC-SAFE",
         "AC-TENANT",
         "F01",
@@ -158,6 +163,7 @@ CURRENT_RUN_ANCHOR_ERROR: Final = "CI current run authority mismatch"
 CURRENT_RUN_REPLAY_ERROR: Final = "CI current run transition is invalid"
 CURRENT_RUN_SHAPE_ERROR: Final = "CI current run has an invalid shape"
 SENSITIVE_EVIDENCE_ERROR: Final = "evidence contains unredacted secret material"
+MAX_SECRET_DECODE_PASSES: Final = 32
 EVIDENCE_DESCRIPTOR_ERROR: Final = "evidence descriptor is incomplete or inconsistent"
 EVIDENCE_REDERIVATION_ERROR: Final = "evidence count cannot be rederived"
 MAX_EVIDENCE_FILE_BYTES: Final = 8 * 1024 * 1024
@@ -258,11 +264,19 @@ class CiExecutionAttestation(BaseModel):
     catalog_source_root_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     job: CiJob
     argv: tuple[str, ...] = Field(min_length=1)
-    requirement_ids: tuple[str, ...] = Field(min_length=1)
+    requirement_ids: tuple[str, ...] = ()
     control_ids: tuple[str, ...] = Field(min_length=1)
     toolchain: str = Field(min_length=1)
     executed_count: int = Field(ge=1)
     output_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    attachment_sha256: tuple[Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")], ...] = ()
+    security_catalog_root_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    security_threat_ids: tuple[str, ...] = ()
+    security_evidence_roots: tuple[
+        Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")], ...
+    ] = ()
     outcome: Literal["success"]
     started_at: str = Field(min_length=1)
     finished_at: str = Field(min_length=1)
@@ -313,6 +327,137 @@ class GateResult(BaseModel):
     execution_attestation: CiExecutionAttestation | None = None
 
 
+class CiRequirementCaseBinding(BaseModel):
+    """One authority-pinned executable case for a normative requirement."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
+
+    requirement_id: str = Field(min_length=1)
+    job: CiJob
+    case_id: str = Field(min_length=1)
+    source_path: str = Field(min_length=1)
+    source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    test_path: str = Field(min_length=1)
+    test_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    test_node_id: str = Field(min_length=1)
+    observation_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def paths_are_repository_relative(self) -> Self:
+        """Reject paths that can escape or ambiguously address the source tree."""
+        for raw_path in (self.source_path, self.test_path):
+            path = PurePosixPath(raw_path)
+            if path.is_absolute() or ".." in path.parts or str(path) != raw_path:
+                msg = "invalid CI requirement case binding"
+                raise ValueError(msg)
+        if (
+            self.source_path == self.test_path
+            or not self.test_path.endswith(".py")
+            or not self.test_node_id.startswith(f"{self.test_path}::")
+            or any(character in self.test_node_id for character in "\x00\r\n")
+        ):
+            msg = "invalid CI requirement case binding"
+            raise ValueError(msg)
+        return self
+
+
+class CiRequirementCaseObservation(BaseModel):
+    """Trusted-parent observation of one exact executable requirement case."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
+
+    requirement_id: str = Field(min_length=1)
+    job: CiJob
+    case_id: str = Field(min_length=1)
+    source_path: str = Field(min_length=1)
+    source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    test_path: str = Field(min_length=1)
+    test_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    test_node_id: str = Field(min_length=1)
+    execution_output_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    case_executed_count: Literal[1]
+    outcome: Literal["passed"]
+
+
+def ci_requirement_case_evidence_bytes(binding: CiRequirementCaseBinding) -> bytes:
+    """Return canonical success evidence expected for one requirement case."""
+    content = {
+        "case_id": binding.case_id,
+        "job": binding.job.value,
+        "outcome": "passed",
+        "requirement_id": binding.requirement_id,
+        "source_path": binding.source_path,
+        "source_sha256": binding.source_sha256,
+        "test_path": binding.test_path,
+        "test_sha256": binding.test_sha256,
+        "test_node_id": binding.test_node_id,
+    }
+    return (json.dumps(content, separators=(",", ":"), sort_keys=True) + "\n").encode()
+
+
+def ci_requirement_case_attachment_sha256(
+    bindings: tuple[CiRequirementCaseBinding, ...],
+) -> tuple[str, ...]:
+    """Return the canonical observation attachment order for mapped cases."""
+    return tuple(
+        binding.observation_sha256
+        for binding in sorted(
+            bindings,
+            key=lambda item: (item.requirement_id, item.case_id),
+        )
+    )
+
+
+def ci_requirement_case_marker_bytes(
+    observation: CiRequirementCaseObservation,
+) -> bytes:
+    """Serialize one trusted-parent case observation as a reserved log record."""
+    content = json.dumps(
+        observation.model_dump(mode="json"),
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode()
+    return CI_REQUIREMENT_CASE_PREFIX + content + b"\n"
+
+
+def verify_ci_requirement_case_output(
+    output: bytes,
+    bindings: tuple[CiRequirementCaseBinding, ...],
+) -> None:
+    """Require exact parent-observed case markers for every mapped requirement."""
+    ordered = tuple(
+        sorted(bindings, key=lambda item: (item.requirement_id, item.case_id))
+    )
+    observed_payloads = tuple(
+        line.removeprefix(CI_REQUIREMENT_CASE_PREFIX)
+        for line in output.splitlines()
+        if line.startswith(CI_REQUIREMENT_CASE_PREFIX)
+    )
+    if len(observed_payloads) != len(ordered):
+        job = ordered[0].job if ordered else None
+        raise _evidence_error(CI_REQUIREMENT_CASE_ERROR, job)
+    try:
+        observed = tuple(
+            CiRequirementCaseObservation.model_validate_json(payload)
+            for payload in observed_payloads
+        )
+    except (TypeError, ValueError):
+        job = ordered[0].job if ordered else None
+        raise _evidence_error(CI_REQUIREMENT_CASE_ERROR, job) from None
+    for binding, observation in zip(ordered, observed, strict=True):
+        if (
+            observation.requirement_id != binding.requirement_id
+            or observation.job is not binding.job
+            or observation.case_id != binding.case_id
+            or observation.source_path != binding.source_path
+            or observation.source_sha256 != binding.source_sha256
+            or observation.test_path != binding.test_path
+            or observation.test_sha256 != binding.test_sha256
+            or observation.test_node_id != binding.test_node_id
+        ):
+            raise _evidence_error(CI_REQUIREMENT_CASE_ERROR, binding.job)
+
+
 class CiCatalogJob(BaseModel):
     """One immutable externally-authorized CI command contract."""
 
@@ -329,7 +474,7 @@ class CiCatalogJob(BaseModel):
     category: str = Field(min_length=1)
     environment_profile: str = Field(min_length=1)
     control_ids: tuple[str, ...] = Field(min_length=1)
-    requirement_ids: tuple[str, ...] = Field(min_length=1)
+    requirement_ids: tuple[str, ...] = ()
     prerequisites: tuple[str, ...] = ()
     blockers: tuple[str, ...] = ()
 
@@ -369,17 +514,30 @@ class CiControlCatalog(BaseModel):
 
     version: Literal[1] = 1
     source_identity: str = Field(min_length=1)
+    requirements_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_root_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     catalog_root_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     security_catalog_id: str = Field(min_length=1)
     jobs: tuple[CiCatalogJob, ...] = Field(min_length=1)
+    requirement_case_bindings: tuple[CiRequirementCaseBinding, ...] = ()
+    unverified_requirement_ids: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def exact_jobs_and_roots_are_current(self) -> Self:
         """Reject incomplete, duplicate, and self-inconsistent catalogs."""
-        requirement_ids = tuple(
+        mapped_requirement_ids = tuple(
             requirement for item in self.jobs for requirement in item.requirement_ids
         )
+        requirement_ids = (
+            *mapped_requirement_ids,
+            *self.unverified_requirement_ids,
+        )
+        binding_requirement_ids = tuple(
+            binding.requirement_id for binding in self.requirement_case_bindings
+        )
+        job_requirements = {
+            item.job: frozenset(item.requirement_ids) for item in self.jobs
+        }
         if (
             len(self.jobs) != len(CiJob)
             or {item.job for item in self.jobs} != set(CiJob)
@@ -389,6 +547,15 @@ class CiControlCatalog(BaseModel):
             or len(requirement_ids) != len(TRUSTED_REQUIREMENT_IDS)
             or len(set(requirement_ids)) != len(requirement_ids)
             or frozenset(requirement_ids) != TRUSTED_REQUIREMENT_IDS
+            or frozenset(binding_requirement_ids) != frozenset(mapped_requirement_ids)
+            or len({binding.case_id for binding in self.requirement_case_bindings})
+            != len(self.requirement_case_bindings)
+            or len({binding.test_node_id for binding in self.requirement_case_bindings})
+            != len(self.requirement_case_bindings)
+            or any(
+                binding.requirement_id not in job_requirements[binding.job]
+                for binding in self.requirement_case_bindings
+            )
             or self.source_root_sha256 != ci_catalog_source_root(self)
             or self.catalog_root_sha256 != ci_catalog_root(self)
         ):
@@ -403,8 +570,17 @@ def _catalog_content(catalog: CiControlCatalog, *, include_source_root: bool) ->
             item.model_dump(mode="json")
             for item in sorted(catalog.jobs, key=lambda item: item.job)
         ],
+        "requirement_case_bindings": [
+            item.model_dump(mode="json")
+            for item in sorted(
+                catalog.requirement_case_bindings,
+                key=lambda item: (item.requirement_id, item.case_id),
+            )
+        ],
         "security_catalog_id": catalog.security_catalog_id,
         "source_identity": catalog.source_identity,
+        "requirements_sha256": catalog.requirements_sha256,
+        "unverified_requirement_ids": list(catalog.unverified_requirement_ids),
         "version": catalog.version,
     }
     if include_source_root:
@@ -484,10 +660,30 @@ def load_checked_in_ci_catalog(path: Path) -> CiControlCatalog:
         msg = "checked-in CI control catalog is invalid"
         raise _evidence_error(msg)
     try:
-        return CiControlCatalog.model_validate(document["catalog"])
+        catalog = CiControlCatalog.model_validate(document["catalog"])
     except (TypeError, ValueError):
         msg = "checked-in CI control catalog is invalid"
         raise _evidence_error(msg) from None
+    if (
+        any(job.requirement_ids for job in catalog.jobs)
+        or frozenset(catalog.unverified_requirement_ids) != TRUSTED_REQUIREMENT_IDS
+    ):
+        msg = "checked-in CI catalog cannot claim semantic requirement evidence"
+        raise _evidence_error(msg)
+    return catalog
+
+
+class RequiredSecurityCaseBinding(BaseModel):
+    """Externally pinned meaning and source identity of one SECURITY case."""
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
+
+    threat_id: str = Field(min_length=1)
+    case_id: str = Field(min_length=1)
+    source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    test_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    denial_observation_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    postcondition_observation_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
 class RequiredSecurityCatalog(BaseModel):
@@ -497,23 +693,33 @@ class RequiredSecurityCatalog(BaseModel):
 
     version: Literal[1] = 1
     high_threat_ids: tuple[str, ...] = Field(min_length=1)
+    case_bindings: tuple[RequiredSecurityCaseBinding, ...] = ()
     source_root_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
     def high_threat_ids_are_unique(self) -> Self:
         """Reject ambiguous independently supplied required threat sets."""
-        if len(set(self.high_threat_ids)) != len(self.high_threat_ids):
+        binding_threat_ids = tuple(binding.threat_id for binding in self.case_bindings)
+        if len(set(self.high_threat_ids)) != len(self.high_threat_ids) or (
+            self.case_bindings
+            and (
+                binding_threat_ids != self.high_threat_ids
+                or len({binding.case_id for binding in self.case_bindings})
+                != len(self.case_bindings)
+                or any(
+                    binding.denial_observation_sha256
+                    == binding.postcondition_observation_sha256
+                    for binding in self.case_bindings
+                )
+            )
+        ):
             raise ValueError(HIGH_THREAT_IDS_UNIQUE_ERROR)
         return self
 
 
-class SecurityCaseEvidence(BaseModel):
+class SecurityCaseEvidence(RequiredSecurityCaseBinding):
     """One structured, independently countable successful SECURITY case."""
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
-
-    threat_id: str = Field(min_length=1)
-    case_id: str = Field(min_length=1)
     outcome: Literal["passed"]
 
 
@@ -564,9 +770,17 @@ def parse_security_evidence_output(
         raise _evidence_error(HIGH_THREAT_MAPPING_ERROR, CiJob.SECURITY) from None
     case_ids = tuple(case.case_id for case in cases)
     case_threat_order = tuple(dict.fromkeys(case.threat_id for case in cases))
+    observed_bindings = tuple(
+        RequiredSecurityCaseBinding.model_validate(
+            case.model_dump(mode="python", exclude={"outcome"})
+        )
+        for case in cases
+    )
     if (
         len(set(case_ids)) != len(case_ids)
         or case_threat_order != catalog.high_threat_ids
+        or not catalog.case_bindings
+        or observed_bindings != catalog.case_bindings
     ):
         raise _evidence_error(HIGH_THREAT_MAPPING_ERROR, CiJob.SECURITY)
     mappings = tuple(
@@ -749,7 +963,7 @@ def _evidence_error(issue: str, job: CiJob | None = None) -> EvidenceIntegrityEr
 def _normalized_secret_text(content: bytes) -> str:
     """Decode common structured encodings before applying the secret policy."""
     text = content.decode(errors="replace")
-    for _ in range(3):
+    for _ in range(MAX_SECRET_DECODE_PASSES):
         decoded = unquote(text)
         decoded = re.sub(
             r"\\u([0-9a-fA-F]{4})",
@@ -762,9 +976,9 @@ def _normalized_secret_text(content: bytes) -> str:
             decoded,
         )
         if decoded == text:
-            break
+            return text
         text = decoded
-    return text
+    raise _evidence_error(SENSITIVE_EVIDENCE_ERROR)
 
 
 def redact_evidence_bytes(content: bytes) -> bytes:
@@ -1104,6 +1318,10 @@ def verify_execution_attestation(
         or receipt.control_ids != record.control_ids
         or receipt.executed_count != record.executed_count
         or receipt.output_sha256 != record.output_sha256
+        or receipt.attachment_sha256 != record.attachment_sha256
+        or receipt.security_catalog_root_sha256 != record.security_catalog_root_sha256
+        or receipt.security_threat_ids != record.security_threat_ids
+        or receipt.security_evidence_roots != record.security_evidence_roots
         or receipt.outcome != record.outcome
         or receipt.started_at != record.started_at
         or receipt.finished_at != record.finished_at
@@ -1205,16 +1423,32 @@ def load_published_ci_generation(
                 current_run,
             )
             logs = _load_verified_generation_logs(generation_fd, records)
+            for record in records:
+                verify_ci_requirement_case_output(
+                    logs[record.job],
+                    tuple(
+                        binding
+                        for binding in catalog.requirement_case_bindings
+                        if binding.job is record.job
+                    ),
+                )
             mappings = parse_security_evidence_output(
                 security_catalog,
                 logs[CiJob.SECURITY],
             )
             mapped_ids = tuple(item.threat_id for item in mappings)
             evidence_roots = tuple(item.evidence_root_sha256 for item in mappings)
+            requirement_roots = ci_requirement_case_attachment_sha256(
+                tuple(
+                    binding
+                    for binding in catalog.requirement_case_bindings
+                    if binding.job is CiJob.SECURITY
+                )
+            )
             if (
                 security.security_threat_ids != mapped_ids
                 or security.security_evidence_roots != evidence_roots
-                or security.attachment_sha256 != evidence_roots
+                or security.attachment_sha256 != (*requirement_roots, *evidence_roots)
             ):
                 raise _evidence_error(
                     CI_MANIFEST_AUTHORITY_ERROR,
@@ -1345,6 +1579,27 @@ def _open_published_generation(evidence_fd: int, generation_name: str) -> int:
         os.close(generations_fd)
 
 
+def _tamper_fstat_signature(
+    result: os.stat_result,
+) -> tuple[int, int, int, int, int, int]:
+    """Tamper signature for read-back checks, excluding access time.
+
+    Reading the descriptor legitimately updates atime on relatime mounts
+    (freshly written evidence files have atime == mtime, so the very next read
+    bumps atime), and a full stat_result comparison intermittently misreported
+    that as concurrent modification. Identity (dev/ino), link count, mode,
+    size, and mtime still pin replace/append/chmod races.
+    """
+    return (
+        result.st_dev,
+        result.st_ino,
+        result.st_mode,
+        result.st_nlink,
+        result.st_size,
+        result.st_mtime_ns,
+    )
+
+
 def _bounded_descriptor_read(file_descriptor: int, issue: str) -> bytes:
     """Read a pinned regular file with a cap and concurrent-growth detection."""
     before = os.fstat(file_descriptor)
@@ -1356,7 +1611,10 @@ def _bounded_descriptor_read(file_descriptor: int, issue: str) -> bytes:
     ):
         raise _evidence_error(issue)
     content = os.read(file_descriptor, before.st_size + 1)
-    if len(content) > before.st_size or os.fstat(file_descriptor) != before:
+    after = os.fstat(file_descriptor)
+    if len(content) > before.st_size or _tamper_fstat_signature(
+        after
+    ) != _tamper_fstat_signature(before):
         raise _evidence_error(issue)
     return content
 
@@ -1754,6 +2012,9 @@ def canonical_security_catalog_bytes(catalog: RequiredSecurityCatalog) -> bytes:
 def security_catalog_source_bytes(catalog: RequiredSecurityCatalog) -> bytes:
     """Return independent catalog content bytes excluding its source anchor."""
     source = {
+        "case_bindings": [
+            binding.model_dump(mode="json") for binding in catalog.case_bindings
+        ],
         "high_threat_ids": list(catalog.high_threat_ids),
         "version": catalog.version,
     }

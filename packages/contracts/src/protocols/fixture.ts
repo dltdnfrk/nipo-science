@@ -53,6 +53,7 @@ export const ProtocolFixtureSchema = z
       binding.run_id === plan.run_id,
       binding.requester_id === plan.requester_id,
       binding.action_plan_id === plan.id,
+      binding.research_intent_sha256 === plan.research_intent_sha256,
       binding.plan_digest === plan.plan_digest,
       execution.org_id === run.org_id,
       execution.run_id === run.id,

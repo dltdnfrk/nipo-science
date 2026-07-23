@@ -7,11 +7,19 @@ import unittest
 from pathlib import Path
 
 from tools.boundary_adversarial_cases import BAD_CASES, SAFE_CASES
+from tools.boundary_node_cases import ABS_OUT
+from tools.boundary_shell_cases import ABSOLUTE_OUTSIDE
 
 CHECKER = Path(__file__).parents[1] / "tools" / "check_boundaries.py"
 
 
 class BoundaryCheckerTests(unittest.TestCase):
+    def test_absolute_attack_fixtures_are_machine_independent(self) -> None:
+        for fixture_path in (ABS_OUT, ABSOLUTE_OUTSIDE):
+            with self.subTest(fixture_path=fixture_path):
+                self.assertTrue(Path(fixture_path).is_absolute())
+                self.assertNotIn("/Users/", fixture_path)
+
     def run_checker(self, root: Path) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, str(CHECKER), str(root)],

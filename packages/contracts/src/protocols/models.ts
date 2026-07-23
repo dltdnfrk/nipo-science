@@ -2,18 +2,23 @@ import { z } from "zod"
 
 import {
   NonEmptyTextSchema,
+  ReadonlyJsonValueSchema,
   RevisionSchema,
   Sha256Schema,
   UtcTimestampSchema,
   Uuid7Schema,
 } from "../common"
+import { ResearchIntentSchema, researchIntentSha256 } from "../runs"
 import { containsForbiddenEventData } from "./event-guard"
 
-const RunEventDataSchema = z.json().superRefine((data, context) => {
-  if (containsForbiddenEventData(data)) {
-    context.addIssue({ code: "custom", message: "Run event data contains forbidden semantics" })
-  }
-})
+const RunEventDataSchema = z
+  .json()
+  .superRefine((data, context) => {
+    if (containsForbiddenEventData(data)) {
+      context.addIssue({ code: "custom", message: "Run event data contains forbidden semantics" })
+    }
+  })
+  .transform((data) => ReadonlyJsonValueSchema.parse(data))
 
 export const ProtocolRunStatusSchema = z.enum([
   "queued",
@@ -83,15 +88,22 @@ export const ActionPlanSchema = z
     project_id: Uuid7Schema,
     run_id: Uuid7Schema,
     requester_id: Uuid7Schema,
+    research_intent: ResearchIntentSchema,
+    research_intent_sha256: Sha256Schema,
     version: z.int().min(1),
     tool: NonEmptyTextSchema,
-    arguments: z.json(),
+    arguments: ReadonlyJsonValueSchema,
     arguments_hash: Sha256Schema,
-    network_scope: z.array(z.string()).readonly().default([]),
-    secret_scope: z.array(z.string()).readonly().default([]),
+    network_scope: z.array(z.string()).default([]).readonly(),
+    secret_scope: z.array(z.string()).default([]).readonly(),
     reason: NonEmptyTextSchema,
     plan_digest: Sha256Schema,
     created_at: UtcTimestampSchema,
+  })
+  .superRefine((plan, context) => {
+    if (plan.research_intent_sha256 !== researchIntentSha256(plan.research_intent)) {
+      context.addIssue({ code: "custom", message: "research intent digest mismatch" })
+    }
   })
   .readonly()
 export const ToolGrantSchema = z
@@ -109,11 +121,12 @@ export const ApprovalBindingSchema = z
     run_id: Uuid7Schema,
     requester_id: Uuid7Schema,
     action_plan_id: Uuid7Schema,
+    research_intent_sha256: Sha256Schema,
     plan_digest: Sha256Schema,
     tool: NonEmptyTextSchema,
     arguments_hash: Sha256Schema,
-    network_scope: z.array(z.string()).readonly().default([]),
-    secret_scope: z.array(z.string()).readonly().default([]),
+    network_scope: z.array(z.string()).default([]).readonly(),
+    secret_scope: z.array(z.string()).default([]).readonly(),
     expires_at: UtcTimestampSchema,
   })
   .readonly()

@@ -33,6 +33,64 @@
     "required_runtimes": ["openai_codex"],
     "automatic_fallback": "forbidden",
     "forbidden_auth": ["api_key", "byok", "unofficial_token", "browser_cookie_reuse"],
+    "qualification": {
+      "issuer": "external_unix_socket_authority",
+      "signing_material_in_runtime": false,
+      "verification": "deployment_public_key_set",
+      "verification_key_retention": "permanent_or_archive_verifier_for_all_immutable_receipts",
+      "history": "append_only_signed_receipts",
+      "legacy_history": "append_only_unverified_non_authoritative",
+      "publication": "ordered_profile_then_receipt_then_database_adoption_not_an_atomic_triple",
+      "adoption_failure": "sidecars_remain_non_authoritative_without_database_receipt_or_pointer",
+      "adoption_snapshot": "cas_rechecks_runtime_home_account_models_selected_model_health_created_at_revision_and_subject",
+      "runtime_policy": {
+        "production": "deployment_supplied_protected_exact_platform_policy_file_pinned_by_sha256",
+        "checked_in_darwin_policy": "development_and_test_example_only"
+      },
+      "processes": {
+        "authority": "external_signer_without_database_credential",
+        "adopter": "dedicated_qualification_login_only",
+        "dispatcher": "dedicated_dispatcher_login_only",
+        "cleanup": "dedicated_cleanup_login_only_never_resident_in_app_or_provider_runtime"
+      },
+      "adoption_roles": {
+        "login": "deployment_managed_dedicated_noinherit_login",
+        "database": "science_workbench_qualification",
+        "database_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"]
+      },
+      "dispatch_roles": {
+        "login": "deployment_managed_dedicated_noinherit_login",
+        "database": "science_workbench_dispatcher",
+        "database_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"]
+      },
+      "cleanup_roles": {
+        "login": "deployment_managed_dedicated_noinherit_login",
+        "database": "science_workbench_provider_cleanup",
+        "database_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"],
+        "scope": "fixed_cross_tenant_due_cleanup_only",
+        "direct_table_access": "forbidden",
+        "database_interface": "four_fixed_security_definer_functions_for_bounded_due_candidates_exact_due_validation_and_two_completion_mutations"
+      },
+      "ordinary_application": {
+        "receipt_or_current_pointer_mutation": "forbidden",
+        "run_insert": "forbidden"
+      },
+      "migration": {
+        "remediation_revision": "0004_provider_security",
+        "fresh_upgrade_bare_healthy": "archive_as_legacy_unverified_then_normalize_to_pending",
+        "stamped_0003_missing_evidence": "preserve_pending_without_fabrication_and_require_backup_remediation"
+      },
+      "run_binding": "exact_current_receipt_runtime_identity_and_selected_model",
+      "failure_policy": "fail_closed"
+    },
+    "verification": {
+      "authority_and_restart": "tests/g004/test_provider_live_capture.py",
+      "receipt_contract": "tests/g004/test_provider_qualification.py",
+      "migration_and_roles": "services/api/tests/persistence/test_upgrade_migrations.py",
+      "rls_forgery": "services/api/tests/persistence/test_rls_contracts.py",
+      "code_path_status": "verified_by_repository_gates",
+      "external_live_status": "release_blocked_until_fresh_deployment_qualification_succeeds"
+    },
     "adapters": {
       "openai_codex": {
         "tier": "required",
@@ -82,7 +140,7 @@
     "effects": ["allow", "ask", "deny"],
     "approval_binding": [
       "org_id", "run_id", "requester_id", "tool", "arguments_hash",
-      "network_scope", "secret_scope", "expires_at"
+      "network_scope", "secret_scope", "research_intent_sha256", "expires_at"
     ],
     "single_use": true
   },
@@ -127,6 +185,7 @@
   "dry_lab": {
     "ordered_chain": [
       "scientific_input",
+      "research_intent",
       "immutable_action_plan",
       "isolated_python",
       "csv",
@@ -138,6 +197,18 @@
       "export"
     ],
     "action_plan_approval_required": true,
+    "research_intent": {
+      "approval_binding": "full_canonical_digest",
+      "canonicalization": "sorted_keys_compact_nfc_utf8",
+      "data_origins": ["observed", "synthetic", "mixed"],
+      "fields": [
+        "question", "rationale", "intended_benefit", "success_criteria",
+        "constraints", "stop_conditions", "research_mode", "data_origin"
+      ],
+      "research_modes": ["ai_for_science", "copilot", "bounded_agentic"],
+      "optional_references": "explicit_null_when_absent",
+      "synthetic_data": "distinct_generator_and_validator_required"
+    },
     "python_deterministic": true,
     "artifact_versions_immutable": true,
     "export_pins_versions": true
@@ -167,7 +238,7 @@
     "F08": {"kind": "feature", "priority": "P0", "statement": "PubMed and OpenAlex connectors preserve source identifiers, retrieval time, and partial failures."},
     "F09": {"kind": "feature", "priority": "P0", "statement": "Persisted Reviewer v1 verifies pinned evidence without re-execution."},
     "F10": {"kind": "feature", "priority": "P0", "statement": "Version-pinned reproducible Export Pack with manifest and checksums."},
-    "F11": {"kind": "feature", "priority": "P0", "statement": "Project Tool Grant and immutable Plan Approval only."},
+    "F11": {"kind": "feature", "priority": "P0", "statement": "Project Tool Grant and immutable Plan Approval bound to a complete ResearchIntent only."},
     "F13": {"kind": "feature", "priority": "P0", "statement": "F13 protects application Connector and Broker credentials; provider OAuth connections are a separate requester-owned domain."},
 
     "AC-F01": {"kind": "acceptance", "priority": "release", "statement": "A new email consumes one 15-minute magic link, creates one organization, and replay returns 410."},
@@ -187,12 +258,15 @@
     "AC-F08": {"kind": "acceptance", "priority": "release", "statement": "Literature retrieval stores identifiers, timestamps, and calls while one connector failure preserves partial results."},
     "AC-F09": {"kind": "acceptance", "priority": "release", "statement": "Persisted Review catches DOI, numeric, and figure mismatches without execution capabilities."},
     "AC-F10": {"kind": "acceptance", "priority": "release", "statement": "Export contains selected CSV, PNG, Markdown, Ledger, manifest, versions, checksums, and no traversal entry."},
-    "AC-F11": {"kind": "acceptance", "priority": "release", "statement": "Tool deny executes zero, ask waits for a bound approval, and allow executes with an audited action digest."},
-    "AC-F11-B": {"kind": "acceptance", "priority": "release", "statement": "Wrong actor, expiry, mutation, replay, or cross-tenant approval use is rejected with zero execution."},
+    "AC-F11": {"kind": "acceptance", "priority": "release", "statement": "Every public Run and ActionPlan boundary rejects a missing or incomplete ResearchIntent; an accepted intent changes the plan digest and is pinned through provenance and Export."},
+    "AC-F11-B": {"kind": "acceptance", "priority": "release", "statement": "Tool deny executes zero, ask waits for a digest-bound approval, allow executes with an audited action digest, and wrong actor, expiry, intent mutation, replay, or cross-tenant use is rejected."},
     "AC-F13": {"kind": "acceptance", "priority": "release", "statement": "Application credentials never appear in UI, API, logs, database plaintext, or durable execution context."},
     "AC-F13-B": {"kind": "acceptance", "priority": "release", "statement": "Credential rotation and revocation reject old material and emit full lifecycle audit."},
     "AC-F13-C": {"kind": "acceptance", "priority": "release", "statement": "A scoped Sandbox operation receives only a one-use broker handle and never credential plaintext."},
     "AC-F13-D": {"kind": "acceptance", "priority": "release", "statement": "Requester OAuth secrets live only in provider_connections; F13 credentials cannot authenticate AgentRuntimeAdapter and provider OAuth cannot enter F13 APIs."},
+    "AC-PROVIDER-AUTHORITY": {"kind": "acceptance", "priority": "release", "statement": "Provider qualification is accepted only from an externally signed receipt whose private key is absent from the evaluator and runtime; authority, adopter, dispatcher, and cleanup credentials remain separate, and an unknown key, malformed receipt, unavailable authority, wrong subject, or credential-role mismatch fails closed."},
+    "AC-PROVIDER-RUN-BINDING": {"kind": "acceptance", "priority": "release", "statement": "The ordinary application role cannot insert a Run; the dedicated dispatcher atomically persists every model-backed Run with the exact current immutable qualification receipt, connection revision, selected model, profile, runtime version, and executable digest, and that history survives qualification refresh and process restart."},
+    "AC-PROVIDER-MIGRATION": {"kind": "acceptance", "priority": "release", "statement": "A fresh upgrade archives every observable unsigned signal including bare healthy state as append-only legacy_unverified evidence before normalization; revision 0004_provider_security converges stale-0003 security state but never fabricates evidence already lost by an older 0003, requires backup remediation for that case, and refuses a downgrade that would destroy signed or legacy history."},
     "AC-SAFE": {"kind": "acceptance", "priority": "release", "statement": "Clinical, diagnostic, patient-care, or regulated procedural requests stop or remain bounded research support and are audited."},
     "AC-TENANT": {"kind": "acceptance", "priority": "release", "statement": "Cross-organization Run, SSE, Approval, Artifact, Review, Export, queue, and object access reveals no existence and returns 404 where synchronous."},
     "AC-COMPLIANCE": {"kind": "acceptance", "priority": "release", "statement": "Research-only and non-clinical notices appear in onboarding and Settings with consent time."},

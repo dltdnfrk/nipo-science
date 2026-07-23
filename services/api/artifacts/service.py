@@ -17,7 +17,11 @@ from .models import (
     SessionArtifactLink,
     SignedDownload,
     VersionDraft,
-    WatcherClaim,
+)
+from .recovery import (
+    ArtifactRecoveryError,
+    CompletedArtifactCommit,
+    PendingArtifactCommit,
 )
 from .signing import DownloadSigner
 from .store_contract import (
@@ -52,6 +56,7 @@ class ArtifactService:
         self._ids = ids
         self._clock = clock
         self._signer = DownloadSigner(download_signing_key)
+        self._recovery = watcher.recovery
         self._lock = RLock()
 
     def create_artifact(self, scope: ArtifactScope, name: str) -> ArtifactRecord:
@@ -69,63 +74,92 @@ class ArtifactService:
         self._require_created(self._store.create_artifact(scope, artifact))
         return artifact
 
+    def read_artifact(self, scope: ArtifactScope, artifact_id: UUID) -> ArtifactRecord:
+        """Read one exact Artifact without disclosing foreign existence."""
+        artifact = self._store.artifact(scope, artifact_id)
+        if artifact is None:
+            raise ArtifactError(ArtifactErrorCode.NOT_FOUND)
+        return artifact
+
     def create_version(
         self,
         scope: ArtifactScope,
         draft: VersionDraft,
     ) -> ArtifactVersion:
         """Create one monotonic Version with atomic CAS and pinned lineage."""
-        with self._lock:
-            claim = self._watcher.claim(
+        with self._lock, self._recovery.locked(draft.watcher_reference):
+            draft = draft.model_copy(
+                update={"input_version_ids": tuple(sorted(draft.input_version_ids))}
+            )
+            reconciliation = self._recovery.reconciliation(draft.watcher_reference)
+            match reconciliation:
+                case CompletedArtifactCommit() as completed:
+                    if completed.scope == scope and completed.draft == draft:
+                        return completed.version
+                    raise ArtifactError(ArtifactErrorCode.WATCHER_REFERENCE_INVALID)
+                case PendingArtifactCommit() as pending:
+                    if pending.scope != scope or pending.draft != draft:
+                        raise ArtifactError(ArtifactErrorCode.WATCHER_REFERENCE_INVALID)
+                    return self._retry_pending_commit(pending)
+                case None:
+                    return self._create_fresh_version(scope, draft)
+
+    def _create_fresh_version(
+        self,
+        scope: ArtifactScope,
+        draft: VersionDraft,
+    ) -> ArtifactVersion:
+        output = self._watcher.resolve(
+            scope,
+            draft.producing_execution_id,
+            draft.watcher_reference,
+        )
+        if (
+            draft.runtime_adapter_id != output.runtime_adapter_id
+            or draft.runtime_connection_id != output.runtime_connection_id
+        ):
+            raise ArtifactError(ArtifactErrorCode.WATCHER_REFERENCE_INVALID)
+        version = ArtifactVersion(
+            id=self._ids.new_uuid7(),
+            org_id=scope.org_id,
+            project_id=scope.project_id,
+            artifact_id=draft.artifact_id,
+            version_no=draft.base_version_no + 1,
+            object_key=self._store.object_key(scope, output.content_sha256),
+            content_sha256=output.content_sha256,
+            size_bytes=len(output.payload),
+            media_type=output.media_type,
+            producing_execution_id=draft.producing_execution_id,
+            environment_sha256=draft.environment_sha256,
+            code_sha256=draft.code_sha256,
+            runtime_adapter_id=output.runtime_adapter_id,
+            runtime_connection_id=output.runtime_connection_id,
+            skill_content_hashes=draft.skill_content_hashes,
+            source_hashes=draft.source_hashes,
+            input_version_ids=draft.input_version_ids,
+            created_at=self._clock.now(),
+        )
+        try:
+            pending = self._watcher.prepare_commit(scope, draft, version, output)
+        except ArtifactRecoveryError:
+            raise ArtifactCommitError from None
+        try:
+            outcome = self._store.commit_version(
                 scope,
-                draft.producing_execution_id,
-                draft.watcher_reference,
+                draft.base_version_no,
+                version,
+                output.payload,
             )
-            output = claim.output
-            if (
-                draft.runtime_adapter_id != output.runtime_adapter_id
-                or draft.runtime_connection_id != output.runtime_connection_id
-            ):
-                self._watcher.release(claim)
-                raise ArtifactError(ArtifactErrorCode.WATCHER_REFERENCE_INVALID)
-            version = ArtifactVersion(
-                id=self._ids.new_uuid7(),
-                org_id=scope.org_id,
-                project_id=scope.project_id,
-                artifact_id=draft.artifact_id,
-                version_no=draft.base_version_no + 1,
-                object_key=self._store.object_key(scope, output.content_sha256),
-                content_sha256=output.content_sha256,
-                size_bytes=len(output.payload),
-                media_type=output.media_type,
-                producing_execution_id=draft.producing_execution_id,
-                environment_sha256=draft.environment_sha256,
-                code_sha256=draft.code_sha256,
-                runtime_adapter_id=output.runtime_adapter_id,
-                runtime_connection_id=output.runtime_connection_id,
-                skill_content_hashes=draft.skill_content_hashes,
-                source_hashes=draft.source_hashes,
-                input_version_ids=tuple(sorted(draft.input_version_ids)),
-                created_at=self._clock.now(),
-            )
-            try:
-                outcome = self._store.commit_version(
-                    scope,
-                    draft.base_version_no,
-                    version,
-                    output.payload,
-                )
-            except BlobIntegrityError:
-                self._watcher.release(claim)
-                raise ArtifactError(ArtifactErrorCode.CHECKSUM_MISMATCH) from None
-            except ArtifactCommitError as error:
-                return self._reconcile_commit(scope, claim, version, error)
-            if outcome is StoreOutcome.CREATED:
-                self._watcher.finalize(claim)
-            else:
-                self._watcher.release(claim)
+        except BlobIntegrityError:
+            self._discard_pending(pending)
+            raise ArtifactError(ArtifactErrorCode.CHECKSUM_MISMATCH) from None
+        except ArtifactCommitError as error:
+            return self._reconcile_initial_commit(pending, error)
+        if outcome is StoreOutcome.CREATED:
+            return self._complete_reconciliation(pending)
+        self._discard_pending(pending)
         self._require_created(outcome)
-        return version
+        raise AssertionError
 
     def read_version(self, scope: ArtifactScope, version_id: UUID) -> ArtifactVersion:
         """Read one exact immutable Version or disclose no foreign existence."""
@@ -137,12 +171,28 @@ class ArtifactService:
     def read_content(self, scope: ArtifactScope, version_id: UUID) -> bytes:
         """Read checksum-verified bytes for one exact Version."""
         try:
-            payload = self._store.read_content(scope, version_id)
+            outcome, _, payload = self._store.redeem_content(scope, version_id)
         except BlobIntegrityError:
             raise ArtifactError(ArtifactErrorCode.CHECKSUM_MISMATCH) from None
+        self._require_created(outcome)
         if payload is None:
             raise ArtifactError(ArtifactErrorCode.NOT_FOUND)
         return payload
+
+    def read_active_content(
+        self,
+        scope: ArtifactScope,
+        version_id: UUID,
+    ) -> tuple[ArtifactVersion, bytes]:
+        """Read immutable metadata and bytes at one active-Project boundary."""
+        try:
+            outcome, version, payload = self._store.redeem_content(scope, version_id)
+        except BlobIntegrityError:
+            raise ArtifactError(ArtifactErrorCode.CHECKSUM_MISMATCH) from None
+        self._require_created(outcome)
+        if version is None or payload is None:
+            raise ArtifactError(ArtifactErrorCode.NOT_FOUND)
+        return version, payload
 
     def lineage(self, scope: ArtifactScope, version_id: UUID) -> tuple[UUID, ...]:
         """Return immutable dependency Version IDs."""
@@ -212,7 +262,7 @@ class ArtifactService:
         if claims.org_id != scope.org_id or claims.project_id != scope.project_id:
             raise ArtifactError(ArtifactErrorCode.NOT_FOUND)
         try:
-            outcome, payload = self._store.redeem_content(scope, claims.version_id)
+            outcome, _, payload = self._store.redeem_content(scope, claims.version_id)
         except BlobIntegrityError:
             raise ArtifactError(ArtifactErrorCode.CHECKSUM_MISMATCH) from None
         self._require_created(outcome)
@@ -220,23 +270,77 @@ class ArtifactService:
             raise ArtifactError(ArtifactErrorCode.NOT_FOUND)
         return payload
 
-    def _reconcile_commit(
+    def _reconcile_initial_commit(
         self,
-        scope: ArtifactScope,
-        claim: WatcherClaim,
-        version: ArtifactVersion,
+        pending: PendingArtifactCommit,
         error: ArtifactCommitError,
     ) -> ArtifactVersion:
         try:
-            persisted = self._store.version(scope, version.id)
+            persisted = self._store.version(pending.scope, pending.version.id)
         except ArtifactStoreError:
-            self._watcher.finalize(claim)
             raise error from None
-        if persisted == version:
-            self._watcher.finalize(claim)
-            return version
-        self._watcher.release(claim)
+        if persisted == pending.version:
+            return self._complete_reconciliation(pending)
+        self._discard_pending(pending)
         raise error from None
+
+    def _retry_pending_commit(
+        self,
+        pending: PendingArtifactCommit,
+    ) -> ArtifactVersion:
+        try:
+            persisted = self._store.version(pending.scope, pending.version.id)
+        except ArtifactStoreError:
+            raise ArtifactCommitError from None
+        if persisted == pending.version:
+            return self._complete_reconciliation(pending)
+        if persisted is not None:
+            self._discard_pending(pending)
+            raise ArtifactCommitError
+        try:
+            outcome = self._store.commit_version(
+                pending.scope,
+                pending.draft.base_version_no,
+                pending.version,
+                pending.claim.output.payload,
+            )
+        except BlobIntegrityError:
+            self._discard_pending(pending)
+            raise ArtifactError(ArtifactErrorCode.CHECKSUM_MISMATCH) from None
+        except ArtifactCommitError as error:
+            return self._reconcile_retried_commit(pending, error)
+        if outcome is StoreOutcome.CREATED:
+            return self._complete_reconciliation(pending)
+        self._discard_pending(pending)
+        self._require_created(outcome)
+        raise AssertionError
+
+    def _reconcile_retried_commit(
+        self,
+        pending: PendingArtifactCommit,
+        error: ArtifactCommitError,
+    ) -> ArtifactVersion:
+        try:
+            persisted = self._store.version(pending.scope, pending.version.id)
+        except ArtifactStoreError:
+            raise error from None
+        if persisted == pending.version:
+            return self._complete_reconciliation(pending)
+        if persisted is not None:
+            self._discard_pending(pending)
+        raise error from None
+
+    def _complete_reconciliation(
+        self,
+        pending: PendingArtifactCommit,
+    ) -> ArtifactVersion:
+        if not self._recovery.save_completed(pending):
+            raise ArtifactRecoveryError
+        return pending.version
+
+    def _discard_pending(self, pending: PendingArtifactCommit) -> None:
+        if not self._recovery.discard_pending(pending):
+            raise ArtifactRecoveryError
 
     @staticmethod
     def _require_created(outcome: StoreOutcome) -> None:

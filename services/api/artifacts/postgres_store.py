@@ -14,7 +14,7 @@ from .postgres_operations import (
     commit_version_operation,
     lock_content_address,
 )
-from .postgres_queries import VERSION_JSON
+from .postgres_queries import ARTIFACT_JSON, VERSION_JSON
 from .postgres_runtime import exists, identity, run_scoped
 from .store_contract import (
     ArtifactCommitError,
@@ -86,6 +86,36 @@ class PostgresArtifactStore:
 
         return run_scoped(self._database_url, scope, operation)
 
+    def artifact(
+        self,
+        scope: ArtifactScope,
+        artifact_id: UUID,
+    ) -> ArtifactRecord | None:
+        """Read one durable Artifact through requester-scoped RLS."""
+
+        async def operation(connection: AsyncConnection) -> str | None:
+            active: bool | None = (
+                await connection.execute(
+                    text(
+                        "SELECT archived_at IS NULL FROM projects "
+                        "WHERE org_id = :org AND id = :project FOR UPDATE"
+                    ),
+                    identity(scope),
+                )
+            ).scalar_one_or_none()
+            if active is not True:
+                return None
+            value: str | None = (
+                await connection.execute(
+                    text(ARTIFACT_JSON),
+                    identity(scope) | {"identity": artifact_id},
+                )
+            ).scalar_one_or_none()
+            return value
+
+        value = run_scoped(self._database_url, scope, operation)
+        return None if value is None else ArtifactRecord.model_validate_json(value)
+
     def commit_version(
         self,
         scope: ArtifactScope,
@@ -124,6 +154,17 @@ class PostgresArtifactStore:
         """Read one immutable Version with exact dependency IDs."""
 
         async def operation(connection: AsyncConnection) -> str | None:
+            active: bool | None = (
+                await connection.execute(
+                    text(
+                        "SELECT archived_at IS NULL FROM projects "
+                        "WHERE org_id = :org AND id = :project FOR UPDATE"
+                    ),
+                    identity(scope),
+                )
+            ).scalar_one_or_none()
+            if active is not True:
+                return None
             value: str | None = (
                 await connection.execute(
                     text(VERSION_JSON),
@@ -137,19 +178,19 @@ class PostgresArtifactStore:
 
     def read_content(self, scope: ArtifactScope, version_id: UUID) -> bytes | None:
         """Read checksum-verified durable bytes for an authorized Version."""
-        version = self.version(scope, version_id)
-        return None if version is None else self._blobs.read(version.object_key)
+        outcome, _, payload = self.redeem_content(scope, version_id)
+        return payload if outcome is StoreOutcome.CREATED else None
 
     def redeem_content(
         self,
         scope: ArtifactScope,
         version_id: UUID,
-    ) -> tuple[StoreOutcome, bytes | None]:
-        """Read bytes while holding the active Project row lock."""
+    ) -> tuple[StoreOutcome, ArtifactVersion | None, bytes | None]:
+        """Read Version and bytes while holding the active Project row lock."""
 
         async def operation(
             connection: AsyncConnection,
-        ) -> tuple[StoreOutcome, bytes | None]:
+        ) -> tuple[StoreOutcome, ArtifactVersion | None, bytes | None]:
             return await redeem_content_operation(
                 connection,
                 scope,

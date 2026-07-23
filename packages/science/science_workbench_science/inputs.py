@@ -85,7 +85,7 @@ class ImageInput(ScienceInputModel):
     width: int
     height: int
     pixels: tuple[tuple[int, int, int], ...]
-    region_threshold: float = 48.0
+    region_threshold: float
     metadata: InputMetadata
 
 

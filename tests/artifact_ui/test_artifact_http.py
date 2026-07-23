@@ -6,7 +6,11 @@ from socket import AF_INET, AF_INET6
 from typing import cast
 from urllib.parse import urlsplit
 
-from services.api.artifact_ui_app import ArtifactUiServer, run_artifact_ui_server
+from services.api.artifact_ui_app import (
+    ArtifactUiPrincipal,
+    ArtifactUiServer,
+    run_artifact_ui_server,
+)
 
 type JsonScalar = str | int | float | bool | None
 type JsonValue = JsonScalar | list[JsonValue] | dict[str, JsonValue]
@@ -69,12 +73,22 @@ def test_authenticated_artifact_detail_attach_download_and_preview_headers() -> 
         "Origin": f"http://{host}:{port}",
         "Sec-Fetch-Site": "same-origin",
         "Sec-Fetch-Mode": "cors",
+        "X-CSRF-Token": server.fixture_csrf_token(),
     }
     try:
         blocked_page = _request(address, "GET", "/artifacts/artifact-spectrum")
         blocked_api = _request(address, "GET", "/api/v1/artifacts")
         assert blocked_page.status == 401
         assert blocked_api.status == 401
+
+        favicon = _request(
+            address,
+            "GET",
+            "/product/favicon.svg",
+            headers={"Cookie": cookie},
+        )
+        assert favicon.status == 200
+        assert favicon.header("Content-Type") == "image/svg+xml"
 
         listing = _request(
             address, "GET", "/api/v1/artifacts", headers={"Cookie": cookie}
@@ -92,6 +106,8 @@ def test_authenticated_artifact_detail_attach_download_and_preview_headers() -> 
         selected = cast("JsonObject", detail["selected"])
         assert detail_response.status == 200
         assert selected["version_no"] == 2
+        assert selected["status"] == "immutable"
+        assert cast("str", selected["created_at"]).endswith("Z")
         assert cast("str", detail["preview_url"]).startswith("http://localhost:")
 
         attached = _request(
@@ -161,6 +177,7 @@ def test_library_routes_explicit_version_and_version_level_attachment() -> None:
         "Cookie": cookie,
         "Origin": f"http://{host}:{port}",
         "Sec-Fetch-Site": "same-origin",
+        "X-CSRF-Token": server.fixture_csrf_token(),
     }
     try:
         for path in (
@@ -207,13 +224,111 @@ def test_library_routes_explicit_version_and_version_level_attachment() -> None:
         server.server_close()
 
 
-def test_artifact_fixture_exposes_an_empty_dry_lab_state() -> None:
+def test_authenticated_principal_controls_artifact_tenant_and_session_ids() -> None:
+    primary = ArtifactUiPrincipal(
+        user_id="user-primary",
+        organization_id="org-mineral",
+        organization_name="Nipo Labs",
+        projects=(("project-owned", "보정 프로젝트"),),
+        session_ids=frozenset({"session-owned"}),
+    )
+    foreign = ArtifactUiPrincipal(
+        user_id="user-foreign",
+        organization_id="org-foreign",
+        organization_name="외부 연구실",
+        projects=(("project-foreign", "외부 프로젝트"),),
+        session_ids=frozenset({"session-foreign"}),
+    )
+    server = run_artifact_ui_server(principal=primary)
+    host, port = _server_host_port(server)
+    address = (host, port)
+    cookie = server.fixture_cookie()
+    csrf_token = server.fixture_csrf_token()
+    foreign_cookie, foreign_csrf = server.issue_fixture_session(foreign)
+    origin = f"http://{host}:{port}"
+    try:
+        identity = _request(address, "GET", "/api/v1/me", headers={"Cookie": cookie})
+        identity_body = cast("JsonObject", json.loads(identity.body))
+        assert identity_body["csrf_token"] == csrf_token
+
+        missing_csrf = _request(
+            address,
+            "POST",
+            "/api/v1/artifacts/artifact-spectrum/versions/artifact-spectrum-v1/attachments",
+            body={"session_id": "session-owned"},
+            headers={
+                "Cookie": cookie,
+                "Origin": origin,
+                "Sec-Fetch-Site": "same-origin",
+            },
+        )
+        wrong_session = _request(
+            address,
+            "POST",
+            "/api/v1/artifacts/artifact-spectrum/versions/artifact-spectrum-v1/attachments",
+            body={"session_id": "session-demo"},
+            headers={
+                "Cookie": cookie,
+                "Origin": origin,
+                "Sec-Fetch-Site": "same-origin",
+                "X-CSRF-Token": csrf_token,
+            },
+        )
+        attached = _request(
+            address,
+            "POST",
+            "/api/v1/artifacts/artifact-spectrum/versions/artifact-spectrum-v1/attachments",
+            body={"session_id": "session-owned"},
+            headers={
+                "Cookie": cookie,
+                "Origin": origin,
+                "Sec-Fetch-Site": "same-origin",
+                "X-CSRF-Token": csrf_token,
+            },
+        )
+        assert missing_csrf.status == 403
+        assert wrong_session.status == 404
+        assert attached.status == 200
+
+        hidden_primary = _request(
+            address,
+            "GET",
+            "/api/v1/artifacts/artifact-spectrum",
+            headers={"Cookie": foreign_cookie},
+        )
+        visible_foreign = _request(
+            address,
+            "GET",
+            "/api/v1/artifacts/artifact-foreign",
+            headers={"Cookie": foreign_cookie},
+        )
+        foreign_attachment = _request(
+            address,
+            "POST",
+            "/api/v1/artifacts/artifact-foreign/versions/artifact-foreign-v1/attachments",
+            body={"session_id": "session-foreign"},
+            headers={
+                "Cookie": foreign_cookie,
+                "Origin": origin,
+                "Sec-Fetch-Site": "same-origin",
+                "X-CSRF-Token": foreign_csrf,
+            },
+        )
+        assert hidden_primary.status == 404
+        assert visible_foreign.status == 200
+        assert foreign_attachment.status == 200
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_artifact_fixture_rejects_the_removed_dry_lab_state_route() -> None:
     # Given: the authenticated Artifact-only browser fixture.
     server = run_artifact_ui_server()
     host, port = _server_host_port(server)
 
     try:
-        # When: the shared product shell requests its optional dry-lab state.
+        # When: a stale client requests the removed dry-lab state route.
         response = _request(
             (host, port),
             "GET",
@@ -221,9 +336,9 @@ def test_artifact_fixture_exposes_an_empty_dry_lab_state() -> None:
             headers={"Cookie": server.fixture_cookie()},
         )
 
-        # Then: the fixture supplies a valid empty state without a console 404.
-        assert response.status == 200
-        assert json.loads(response.body) == {}
+        # Then: the Artifact fixture exposes the same explicit 404 contract.
+        assert response.status == 404
+        assert json.loads(response.body) == {"error": "not_found"}
     finally:
         server.shutdown()
         server.server_close()

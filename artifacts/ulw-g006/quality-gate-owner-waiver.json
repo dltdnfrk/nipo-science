@@ -1,0 +1,96 @@
+{
+  "architectReview": {
+    "architectureStatus": "PENDING_FINAL_REVIEW",
+    "blockers": [],
+    "codeStatus": "PENDING_FINAL_REVIEW",
+    "commands": [],
+    "evidence": "Fresh independent final reviews are run after the source and local evidence are frozen; prior review identifiers are not reused as current authority.",
+    "productStatus": "PENDING_FINAL_REVIEW",
+    "recommendation": "PENDING"
+  },
+  "executorQa": {
+    "adversarialCases": [
+      {
+        "artifactRefs": [
+          "g006-canonical-gates",
+          "g006-provider-waiver"
+        ],
+        "contractRef": "G006 authority separation",
+        "expectedBehavior": "Local gates may pass while absent external and live-provider authorities remain explicitly unavailable and non-synthetic.",
+        "id": "g006-no-synthetic-promotion",
+        "scenario": "Execute the full local catalog and inspect publication and live-qualification state.",
+        "verdict": "passed"
+      }
+    ],
+    "artifactRefs": [
+      {
+        "description": "Current 27-of-27 owner-scoped local gate evidence with sanitized checksummed logs",
+        "id": "g006-canonical-gates",
+        "kind": "canonical-local-gate-report",
+        "path": "science-workbench/artifacts/ulw-g006/canonical-gates.json"
+      },
+      {
+        "description": "Fail-closed receipt for the current unavailable live qualification authority",
+        "id": "g006-provider-waiver",
+        "kind": "blocked-live-qualification-receipt",
+        "path": "science-workbench/artifacts/ulw-g004/live-profile-attempt.json"
+      }
+    ],
+    "blockers": [
+      "No external CI execution/finalization authority is installed for authoritative publication.",
+      "Current OpenAI Codex live qualification is blocked by the subscription usage limit until 2026-07-20 22:57 Asia/Seoul."
+    ],
+    "contractCoverage": [
+      {
+        "adversarialCaseRefs": [
+          "g006-no-synthetic-promotion"
+        ],
+        "contractRef": "G006 frozen local verification",
+        "id": "g006-local-verification-contract",
+        "obligation": "Pass the exact checked-in 27-job catalog at one unchanged source identity without promoting local evidence to external release authority.",
+        "status": "covered-local-only",
+        "surfaceEvidenceRefs": [
+          "g006-frozen-local-surface"
+        ]
+      }
+    ],
+    "e2eCommands": [
+      "make ci-validate",
+      "canonical ci_commands(root) direct execution"
+    ],
+    "e2eStatus": "passed",
+    "evidence": "Current source 7a855379a546b3c8df4db455bbd375443517a51039c3b001e6bf03493a72f3d4 passed all 27 directly observed local gates with 3366 parser-derived checks. This is owner-scoped verification, not production release authority.",
+    "redTeamCommands": [
+      "security gate from ci_commands(root)",
+      "make test-rls",
+      "secret-scan from ci_commands(root)"
+    ],
+    "redTeamStatus": "passed",
+    "status": "passed-local-only",
+    "surfaceEvidence": [
+      {
+        "artifactRefs": [
+          "g006-canonical-gates"
+        ],
+        "contractRef": "G006 current source",
+        "id": "g006-frozen-local-surface",
+        "invocation": "canonical ci_commands(root) direct execution",
+        "surface": "27 local gates including Docker/PostgreSQL and Chromium",
+        "verdict": "passed"
+      }
+    ]
+  },
+  "iteration": {
+    "blockers": [
+      "No external CI execution/finalization authority is installed for authoritative publication.",
+      "Current OpenAI Codex live qualification is blocked by the subscription usage limit until 2026-07-20 22:57 Asia/Seoul."
+    ],
+    "evidence": "Current source 7a855379a546b3c8df4db455bbd375443517a51039c3b001e6bf03493a72f3d4 passed all 27 directly observed local gates with 3366 parser-derived checks. This is owner-scoped verification, not production release authority.",
+    "fullRerun": true,
+    "rerunCommands": [
+      "make ci-validate",
+      "canonical ci_commands(root) direct execution"
+    ],
+    "status": "passed-local-only"
+  }
+}

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
+import type { ReadonlyJsonArray, ReadonlyJsonObject, ReadonlyJsonValue } from "../src/common"
 import { RunAggregateSchema } from "../src/index"
 import { ExecutionCompletionCommandSchema } from "../src/protocols/execution"
 import { ProtocolFixtureSchema } from "../src/protocols/fixture"
@@ -26,6 +27,10 @@ import {
 const fixturePath = fileURLToPath(new URL("../fixtures/run-runtime-protocol.json", import.meta.url))
 const rawFixture: unknown = JSON.parse(readFileSync(fixturePath, "utf8"))
 const fixture = ProtocolFixtureSchema.parse(rawFixture)
+const isReadonlyJsonObject = (value: ReadonlyJsonValue): value is ReadonlyJsonObject =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+const isReadonlyJsonArray = (value: ReadonlyJsonValue): value is ReadonlyJsonArray =>
+  Array.isArray(value)
 
 describe("Run and runtime protocol contracts", () => {
   it("round trips the shared protocol fixture through Zod", () => {
@@ -35,6 +40,38 @@ describe("Run and runtime protocol contracts", () => {
     expect(ProtocolFixtureSchema.parse(JSON.parse(JSON.stringify(fixture)))).toEqual(fixture)
     expect(fixture.execution.run_id).toBe(fixture.run.id)
     expect(Object.isFrozen(fixture.action_plan)).toBe(true)
+  })
+
+  it("deep-freezes ActionPlan arguments and omitted approval scopes", () => {
+    const plan = ActionPlanSchema.parse({
+      ...fixture.action_plan,
+      arguments: { filter: { terms: ["quantum dots", "photoluminescence"] } },
+      network_scope: undefined,
+      secret_scope: undefined,
+    })
+    const binding = ApprovalBindingSchema.parse({
+      ...fixture.approval.binding,
+      network_scope: undefined,
+      secret_scope: undefined,
+    })
+    const filter = plan.arguments
+    if (!isReadonlyJsonObject(filter)) return
+    const filterValue = filter["filter"]
+    if (filterValue === undefined || !isReadonlyJsonObject(filterValue)) return
+    const terms = filterValue["terms"]
+    if (terms === undefined || !isReadonlyJsonArray(terms)) return
+
+    expect(Object.isFrozen(plan.arguments)).toBe(true)
+    expect(Object.isFrozen(filterValue)).toBe(true)
+    expect(Object.isFrozen(terms)).toBe(true)
+    expect(Reflect.set(terms, 0, "tampered")).toBe(false)
+    expect(Object.isFrozen(plan.network_scope)).toBe(true)
+    expect(Object.isFrozen(plan.secret_scope)).toBe(true)
+    expect(Object.isFrozen(binding.network_scope)).toBe(true)
+    expect(Object.isFrozen(binding.secret_scope)).toBe(true)
+    expect(JSON.parse(JSON.stringify(plan.arguments))).toEqual({
+      filter: { terms: ["quantum dots", "photoluminescence"] },
+    })
   })
 
   it("rejects duplicate or decreasing event sequence", () => {
@@ -204,6 +241,29 @@ describe("Run and runtime protocol contracts", () => {
     // Then: neither cross-context authorization nor alternate plan is accepted.
     expect(grant.success).toBe(false)
     expect(approval.success).toBe(false)
+  })
+
+  it("binds the complete ResearchIntent into the ActionPlan and approval", () => {
+    // Given: a canonical plan and its one-use approval binding.
+    const plan = fixture.action_plan
+    const binding = fixture.approval.binding
+
+    // Then: both records explicitly pin the same complete human-owned intent.
+    expect(plan.research_intent_sha256).toBe(binding.research_intent_sha256)
+    expect(plan.research_intent.question.length).toBeGreaterThan(0)
+
+    // When: the intent digest is changed after approval.
+    const result = ApprovalConsumeCasSchema.safeParse({
+      approval_id: fixture.approval.id,
+      expected_revision: fixture.approval.revision,
+      expected_status: "approved",
+      presented_binding: binding,
+      presented_plan: { ...plan, research_intent_sha256: "d".repeat(64) },
+      occurred_at: fixture.run.updated_at,
+    })
+
+    // Then: the canonical approval boundary rejects the mutation.
+    expect(result.success).toBe(false)
   })
 
   it("rejects escaped forbidden keys and all foreign continuation context", () => {

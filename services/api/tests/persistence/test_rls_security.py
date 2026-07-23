@@ -72,7 +72,8 @@ def test_provider_account_metadata_rejects_nested_plaintext_secrets() -> None:
         + app_principal_sql()
         + PROVIDER_INSERT
         + f"('{PROVIDER_SAFE}', '{ORG_A}', '{USER_A}', 'openai_codex', "
-        "'vault://runtime/safe', '{\"account_name\":\"lab\"}', 'healthy')",
+        "'vault://runtime/safe', "
+        "'{\"account_name\":\"lab\",\"revision\":\"1\"}', 'pending')",
         check=False,
     )
     rejected = psql(
@@ -82,7 +83,7 @@ def test_provider_account_metadata_rejects_nested_plaintext_secrets() -> None:
         + f"('{PROVIDER_REJECTED}', '{ORG_A}', '{USER_A}', 'openai_codex', "
         "'vault://runtime/rejected', "
         '\'{"nested":{"authorization":"Bearer abcdefghijklmnop"}}\', '
-        "'healthy')",
+        "'pending')",
         check=False,
     )
     unicode_key = psql(
@@ -92,7 +93,7 @@ def test_provider_account_metadata_rejects_nested_plaintext_secrets() -> None:
         + f"('{PROVIDER_UNICODE}', '{ORG_A}', '{USER_A}', 'openai_codex', "
         "'vault://runtime/rejected-unicode', "
         "'{\"\uff41\uff43\uff43\uff45\uff53\uff53\uff3f"
-        "\uff54\uff4f\uff4b\uff45\uff4e\":\"abcdefghijklmnop\"}', 'healthy')",
+        "\uff54\uff4f\uff4b\uff45\uff4e\":\"abcdefghijklmnop\"}', 'pending')",
         check=False,
     )
     assert safe.returncode == 0, safe.stderr
@@ -100,6 +101,29 @@ def test_provider_account_metadata_rejects_nested_plaintext_secrets() -> None:
     assert unicode_key.returncode != 0
     assert "provider account metadata contains secret" in rejected.stderr
     assert "provider account metadata contains secret" in unicode_key.stderr
+
+
+def test_provider_metadata_guard_rejects_temp_schema_shadowing() -> None:
+    seed_tenants()
+    shadowed = psql(
+        "SET ROLE science_workbench_app; "
+        + app_principal_sql()
+        + "SET search_path = pg_temp, public; CREATE FUNCTION "
+        "pg_temp.jsonb_contains_secret(jsonb) RETURNS boolean LANGUAGE sql "
+        "IMMUTABLE AS 'SELECT false'; "
+        + PROVIDER_INSERT
+        + f"('{PROVIDER_REJECTED}', '{ORG_A}', '{USER_A}', 'openai_codex', "
+        "'vault://runtime/rejected-shadow', "
+        "'{\"authorization\":\"Bearer abcdefghijklmnop\"}', 'pending')",
+        check=False,
+    )
+    guard_config = psql(
+        "SELECT proconfig::text || ':' || prosecdef::text FROM pg_proc WHERE oid = "
+        "'public.reject_provider_metadata_secret()'::regprocedure"
+    ).stdout.strip()
+
+    assert "provider account metadata contains secret" in shadowed.stderr
+    assert guard_config == '{"search_path=pg_catalog, pg_temp"}:true'
 
 
 @pytest.mark.parametrize(
@@ -121,7 +145,7 @@ def test_provider_account_metadata_rejects_secret_bypass_shapes(
         + app_principal_sql()
         + PROVIDER_INSERT
         + f"('{PROVIDER_REJECTED}', '{ORG_A}', '{USER_A}', 'openai_codex', "
-        f"'vault://runtime/rejected', '{metadata}', 'healthy')",
+        f"'vault://runtime/rejected', '{metadata}', 'pending')",
         check=False,
     )
     assert result.returncode != 0
@@ -144,7 +168,7 @@ def test_provider_runtime_home_requires_opaque_vault_reference() -> None:
         + app_principal_sql()
         + PROVIDER_INSERT
         + f"('{PROVIDER_RAW_HOME}', '{ORG_A}', '{USER_A}', 'openai_codex', "
-        f"'{raw_home}', '{{}}', 'healthy')",
+        f"'{raw_home}', '{{}}', 'pending')",
         check=False,
     )
     assert result.returncode != 0

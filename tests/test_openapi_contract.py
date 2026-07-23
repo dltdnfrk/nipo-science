@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -74,6 +76,209 @@ class OpenApiAcceptanceTests(unittest.TestCase):
         # Then: every required security and tenancy invariant is present.
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("openapi-contract: PASS", result.stdout)
+
+    def test_research_intent_rejects_the_shared_unicode_boundary_set(self) -> None:
+        document = _json_object(OPENAPI.read_text(encoding="utf-8"))
+        components = _object_value(document["components"])
+        schemas = _object_value(components["schemas"])
+        intent = _object_value(schemas["ResearchIntent"])
+        properties = _object_value(intent["properties"])
+        question = _object_value(properties["question"])
+        pattern = question["pattern"]
+        assert isinstance(pattern, str)
+        boundary = re.compile(pattern)
+
+        for value in (" boundary", "boundary ", "\u0085boundary", "\ufeffboundary"):
+            self.assertIsNone(boundary.fullmatch(value))
+        self.assertIsNotNone(boundary.fullmatch("내부\u0085공백"))
+
+    def test_research_intent_declares_nfc_validation_and_collision_rejection(
+        self,
+    ) -> None:
+        document = _json_object(OPENAPI.read_text(encoding="utf-8"))
+        schemas = _object_value(_object_value(document["components"])["schemas"])
+        intent = _object_value(schemas["ResearchIntent"])
+        properties = _object_value(intent["properties"])
+        for field in (
+            "question",
+            "rationale",
+            "intended_benefit",
+            "synthetic_generator_ref",
+            "synthetic_validator_ref",
+        ):
+            self.assertEqual(
+                _object_value(properties[field])["x-unicode-normalization"], "NFC"
+            )
+        for field in ("synthetic_generator_ref", "synthetic_validator_ref"):
+            reference = _object_value(properties[field])
+            self.assertEqual(reference["type"], ["string", "null"])
+            self.assertTrue(reference["x-canonical-null-when-absent"])
+        for field in ("success_criteria", "constraints", "stop_conditions"):
+            items = _object_value(properties[field])
+            self.assertEqual(items["x-unique-after-normalization"], "NFC")
+            self.assertEqual(
+                _object_value(items["items"])["x-unicode-normalization"], "NFC"
+            )
+        conditions = intent["allOf"]
+        self.assertIsInstance(conditions, list)
+        assert isinstance(conditions, list)
+        self.assertEqual(len(conditions), 2)
+        observed_then = _object_value(_object_value(conditions[0])["then"])
+        observed_properties = _object_value(observed_then["properties"])
+        self.assertIsNone(
+            _object_value(observed_properties["synthetic_generator_ref"])["const"]
+        )
+        synthetic_then = _object_value(_object_value(conditions[1])["then"])
+        self.assertEqual(
+            synthetic_then["required"],
+            ["synthetic_generator_ref", "synthetic_validator_ref"],
+        )
+        self.assertEqual(
+            synthetic_then["x-distinct-fields"],
+            ["synthetic_generator_ref", "synthetic_validator_ref"],
+        )
+
+    def test_rejects_research_intent_normalization_policy_drift(self) -> None:
+        contents = OPENAPI.read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            mutated = Path(directory) / "openapi.json"
+            _ = mutated.write_text(
+                contents.replace(
+                    '"x-unicode-normalization": "NFC"',
+                    '"x-unicode-normalization": "NFD"',
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            result = self.run_validator(mutated)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("research-intent-canonicalization", result.stderr)
+
+    def test_export_manifest_requires_research_intent_digest(self) -> None:
+        document = _json_object(OPENAPI.read_text(encoding="utf-8"))
+        schemas = _object_value(_object_value(document["components"])["schemas"])
+        manifest = _object_value(schemas["ExportManifest"])
+        self.assertIn("research_intent_sha256", _list_value(manifest["required"]))
+        digest = _object_value(
+            _object_value(manifest["properties"])["research_intent_sha256"]
+        )
+        self.assertEqual(digest["pattern"], "^[0-9a-f]{64}$")
+
+    def test_run_creation_contract_requires_intent_for_local_and_provider_modes(
+        self,
+    ) -> None:
+        document = _json_object(OPENAPI.read_text(encoding="utf-8"))
+        schemas = _object_value(_object_value(document["components"])["schemas"])
+        run_create = _object_value(schemas["RunCreate"])
+        self.assertEqual(
+            run_create["oneOf"],
+            [
+                {"$ref": "#/components/schemas/LocalDryLabRunCreate"},
+                {"$ref": "#/components/schemas/ProviderModelRunCreate"},
+            ],
+        )
+        self.assertEqual(
+            _object_value(run_create["discriminator"])["propertyName"],
+            "execution_mode",
+        )
+        local = _object_value(schemas["LocalDryLabRunCreate"])
+        local_properties = _object_value(local["properties"])
+        self.assertEqual(
+            _list_value(local["required"]),
+            ["execution_mode", "session_id", "prompt", "research_intent", "input"],
+        )
+        self.assertNotIn("provider_connection_id", local_properties)
+        provider = _object_value(schemas["ProviderModelRunCreate"])
+        self.assertEqual(
+            _list_value(provider["required"]),
+            [
+                "execution_mode",
+                "session_id",
+                "prompt",
+                "research_intent",
+                "input",
+                "connection_id",
+                "model_id",
+            ],
+        )
+        provider_properties = _object_value(provider["properties"])
+        self.assertEqual(provider_properties["execution_mode"], {"const": "provider_model"})
+        self.assertEqual(
+            provider_properties["research_intent"],
+            {"$ref": "#/components/schemas/ResearchIntent"},
+        )
+        paths = _object_value(document["paths"])
+        operation = _object_value(_object_value(paths["/api/v1/runs"])["post"])
+        responses = _object_value(operation["responses"])
+        self.assertIn("201", responses)
+        created = _object_value(responses["201"])
+        content = _object_value(created["content"])
+        media = _object_value(content["application/json"])
+        self.assertEqual(media["schema"], {"$ref": "#/components/schemas/RunResource"})
+        run_read = _object_value(_object_value(paths["/api/v1/runs/{run_id}"])["get"])
+        read_responses = _object_value(run_read["responses"])
+        read_content = _object_value(_object_value(read_responses["200"])["content"])
+        read_media = _object_value(read_content["application/json"])
+        self.assertEqual(
+            read_media["schema"], {"$ref": "#/components/schemas/RunResource"}
+        )
+        resource = _object_value(schemas["RunResource"])
+        resource_properties = _object_value(resource["properties"])
+        expected_resource_fields = {
+            "run_id",
+            "session_id",
+            "execution_mode",
+            "provider",
+            "prompt",
+            "filename",
+            "sha256",
+            "digest",
+            "stage",
+            "artifacts",
+            "plan_digest",
+            "research_intent",
+            "research_intent_sha256",
+            "review",
+            "export",
+            "cleanup",
+            "child_succeeded",
+            "review_id",
+            "export_id",
+            "created_at",
+            "display",
+            "action_plan",
+            "links",
+            "actions",
+            "timeline",
+        }
+        self.assertEqual(
+            set(_list_value(resource["required"])), expected_resource_fields
+        )
+        self.assertEqual(set(resource_properties), expected_resource_fields)
+        self.assertEqual(
+            resource_properties["created_at"],
+            {"$ref": "#/components/schemas/UtcTimestamp"},
+        )
+        self.assertEqual(
+            resource_properties["execution_mode"],
+            {"enum": ["local_dry_lab", "provider_model"]},
+        )
+
+    def test_rejects_provider_run_research_intent_boundary_drift(self) -> None:
+        document = _json_object(OPENAPI.read_text(encoding="utf-8"))
+        schemas = _object_value(_object_value(document["components"])["schemas"])
+        provider = _object_value(schemas["ProviderModelRunCreate"])
+        required = _list_value(provider["required"])
+        required.remove("research_intent")
+        with tempfile.TemporaryDirectory() as directory:
+            mutated = Path(directory) / "openapi.json"
+            _ = mutated.write_text(
+                json.dumps(document, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            result = self.run_validator(mutated)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("run-create-intent-approval-boundary", result.stderr)
 
     def assert_rejected(self, mutation: ContractMutation) -> None:
         contents = OPENAPI.read_text(encoding="utf-8")
@@ -234,7 +439,6 @@ class OpenApiAcceptanceTests(unittest.TestCase):
         # When/Then: semantic validation rejects the response-body regression.
         self.assert_rejected(mutation)
 
-
     def test_provider_connection_lifecycle_contract(self) -> None:
         document = _json_object(OPENAPI.read_text(encoding="utf-8"))
         paths = _object_value(document["paths"])
@@ -322,9 +526,9 @@ class OpenApiAcceptanceTests(unittest.TestCase):
             )
             self.assertEqual(
                 _object_value(
-                    _object_value(_object_value(success["content"])["application/json"])[
-                        "schema"
-                    ]
+                    _object_value(
+                        _object_value(success["content"])["application/json"]
+                    )["schema"]
                 ),
                 {"$ref": f"#/components/schemas/{schema_name}"},
             )
@@ -351,15 +555,17 @@ class OpenApiAcceptanceTests(unittest.TestCase):
         }
         for path, parameters in expected_parameters.items():
             self.assertEqual(
-                _list_value(_object_value(_object_value(paths[path])["post"])["parameters"]),
+                _list_value(
+                    _object_value(_object_value(paths[path])["post"])["parameters"]
+                ),
                 parameters,
             )
         self.assertEqual(
             _list_value(
                 _object_value(
-                    _object_value(paths["/api/v1/provider-connections/{connection_id}"])[
-                        "delete"
-                    ]
+                    _object_value(
+                        paths["/api/v1/provider-connections/{connection_id}"]
+                    )["delete"]
                 )["parameters"]
             ),
             [if_match_parameter],
@@ -421,7 +627,8 @@ class OpenApiAcceptanceTests(unittest.TestCase):
         for schema in provider_schemas.values():
             self.assertFalse(
                 _string_or_none_value(schema.get("type")) == "object"
-                and _boolean_or_none_value(schema.get("additionalProperties")) is not False
+                and _boolean_or_none_value(schema.get("additionalProperties"))
+                is not False
             )
             walk(schema)
 
@@ -437,7 +644,15 @@ class OpenApiAcceptanceTests(unittest.TestCase):
         )
         self.assertEqual(
             _list_value(_object_value(schemas["ProviderRegistryEntry"])["required"]),
-            ["id", "required", "default", "connectable", "disabled_reason"],
+            [
+                "id",
+                "name",
+                "availability_label",
+                "required",
+                "default",
+                "connectable",
+                "disabled_reason",
+            ],
         )
         self.assertEqual(
             set(
@@ -445,7 +660,15 @@ class OpenApiAcceptanceTests(unittest.TestCase):
                     _object_value(schemas["ProviderRegistryEntry"])["properties"]
                 )
             ),
-            {"id", "required", "default", "connectable", "disabled_reason"},
+            {
+                "id",
+                "name",
+                "availability_label",
+                "required",
+                "default",
+                "connectable",
+                "disabled_reason",
+            },
         )
         self.assertEqual(
             _list_value(_object_value(schemas["ProviderConnection"])["required"]),
@@ -492,11 +715,13 @@ class OpenApiAcceptanceTests(unittest.TestCase):
         )
         self.assertEqual(
             _object_value(
-                _object_value(_object_value(schemas["ProviderCleanupReceipt"])["properties"])[
-                    "redacted"
-                ]
+                _object_value(
+                    _object_value(schemas["ProviderCleanupReceipt"])["properties"]
+                )["redacted"]
             ),
             {"const": True},
         )
+
+
 if __name__ == "__main__":
     _ = unittest.main()

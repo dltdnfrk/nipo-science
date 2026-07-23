@@ -1,80 +1,36 @@
 {
-  "schemaVersion": 1,
-  "kind": "product-browser-accessibility-test-report",
-  "goalId": "G003",
-  "resolutionGoalId": "G008",
-  "generatedAt": "2026-07-14T04:26:59+09:00",
-  "verdict": "passed",
-  "commands": [
-    "pytest tests/g003/test_auth_tenancy.py tests/g003/test_product_dry_lab_http.py tests/g003/test_product_dry_lab_service.py tests/g003/test_ui_contract.py",
-    "ruff check services/api/product_app.py tests/g003",
-    "basedpyright services/api/product_app.py tests/g003",
-    "Playwright Chrome-for-Testing 149 route/action capture with pinned axe-core 4.10.3"
-  ],
-  "passingResults": {
-    "g003NonPostgresTests": 19,
-    "lastVerifiedPostgresRlsTests": 33,
-    "browserRouteCaptures": 24,
-    "browserActionJourneySteps": 9,
-    "axeSeriousOrCriticalViolations": 0,
-    "browserConsoleErrors": 0,
-    "browserPageErrors": 0,
-    "browserRequestFailures": 0,
-    "ruffErrors": 0,
-    "typeErrors": 0,
-    "typeWarnings": 0,
-    "nodeSyntaxExitCode": 0,
-    "designReferenceValidSvg": true
-  },
+  "authoritativePublication": false,
+  "blockers": [],
   "coveredBehavior": [
-    "enumeration-safe same-origin Magic Link and opaque authenticated session",
-    "tenant-derived workspace and non-disclosing foreign-resource behavior",
-    "authenticated upload, plan, approve, execute, artifact, review, export, provider-settings and cleanup journey",
-    "served namespaced CSS/JavaScript and artifact-library API discovered and corrected by real browser QA",
-    "frozen DESIGN.md research contract and Mineral Notebook reference",
-    "Korean/CJK product screens at 375, 768 and 1280 pixels",
-    "keyboard skip link, responsive navigation and checksum wrapping",
-    "pinned axe-core WCAG 2.2 A/AA-family audit with zero serious or critical violations",
-    "zero browser console, page or request failures",
-    "navigation capture latency no greater than 15 ms on the loopback fixture"
+    "two distinct UUIDv7 Runs complete create, approve, execute, review and export through exact ID-addressed resources",
+    "approval tokens remain one-use process memory and are absent from browser storage",
+    "foreign and unknown resources remain non-disclosing while the default server has no baked principal",
+    "server-owned Run display IDs, immutable UTC created_at, status and exact links survive reloads",
+    "Korean content, 44px controls, keyboard flow and long identifiers reflow through the 188px equivalent width",
+    "provider, Artifact, Run, Review and Export failures remain distinct and fail closed"
   ],
-  "browserAutomation": {
-    "status": "passed",
-    "browser": "Chrome for Testing 149.0.7827.55",
-    "routes": [
-      "/workspace",
-      "/upload",
-      "/runs/demo/approval",
-      "/runs/demo",
-      "/artifacts",
-      "/reviews/demo",
-      "/exports/demo",
-      "/settings/providers"
-    ],
-    "viewports": [375, 768, 1280],
-    "captureCount": 24,
-    "transcript": "artifacts/ulw-g003/browser-journey-transcript.json",
-    "transcriptSha256": "9184efda5fbe1e13dd2f1b9890a25cb1f3b9cedad32f4719f3ee6b44e88f0ee6",
-    "axe": {
-      "version": "4.10.3",
-      "scriptSha256": "880970c081707360e64f34cea25ff91892f5bc95675b0776925b9709dd8a68bb",
-      "seriousOrCritical": 0
-    },
-    "fabricatedEvidence": false
+  "currentVisualEvidence": {
+    "authority": "current-source-local-manual-inspection",
+    "manifest": "artifacts/ulw-g003/current-7a855379/manifest.json",
+    "note": "Fifty-seven fresh screenshots were captured on the exact frozen source; eight representative screenshots were manually inspected by the root reviewer and independent 57-of-57 review is recorded in the quality gate."
   },
-  "independentVisualReviews": [
-    {
-      "ref": "agent://172-G003VisualArchitectureFinal",
-      "status": "CLEAR",
-      "decision": "APPROVE"
-    },
-    {
-      "ref": "agent://173-G003VisualQaFinal",
-      "status": "PASS"
-    }
-  ],
-  "currentExternalLimitations": {
-    "postgresRlsRerun": "Docker daemon is currently unavailable; the unchanged RLS layer retains the prior 33-test passing receipt."
+  "generatedAt": "2026-07-15T12:21:13Z",
+  "goalId": "G003",
+  "kind": "product-browser-accessibility-test-report",
+  "passingResults": {
+    "artifactUiGateExecutedCount": 99,
+    "canonicalLocalExecutedCount": 3366,
+    "canonicalLocalGates": 27,
+    "playwrightTests": 72,
+    "productUiGateExecutedCount": 115,
+    "sourceTreeSha256": "7a855379a546b3c8df4db455bbd375443517a51039c3b001e6bf03493a72f3d4"
   },
-  "blockers": []
+  "schemaVersion": 2,
+  "verdict": "passed-local-current-source",
+  "verificationCommands": [
+    "make test-e2e-artifacts",
+    "make test-product-ui",
+    "make ci-validate",
+    "canonical ci_commands(root) direct execution"
+  ]
 }

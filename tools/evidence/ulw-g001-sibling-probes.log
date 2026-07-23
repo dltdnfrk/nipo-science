@@ -3,7 +3,7 @@ each probe: created inside science-workbench/tmp_probe, checker run, then remove
 --- probe outputs (named rejections, checker exit=1 each) ---
 BOUNDARY VIOLATION [sibling-import] tmp_probe/probe_import.py:3: from ontologylab
 
-BOUNDARY VIOLATION [escaping-symlink] tmp_probe/probe_symlink: target resolves outside root: /Users/hyunjun/Documents/MUNI/drylab
+BOUNDARY VIOLATION [escaping-symlink] tmp_probe/probe_symlink: target resolves outside root: <outside-root>
 BOUNDARY VIOLATION [sibling-import] tmp_probe/probe_import.py:3: from ontologylab
 BOUNDARY VIOLATION [workspace-reference] tmp_probe/pnpm-workspace.yaml:2: "../
 BOUNDARY VIOLATION [outside-build-input] tmp_probe/Dockerfile.probe:2: COPY ../

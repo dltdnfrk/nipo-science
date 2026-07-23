@@ -1,15 +1,23 @@
 from typing import Annotated, ClassVar, Final, Literal, Self
 
-from pydantic import ConfigDict, Field, JsonValue, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from science_workbench_contracts.common import (
     ContractModel,
+    FrozenJsonValue,
     NonEmptyText,
     Revision,
     Sha256,
     UtcTimestamp,
     Uuid7,
+    json_projection,
+)
+from science_workbench_contracts.runs import (
+    ResearchIntent,
+)
+from science_workbench_contracts.runs import (
+    research_intent_sha256 as compute_research_intent_sha256,
 )
 
 from .event_guard import (
@@ -28,6 +36,8 @@ COMPLETED_EXECUTION_RESULT_ERROR: Final = "completed_execution_result"
 COMPLETED_EXECUTION_RESULT_MESSAGE: Final = (
     "completed Execution requires a result reference"
 )
+RESEARCH_INTENT_DIGEST_ERROR: Final = "research_intent_digest"
+RESEARCH_INTENT_DIGEST_MESSAGE: Final = "research intent digest mismatch"
 
 
 class ProtocolModel(ContractModel):
@@ -87,13 +97,13 @@ class RunEvent(ProtocolModel):
     run_id: Uuid7
     sequence: Annotated[int, Field(ge=1)]
     kind: RunEventKind
-    data: JsonValue
+    data: FrozenJsonValue
     created_at: UtcTimestamp
 
     @field_validator("data")
     @classmethod
-    def reject_forbidden_semantics(cls, value: JsonValue) -> JsonValue:
-        if contains_forbidden_event_data(value):
+    def reject_forbidden_semantics(cls, value: FrozenJsonValue) -> FrozenJsonValue:
+        if contains_forbidden_event_data(json_projection(value)):
             raise PydanticCustomError(FORBIDDEN_EVENT_ERROR, FORBIDDEN_EVENT_MESSAGE)
         return value
 
@@ -127,15 +137,28 @@ class ActionPlan(ProtocolModel):
     project_id: Uuid7
     run_id: Uuid7
     requester_id: Uuid7
+    research_intent: ResearchIntent
+    research_intent_sha256: Sha256
     version: Annotated[int, Field(ge=1)]
     tool: NonEmptyText
-    arguments: JsonValue
+    arguments: FrozenJsonValue
     arguments_hash: Sha256
     network_scope: tuple[str, ...] = ()
     secret_scope: tuple[str, ...] = ()
     reason: NonEmptyText
     plan_digest: Sha256
     created_at: UtcTimestamp
+
+    @model_validator(mode="after")
+    def valid_research_intent_digest(self) -> Self:
+        if self.research_intent_sha256 != compute_research_intent_sha256(
+            self.research_intent
+        ):
+            raise PydanticCustomError(
+                RESEARCH_INTENT_DIGEST_ERROR,
+                RESEARCH_INTENT_DIGEST_MESSAGE,
+            )
+        return self
 
 
 class ToolGrant(ProtocolModel):
@@ -151,6 +174,7 @@ class ApprovalBinding(ProtocolModel):
     run_id: Uuid7
     requester_id: Uuid7
     action_plan_id: Uuid7
+    research_intent_sha256: Sha256
     plan_digest: Sha256
     tool: NonEmptyText
     arguments_hash: Sha256

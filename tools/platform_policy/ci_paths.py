@@ -27,6 +27,7 @@ G001_PYTHON_PATHS: Final = (
     "tools/verify_spec.py",
     "tools/tests/test_verify_spec.py",
     "tools/architecture_contract.py",
+    "tools/architecture_evidence.py",
     "tools/architecture_manifest.py",
     "tools/verify_architecture.py",
     "tests/test_architecture.py",

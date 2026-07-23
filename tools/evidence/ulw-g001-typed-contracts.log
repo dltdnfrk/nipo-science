@@ -17,9 +17,9 @@ Ran 13 tests in 1.947s
 
 OK
 ============================= test session starts ==============================
-platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- <repo>/.venv/bin/python3
 cachedir: .pytest_cache
-rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: anyio-4.14.1
 collecting ... collected 324 items
@@ -352,7 +352,7 @@ packages/contracts/python/tests/test_sse_runtime_protocol.py::test_runtime_adapt
 ============================= 324 passed in 0.33s ==============================
 $ vitest run packages/contracts/tests
 
- RUN  v4.1.9 /Users/hyunjun/Documents/MUNI/science-workbench
+ RUN  v4.1.9 <repo>
 
 
  Test Files  14 passed (14)

@@ -28,7 +28,7 @@ def test_artifact_ui_declares_version_diff_lineage_preview_and_associations() ->
         'button("세션에 연결", "attach")',
         'button("세션 연결 해제", "detach", "secondary")',
         'method: action === "detach" ? "DELETE" : "POST"',
-        'sandbox: ""',
+        'sandbox: "allow-same-origin"',
         'referrerpolicy: "no-referrer"',
         'class: "preview-frame"',
         'class: "preview-status"',
@@ -65,6 +65,9 @@ def test_artifact_library_version_controls_and_exact_download_allowlist_exist() 
     ):
         assert contract in APP
     assert "/artifacts/demo" not in APP
+    assert '{ session_id: "session-demo" }' not in APP
+    assert "selectedAttachmentSessionId()" in APP
+    assert "workspaceSessions" in APP
 
 
 def test_playwright_acceptance_is_pinned_and_runs_from_the_make_target() -> None:

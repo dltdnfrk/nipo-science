@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import re
 import warnings
 from decimal import Decimal, InvalidOperation
-from typing import Final, Literal, TypeGuard, assert_never
+from typing import Final, Literal, TypeGuard, assert_never, cast
 
 from PIL import Image, UnidentifiedImageError
 
@@ -19,12 +20,16 @@ from services.api.product_pdf_validation import validate_passive_pdf
 
 _MAX_CONTENT_BYTES: Final = 1_048_576
 _MAX_CSV_COLUMNS: Final = 256
-type ArtifactMediaType = Literal["application/pdf", "image/png", "text/csv"]
+type ArtifactMediaType = Literal[
+    "application/json", "application/pdf", "image/png", "text/csv", "text/markdown"
+]
 _NAME: Final = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9]$")
 _EXTENSION: Final = {
+    "application/json": ".json",
     "application/pdf": ".pdf",
     "image/png": ".png",
     "text/csv": ".csv",
+    "text/markdown": ".md",
 }
 _ACTIVE_MARKERS: Final = (
     b"<!doctype",
@@ -58,6 +63,8 @@ def validate_artifact_draft(draft: ArtifactVersionDraft) -> bytes:
             _validate_png(content, draft.media_type)
         case "application/pdf":
             validate_passive_pdf(content, draft.media_type)
+        case "application/json" | "text/markdown":
+            _validate_passive_text(content, draft.media_type)
         case _:
             assert_never(media_type)
     return content
@@ -90,6 +97,18 @@ def _validate_csv(content: bytes, media_type: str) -> None:
         or any(_is_formula_cell(cell) for row in rows for cell in row)
     ):
         raise UnsupportedArtifactMediaError(media_type)
+
+
+def _validate_passive_text(content: bytes, media_type: str) -> None:
+    lowered = content[:8192].lower()
+    if b"\x00" in content or any(marker in lowered for marker in _ACTIVE_MARKERS):
+        raise UnsupportedArtifactMediaError(media_type)
+    try:
+        text = content.decode("utf-8", errors="strict")
+        if media_type == "application/json":
+            _ = cast("object", json.loads(text))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise UnsupportedArtifactMediaError(media_type) from error
 
 
 def _is_formula_cell(value: str) -> bool:
@@ -134,4 +153,3 @@ def _validate_png(content: bytes, media_type: str) -> None:
         or width * height > _MAX_PREVIEW_PIXELS
     ):
         raise UnsupportedArtifactMediaError(media_type)
-

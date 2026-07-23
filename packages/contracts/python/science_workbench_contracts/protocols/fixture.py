@@ -68,6 +68,7 @@ class ProtocolFixture(ProtocolModel):
             and binding.run_id == plan.run_id
             and binding.requester_id == plan.requester_id
             and binding.action_plan_id == plan.id
+            and binding.research_intent_sha256 == plan.research_intent_sha256
             and binding.plan_digest == plan.plan_digest
         )
         execution_matches = (

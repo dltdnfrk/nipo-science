@@ -20,14 +20,10 @@ def _interactive_pdf(
 ) -> bytes:
     parts = [b"%PDF-1.4\n"]
     objects = (
-        b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R "
-        + catalog_extra
-        + b">>\nendobj\n",
+        b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R " + catalog_extra + b">>\nendobj\n",
         b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
         b"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 72 72] "
-        b"/Contents 4 0 R "
-        + page_extra
-        + b">>\nendobj\n",
+        b"/Contents 4 0 R " + page_extra + b">>\nendobj\n",
         b"4 0 obj\n<< /Length 0 >>\nstream\n\nendstream\nendobj\n",
         *extra_objects,
     )

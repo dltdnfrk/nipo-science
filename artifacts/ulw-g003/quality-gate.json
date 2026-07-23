@@ -1,77 +1,91 @@
 {
   "architectReview": {
-    "architectureStatus": "CLEAR",
-    "productStatus": "CLEAR",
-    "codeStatus": "CLEAR",
-    "recommendation": "APPROVE",
-    "evidence": "Architect 172 inspected real pixels and the current Chrome 149 transcript: all 24 route-by-viewport captures are responsive and legible with zero serious/critical axe violations and no browser failures.",
-    "commands": ["agent://172-G003VisualArchitectureFinal"],
-    "blockers": []
+    "architectureStatus": "HISTORICAL_ONLY",
+    "blockers": [],
+    "codeStatus": "PENDING_FINAL_REVIEW",
+    "commands": [],
+    "evidence": "Historical pixel-review agents are not reused as current frozen-source authority. Current-source final review is tracked separately after evidence freeze.",
+    "productStatus": "PENDING_FINAL_REVIEW",
+    "recommendation": "PENDING"
   },
   "executorQa": {
-    "status": "passed",
-    "e2eStatus": "passed",
-    "redTeamStatus": "passed",
-    "evidence": "Executor 173 independently inspected mobile/tablet/desktop images and the complete authenticated action journey, confirming CJK rendering, focus, checksum wrapping, provider settings, and zero console/page/request failures.",
-    "e2eCommands": ["Chrome 149 Playwright authenticated route/action capture", "pytest G003 non-Postgres suite"],
-    "redTeamCommands": ["Pinned axe-core 4.10.3 WCAG audit across 24 captures"],
-    "artifactRefs": [
-      {
-        "id": "g003-browser-report",
-        "kind": "product-accessibility-test-report",
-        "path": "science-workbench/artifacts/ulw-g003/qa-report.json",
-        "description": "Checksummed 24-capture browser transcript with pinned axe audit and dual independent visual approvals"
-      },
-      {
-        "id": "g003-browser-transcript",
-        "kind": "browser-automation-transcript",
-        "path": "science-workbench/artifacts/ulw-g003/browser-journey-transcript.json",
-        "description": "Chrome 149 authenticated action transcript across all routes and target viewports"
-      },
-      {
-        "id": "g003-visual-screenshot",
-        "kind": "visual-screenshot",
-        "path": "science-workbench/artifacts/ulw-g003/product-1280-artifacts.png",
-        "description": "Representative desktop artifact-library screenshot from the final responsive capture set"
-      }
-    ],
-    "contractCoverage": [
-      {
-        "id": "g003-product-browser-contract",
-        "contractRef": "Ultragoal G003/G008 product UI acceptance",
-        "obligation": "Complete authenticated Korean product journeys at 375, 768, and 1280 with WCAG, CJK, console, performance, and dual visual PASS evidence",
-        "status": "covered",
-        "surfaceEvidenceRefs": ["g003-browser-surface"],
-        "adversarialCaseRefs": ["g003-accessibility-browser-sweep"]
-      }
-    ],
-    "surfaceEvidence": [
-      {
-        "id": "g003-browser-surface",
-        "contractRef": "Authenticated Korean product application",
-        "surface": "browser",
-        "invocation": "Chrome for Testing 149 Playwright journey over eight routes at three viewports",
-        "verdict": "passed",
-        "artifactRefs": ["g003-browser-report", "g003-browser-transcript", "g003-visual-screenshot"]
-      }
-    ],
     "adversarialCases": [
       {
-        "id": "g003-accessibility-browser-sweep",
-        "contractRef": "G003 WCAG/CJK/browser integrity",
-        "scenario": "Run pinned axe rules and capture console, page, request, focus, CJK, layout, and screenshot evidence at every route and viewport",
-        "expectedBehavior": "24 successful captures, zero serious/critical violations, zero browser failures, visible Korean content, and keyboard skip-link focus",
-        "verdict": "passed",
-        "artifactRefs": ["g003-browser-report"]
+        "artifactRefs": [
+          "g003-current-browser-report",
+          "g006-canonical-gates"
+        ],
+        "contractRef": "G003 current product boundary",
+        "expectedBehavior": "Two exact Runs remain isolated, fail-closed responses stay distinct, and CJK/accessibility contracts hold at all tested widths.",
+        "id": "g003-current-browser-sweep",
+        "scenario": "Run the exact current-source Product and Artifact UI jobs from the 27-job catalog.",
+        "verdict": "passed"
       }
     ],
-    "blockers": []
+    "artifactRefs": [
+      {
+        "description": "Current-source browser and accessibility counts with an explicit historical-visual caveat",
+        "id": "g003-current-browser-report",
+        "kind": "product-browser-accessibility-test-report",
+        "path": "science-workbench/artifacts/ulw-g003/qa-report.json"
+      },
+      {
+        "description": "Current 27-of-27 local report bound to the frozen source identity",
+        "id": "g006-canonical-gates",
+        "kind": "canonical-local-gate-report",
+        "path": "science-workbench/artifacts/ulw-g006/canonical-gates.json"
+      }
+    ],
+    "blockers": [],
+    "contractCoverage": [
+      {
+        "adversarialCaseRefs": [
+          "g003-current-browser-sweep"
+        ],
+        "contractRef": "G003 current browser acceptance",
+        "id": "g003-current-product-contract",
+        "obligation": "Verify the full exact-ID dry-lab journey, accessibility and responsive CJK behavior on the frozen source without promoting historical screenshots to current authority.",
+        "status": "covered-by-current-automated-browser-gates",
+        "surfaceEvidenceRefs": [
+          "g003-current-browser-surface"
+        ]
+      }
+    ],
+    "e2eCommands": [
+      "make test-e2e-artifacts",
+      "make test-product-ui",
+      "canonical ci_commands(root) direct execution"
+    ],
+    "e2eStatus": "passed",
+    "evidence": "Frozen source 7a855379a546b3c8df4db455bbd375443517a51039c3b001e6bf03493a72f3d4 passed Artifact UI 99 checks and Product UI 115 checks inside the 27/27 local catalog; 57 fresh screenshots are checksummed in the current-source manifest.",
+    "redTeamCommands": [
+      "browser failure-state and foreign-resource cases inside the exact Playwright catalog"
+    ],
+    "redTeamStatus": "passed",
+    "status": "passed-local-current-source",
+    "surfaceEvidence": [
+      {
+        "artifactRefs": [
+          "g003-current-browser-report",
+          "g006-canonical-gates"
+        ],
+        "contractRef": "G003 frozen-source product application",
+        "id": "g003-current-browser-surface",
+        "invocation": "make test-e2e-artifacts and make test-product-ui",
+        "surface": "headless Chromium at mobile/tablet/desktop with 188px reflow assertions",
+        "verdict": "passed"
+      }
+    ]
   },
   "iteration": {
-    "status": "passed",
-    "evidence": "Real browser QA exposed and fixed namespaced asset serving, the artifact-library route/API, and checksum overflow. The final 24-capture rerun is clean and both independent visual lanes pass.",
+    "blockers": [],
+    "evidence": "Current automated browser gates are source-bound through the canonical local report; historical screenshots remain design history only.",
     "fullRerun": true,
-    "rerunCommands": ["pytest G003 non-Postgres tests", "ruff check services/api/product_app.py tests/g003", "basedpyright services/api/product_app.py tests/g003", "Chrome 149 Playwright capture"],
-    "blockers": []
+    "rerunCommands": [
+      "make test-e2e-artifacts",
+      "make test-product-ui",
+      "canonical ci_commands(root) direct execution"
+    ],
+    "status": "passed-local-current-source"
   }
 }

@@ -4,13 +4,34 @@ from __future__ import annotations
 
 import base64
 import hmac
+import json
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from pydantic import ValidationError
-from tools.platform_policy.ci_contract import load_checked_in_ci_catalog
+from tools.platform_policy.ci_contract import (
+    TRUSTED_REQUIREMENT_IDS,
+    CiCatalogJob,
+    CiControlCatalog,
+    CiCurrentRun,
+    CiExecutionAttestation,
+    CiExecutionLease,
+    CiGenerationManifestAuthority,
+    CiJob,
+    CiRequirementCaseBinding,
+    CiRequirementCaseObservation,
+    CiRunState,
+    GateResult,
+    RequiredSecurityCatalog,
+    ci_catalog_root,
+    ci_catalog_source_root,
+    ci_requirement_case_evidence_bytes,
+    ci_requirement_case_marker_bytes,
+    load_checked_in_ci_catalog,
+)
+from tools.platform_policy.ci_runner import execute_ci_requirement_cases
 from tools.platform_policy.release_contract import (
     CI_JOB_CATEGORIES,
     NFR_REQUIREMENT_IDS,
@@ -53,8 +74,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Literal
 
-    from tools.platform_policy.ci_contract import CiControlCatalog
-
 FINALIZED_AT = "2026-07-14T12:00:00Z"
 KEY = b"test-only-finalization-key-not-serialized"
 
@@ -90,6 +109,177 @@ class _HmacIssuer:
 
     def verify(self, payload: bytes, signature: bytes) -> bool:
         return hmac.compare_digest(self.sign(payload), signature)
+
+
+@dataclass
+class _TestCiExecutionAuthority:
+    catalog: CiControlCatalog
+    current_run: CiCurrentRun
+    manifest_sha256: str
+    signing_material: bytes = KEY
+    leases: dict[str, CiExecutionLease] = field(default_factory=dict)
+    authorized_leases: set[str] = field(default_factory=set)
+    lease_sequence: int = 0
+
+    def bind(
+        self,
+        authority_context: str,
+        generation_id: str,
+        manifest_sha256: str,
+    ) -> None:
+        if (
+            authority_context != self.current_run.authority_context
+            or generation_id != self.current_run.generation_id
+        ):
+            raise ValueError(authority_context)
+        self.manifest_sha256 = manifest_sha256
+
+    def resolve(self, authority_context: str, generation_id: str) -> str:
+        if (
+            authority_context != self.current_run.authority_context
+            or generation_id != self.current_run.generation_id
+        ):
+            raise LookupError(authority_context)
+        return self.manifest_sha256
+
+    def begin(self, current_run: CiCurrentRun) -> None:
+        self.current_run = current_run
+
+    def complete(self, current_run: CiCurrentRun) -> None:
+        self.current_run = current_run
+
+    def issue_execution_lease(
+        self,
+        current_run: CiCurrentRun,
+        job: CiJob,
+    ) -> CiExecutionLease:
+        self.lease_sequence += 1
+        lease = CiExecutionLease(
+            lease_id=f"release-fixture:{job}:{self.lease_sequence}",
+            authority_context=current_run.authority_context,
+            run_id=current_run.run_id,
+            attempt_id=current_run.attempt_id,
+            source_tree_sha256=current_run.source_tree_sha256,
+            job=job,
+        )
+        self.leases[lease.lease_id] = lease
+        return lease
+
+    def authorize_execution_lease(
+        self,
+        lease: CiExecutionLease,
+        current_run: CiCurrentRun,
+        catalog: CiControlCatalog,
+        job: CiCatalogJob,
+    ) -> None:
+        if (
+            self.leases.get(lease.lease_id) != lease
+            or current_run != self.current_run
+            or catalog != self.catalog
+            or job not in catalog.jobs
+            or job.job is not lease.job
+        ):
+            raise ValueError(lease.lease_id)
+        self.authorized_leases.add(lease.lease_id)
+
+    def attest_execution(
+        self,
+        lease: CiExecutionLease,
+        record: GateResult,
+        toolchain: str,
+    ) -> CiExecutionAttestation:
+        if (
+            self.leases.get(lease.lease_id) != lease
+            or lease.lease_id not in self.authorized_leases
+            or lease.job is not record.job
+            or record.catalog_root_sha256 is None
+            or record.catalog_source_root_sha256 is None
+        ):
+            raise LookupError(lease.lease_id)
+        provisional = CiExecutionAttestation(
+            lease_id=lease.lease_id,
+            authority_context=lease.authority_context,
+            run_id=lease.run_id,
+            attempt_id=lease.attempt_id,
+            source_tree_sha256=lease.source_tree_sha256,
+            catalog_root_sha256=record.catalog_root_sha256,
+            catalog_source_root_sha256=record.catalog_source_root_sha256,
+            job=record.job,
+            argv=record.argv,
+            requirement_ids=record.requirement_ids,
+            control_ids=record.control_ids,
+            toolchain=toolchain,
+            executed_count=record.executed_count,
+            output_sha256=record.output_sha256,
+            attachment_sha256=record.attachment_sha256,
+            security_catalog_root_sha256=record.security_catalog_root_sha256,
+            security_threat_ids=record.security_threat_ids,
+            security_evidence_roots=record.security_evidence_roots,
+            outcome="success",
+            started_at=record.started_at,
+            finished_at=record.finished_at,
+            signature="unsigned",
+        )
+        signature = hmac.digest(
+            self.signing_material,
+            provisional.model_dump_json(exclude={"signature"}).encode(),
+            "sha256",
+        ).hex()
+        return provisional.model_copy(update={"signature": signature})
+
+    def verify_execution_attestation(
+        self,
+        attestation: CiExecutionAttestation,
+        record: GateResult,
+        current_run: CiCurrentRun,
+    ) -> None:
+        if current_run != self.current_run:
+            raise LookupError(current_run.run_id)
+        expected = self.attest_execution(
+            self.leases[attestation.lease_id],
+            record,
+            attestation.toolchain,
+        )
+        if expected != attestation:
+            raise ValueError(attestation.lease_id)
+
+    def finalize_attested_generation(
+        self,
+        current_run: CiCurrentRun,
+        published_run: CiCurrentRun,
+        manifest_sha256: str,
+        attestations: tuple[CiExecutionAttestation, ...],
+    ) -> None:
+        _ = attestations
+        if current_run != self.current_run:
+            raise ValueError(current_run.run_id)
+        self.current_run = published_run
+        self.manifest_sha256 = manifest_sha256
+
+    def resolve_current(self, authority_context: str) -> CiCurrentRun:
+        if authority_context != self.current_run.authority_context:
+            raise LookupError(authority_context)
+        return self.current_run
+
+    def resolve_control_catalog(
+        self,
+        authority_context: str,
+        source_identity: str,
+        run_id: str,
+    ) -> CiControlCatalog:
+        if (
+            authority_context != self.current_run.authority_context
+            or source_identity != self.current_run.source_tree_sha256
+            or run_id != self.current_run.run_id
+        ):
+            raise LookupError(run_id)
+        return self.catalog
+
+    def resolve_security_catalog(
+        self,
+        catalog_id: str,
+    ) -> RequiredSecurityCatalog:
+        raise LookupError(catalog_id)
 
 
 @dataclass
@@ -306,7 +496,11 @@ def _security_log() -> bytes:
         + canonical_bytes(
             {
                 "case_id": f"synthetic-security-case-{index:02d}",
+                "denial_observation_sha256": "c" * 64,
                 "outcome": "passed",
+                "postcondition_observation_sha256": "d" * 64,
+                "source_sha256": "a" * 64,
+                "test_sha256": "b" * 64,
                 "threat_id": f"T{index:02d}",
             }
         )
@@ -329,15 +523,89 @@ def _security_log() -> bytes:
     )
 
 
-def _build_controls(
-    evidence: Path,
-    attachments: list[AttachmentEvidence],
+def _verified_test_catalog(
     catalog: CiControlCatalog,
-    source_root: str,
-    toolchain_sha256: str,
+    source_root: Path,
+) -> CiControlCatalog:
+    requirements = tuple(sorted(TRUSTED_REQUIREMENT_IDS))
+    jobs = tuple(
+        job.model_copy(
+            update={"requirement_ids": requirements[index :: len(CiJob)]}
+        )
+        for index, job in enumerate(catalog.jobs)
+    )
+    bindings: list[CiRequirementCaseBinding] = []
+    source_path = "requirement_subject.py"
+    test_path = "test_requirement_cases.py"
+    source_sha256 = sha256_bytes((source_root / source_path).read_bytes())
+    test_sha256 = sha256_bytes((source_root / test_path).read_bytes())
+    for job in jobs:
+        for requirement_id in job.requirement_ids:
+            provisional_binding = CiRequirementCaseBinding.model_construct(
+                requirement_id=requirement_id,
+                job=job.job,
+                case_id=f"case-{requirement_id}",
+                source_path=source_path,
+                source_sha256=source_sha256,
+                test_path=test_path,
+                test_sha256=test_sha256,
+                test_node_id=(
+                    f"{test_path}::test_requirement_is_bound[{requirement_id}]"
+                ),
+                observation_sha256="0" * 64,
+            )
+            bindings.append(
+                CiRequirementCaseBinding.model_validate(
+                    provisional_binding.model_copy(
+                        update={
+                            "observation_sha256": sha256_bytes(
+                                ci_requirement_case_evidence_bytes(provisional_binding)
+                            )
+                        }
+                    ).model_dump()
+                )
+            )
+    provisional = CiControlCatalog.model_construct(
+        version=catalog.version,
+        source_identity=catalog.source_identity,
+        requirements_sha256=catalog.requirements_sha256,
+        source_root_sha256="0" * 64,
+        catalog_root_sha256="0" * 64,
+        security_catalog_id=catalog.security_catalog_id,
+        jobs=jobs,
+        requirement_case_bindings=tuple(bindings),
+        unverified_requirement_ids=(),
+    )
+    with_source = provisional.model_copy(
+        update={"source_root_sha256": ci_catalog_source_root(provisional)}
+    )
+    complete = with_source.model_copy(
+        update={"catalog_root_sha256": ci_catalog_root(with_source)}
+    )
+    return CiControlCatalog.model_validate(complete.model_dump())
+
+
+@dataclass(frozen=True)
+class _ControlBuildContext:
+    evidence: Path
+    attachments: list[AttachmentEvidence]
+    source_root: str
+    toolchain_sha256: str
+    case_observations: tuple[CiRequirementCaseObservation, ...]
+    ci_authority: CiGenerationManifestAuthority
+
+
+def _build_controls(
+    context: _ControlBuildContext,
+    catalog: CiControlCatalog,
 ) -> list[ControlEvidence]:
     controls: list[ControlEvidence] = []
     for index, job in enumerate(catalog.jobs):
+        requirement_bindings = tuple(
+            binding
+            for binding in catalog.requirement_case_bindings
+            if binding.job is job.job
+        )
         observed_count = (
             13
             if job.job.value == "security"
@@ -359,43 +627,109 @@ def _build_controls(
                 else f"{observed_count} passed\n"
             )
             log_content = f"job={job.job.value}\n{count_line}"
+        observation_by_case = {
+            observation.case_id: observation
+            for observation in context.case_observations
+        }
+        case_markers = b"".join(
+            ci_requirement_case_marker_bytes(observation_by_case[binding.case_id])
+            for binding in sorted(
+                requirement_bindings,
+                key=lambda item: (item.requirement_id, item.case_id),
+            )
+        )
+        if isinstance(log_content, str):
+            log_content = log_content.encode()
+        log_content += case_markers
         log_attachment, log_hash = _attachment(
-            evidence, f"controls/{index:02d}-log.txt", log_content
+            context.evidence, f"controls/{index:02d}-log.txt", log_content
         )
         coverage_attachment, coverage_hash = _attachment(
-            evidence, f"controls/{index:02d}-coverage.json"
+            context.evidence, f"controls/{index:02d}-coverage.json"
         )
-        attachments.extend((log_attachment, coverage_attachment))
-        controls.append(
-            ControlEvidence(
-                control_id=job.job.value,
-                category=CI_JOB_CATEGORIES[job.job],
-                argv=job.argv,
-                outcome="success",
-                exit_code=0,
-                observed_positive_count=observed_count,
-                raw_log_sha256=log_hash,
-                attachment_sha256=(coverage_hash,),
-                requirement_ids=job.requirement_ids,
-                goal_ids=(f"G{index + 1:03d}",) if index < 10 else (),
-                evidence_kind="machine",
-                count_kind=job.count_kind,
-                parser_version=job.parser_version,
-                analyzer_inventory_root_sha256=job.analyzer_inventory_root_sha256,
-                catalog_root_sha256=catalog.catalog_root_sha256,
-                catalog_source_root_sha256=catalog.source_root_sha256,
-                catalog_run_id="canonical-run",
-                release_id="G006",
-                run_id="canonical-run",
-                attempt_id="canonical-attempt",
-                source_root_sha256=source_root,
-                toolchain_sha256=toolchain_sha256,
-                authority_context_id="test-runner-context",
-                authority_generation_id="test-runner-generation",
-                manifest_sha256=catalog.catalog_root_sha256,
-                observed_epoch=29,
-                coverage_sha256=coverage_hash,
+        case_attachments = tuple(
+            _attachment(
+                context.evidence,
+                f"controls/{index:02d}-{binding.case_id}.json",
+                ci_requirement_case_evidence_bytes(binding),
             )
+            for binding in requirement_bindings
+        )
+        context.attachments.extend(
+            (
+                log_attachment,
+                coverage_attachment,
+                *(item[0] for item in case_attachments),
+            )
+        )
+        control = ControlEvidence(
+            control_id=job.job.value,
+            category=CI_JOB_CATEGORIES[job.job],
+            argv=job.argv,
+            outcome="success",
+            exit_code=0,
+            observed_positive_count=observed_count,
+            raw_log_sha256=log_hash,
+            attachment_sha256=(
+                coverage_hash,
+                *(item[1] for item in case_attachments),
+            ),
+            requirement_ids=job.requirement_ids,
+            goal_ids=(f"G{index + 1:03d}",) if index < 10 else (),
+            evidence_kind="machine",
+            count_kind=job.count_kind,
+            parser_version=job.parser_version,
+            analyzer_inventory_root_sha256=job.analyzer_inventory_root_sha256,
+            catalog_root_sha256=catalog.catalog_root_sha256,
+            catalog_source_root_sha256=catalog.source_root_sha256,
+            catalog_run_id="canonical-run",
+            release_id="G006",
+            run_id="canonical-run",
+            attempt_id="canonical-attempt",
+            source_root_sha256=context.source_root,
+            toolchain_sha256=context.toolchain_sha256,
+            authority_context_id="test-runner-context",
+            authority_generation_id="test-runner-generation",
+            manifest_sha256=catalog.catalog_root_sha256,
+            observed_epoch=29,
+            coverage_sha256=coverage_hash,
+        )
+        execution_record = GateResult(
+            job=job.job,
+            executed_count=observed_count,
+            output_sha256=log_hash,
+            argv=job.argv,
+            count_kind=job.count_kind,
+            parser_version=job.parser_version,
+            analyzer_inventory_root_sha256=job.analyzer_inventory_root_sha256,
+            category=job.category,
+            environment_profile=job.environment_profile,
+            control_ids=job.control_ids,
+            attachment_sha256=control.attachment_sha256,
+            started_at="2026-07-14T09:00:00Z",
+            finished_at="2026-07-14T09:01:00Z",
+            catalog_root_sha256=catalog.catalog_root_sha256,
+            catalog_source_root_sha256=catalog.source_root_sha256,
+            catalog_run_id="canonical-run",
+            requirement_ids=job.requirement_ids,
+            prerequisites=job.prerequisites,
+            blockers=job.blockers,
+        )
+        current_run = context.ci_authority.resolve_current("test-runner-context")
+        lease = context.ci_authority.issue_execution_lease(current_run, job.job)
+        context.ci_authority.authorize_execution_lease(
+            lease,
+            current_run,
+            catalog,
+            job,
+        )
+        attestation = context.ci_authority.attest_execution(
+            lease,
+            execution_record,
+            "test-toolchain",
+        )
+        controls.append(
+            control.model_copy(update={"execution_attestation": attestation})
         )
     return controls
 
@@ -509,6 +843,39 @@ def canonical_fixture(tmp_path: Path) -> _Fixture:
     _ = _write(root / ".ci/ci-contract.json", catalog)
     _ = _write(root / "uv.lock", "synthetic dependency authority\n")
     _ = _write(root / "pyproject.toml", "[project]\nname = 'synthetic'\n")
+    requirement_ids = tuple(sorted(TRUSTED_REQUIREMENT_IDS))
+    _ = _write(
+        root / "requirement_subject.py",
+        "REQUIREMENT_IDS = frozenset(" + repr(requirement_ids) + ")\n\n"
+        "def requirement_is_bound(requirement_id: str) -> bool:\n"
+        "    return requirement_id in REQUIREMENT_IDS\n",
+    )
+    _ = _write(
+        root / "test_requirement_cases.py",
+        "import pytest\n\n"
+        "from requirement_subject import requirement_is_bound\n\n"
+        "REQUIREMENT_IDS = " + repr(requirement_ids) + "\n\n"
+        "@pytest.mark.parametrize(\n"
+        '    "requirement_id", REQUIREMENT_IDS, ids=REQUIREMENT_IDS\n'
+        ")\n"
+        "def test_requirement_is_bound(requirement_id: str) -> None:\n"
+        "    assert requirement_is_bound(requirement_id)\n",
+    )
+    ci_catalog = _verified_test_catalog(
+        load_checked_in_ci_catalog(root / ".ci/ci-contract.json"),
+        root,
+    )
+    catalog_document = cast("dict[str, JsonValue]", json.loads(catalog))
+    catalog_document["catalog"] = ci_catalog.model_dump(mode="json")
+    catalog = canonical_bytes(catalog_document)
+    _ = _write(
+        root / ".ci/ci-contract.json",
+        catalog,
+    )
+    case_observations = execute_ci_requirement_cases(
+        root,
+        ci_catalog.requirement_case_bindings,
+    )
     _ = _write(root / "artifacts/ulw-g006/fixture.json", "{}\n")
     goals_path = parent / ".gjc/_session-canonical/ultragoal/goals.json"
     goals = {
@@ -549,14 +916,31 @@ def canonical_fixture(tmp_path: Path) -> _Fixture:
         )
         for name in ("fixture.json", "revision-anchor.json", "external-anchor.json")
     )
-    ci_catalog = load_checked_in_ci_catalog(root / ".ci/ci-contract.json")
-
+    ci_current_run = CiCurrentRun(
+        run_id="canonical-run",
+        attempt_id="canonical-attempt",
+        authority_context="test-runner-context",
+        source_tree_sha256=source_root,
+        started_at="2026-07-14T09:00:00Z",
+        finished_at="2026-07-14T09:01:00Z",
+        state=CiRunState.SUCCESS,
+        generation_id="test-runner-generation",
+    )
+    ci_authority: CiGenerationManifestAuthority = _TestCiExecutionAuthority(
+        catalog=ci_catalog,
+        current_run=ci_current_run,
+        manifest_sha256=ci_catalog.catalog_root_sha256,
+    )
     controls = _build_controls(
-        evidence,
-        attachments,
+        _ControlBuildContext(
+            evidence=evidence,
+            attachments=attachments,
+            source_root=source_root,
+            toolchain_sha256=sha256_bytes((root / "pyproject.toml").read_bytes()),
+            case_observations=case_observations,
+            ci_authority=ci_authority,
+        ),
         ci_catalog,
-        source_root,
-        sha256_bytes((root / "pyproject.toml").read_bytes()),
     )
     external_evidence = _build_external_evidence(evidence, attachments)
     independent_reviews = _build_reviews(evidence, attachments, source_root)
@@ -706,6 +1090,8 @@ def canonical_fixture(tmp_path: Path) -> _Fixture:
         environment="test",
         expected_session_id="canonical",
         expected_lease_generation="canonical",
+        ci_execution_authority=ci_authority,
+        ci_execution_authority_context="test-runner-context",
         evidence_issuers=tuple(
             EvidenceIssuerTrust(kind, issuers[kind], issuers[kind].issuer_id)
             for kind in ClaimKind
@@ -741,7 +1127,7 @@ def test_canonical_fixture_finalizes_and_verifies_document(
                 for item in control.requirement_ids
             }
         )
-        == 81
+        == 84
     )
     assert (
         len({item for control in payload.receipt.controls for item in control.goal_ids})
@@ -754,10 +1140,207 @@ def test_canonical_fixture_finalizes_and_verifies_document(
     assert {
         item.control_id for item in payload.receipt.external_evidence
     } == REQUIRED_EXTERNAL_CONTROL_IDS
+    catalog = canonical_fixture.trust.ci_execution_authority.resolve_control_catalog(
+        canonical_fixture.trust.ci_execution_authority_context,
+        canonical_fixture.receipt.authority.source_tree_sha256,
+        canonical_fixture.receipt.run_id,
+    )
+    assert all(
+        binding.source_path != binding.test_path
+        and "pyproject.toml" not in {binding.source_path, binding.test_path}
+        for binding in catalog.requirement_case_bindings
+    )
     assert len(payload.evidence_references) == len(
         {item.sha256 for item in payload.evidence_references}
     )
     assert KEY not in document
+
+
+def test_release_rejects_parent_marker_without_execution_attestation(
+    canonical_fixture: _Fixture,
+) -> None:
+    controls: list[ControlEvidence] = []
+    for control in canonical_fixture.receipt.controls:
+        unsigned = control.model_copy(
+            update={"execution_attestation": None, "seal": None}
+        )
+        controls.append(
+            unsigned.model_copy(
+                update={
+                    "seal": _seal(
+                        unsigned,
+                        ClaimKind.CI,
+                        canonical_fixture.receipt,
+                        _issuer(canonical_fixture.trust, ClaimKind.CI),
+                    )
+                }
+            )
+        )
+    without_attestations = canonical_fixture.receipt.model_copy(
+        update={"controls": tuple(controls)}
+    )
+    without_attestations = _reseal_receipt_anchors(
+        without_attestations,
+        canonical_fixture.trust,
+    )
+
+    with pytest.raises(ReleaseContractError, match="execution attestation"):
+        _ = canonical_fixture.finalizer.finalize(without_attestations)
+
+
+def test_release_rejects_attachments_outside_execution_attestation(
+    canonical_fixture: _Fixture,
+) -> None:
+    original = next(
+        control
+        for control in canonical_fixture.receipt.controls
+        if control.control_id == CiJob.PLATFORM_TESTS.value
+    )
+    unsigned = original.model_copy(
+        update={
+            "attachment_sha256": tuple(reversed(original.attachment_sha256)),
+            "seal": None,
+        }
+    )
+    forged = unsigned.model_copy(
+        update={
+            "seal": _seal(
+                unsigned,
+                ClaimKind.CI,
+                canonical_fixture.receipt,
+                _issuer(canonical_fixture.trust, ClaimKind.CI),
+            )
+        }
+    )
+    receipt = canonical_fixture.receipt.model_copy(
+        update={
+            "controls": tuple(
+                forged if control.control_id == original.control_id else control
+                for control in canonical_fixture.receipt.controls
+            )
+        }
+    )
+    receipt = _reseal_receipt_anchors(receipt, canonical_fixture.trust)
+
+    with pytest.raises(ReleaseContractError, match="execution attestation"):
+        _ = canonical_fixture.finalizer.finalize(receipt)
+
+
+@pytest.mark.parametrize("forgery", ["generic-pass", "static-marker"])
+def test_release_rejects_attested_child_claim_without_parent_observation(
+    canonical_fixture: _Fixture,
+    forgery: str,
+) -> None:
+    original = next(
+        control
+        for control in canonical_fixture.receipt.controls
+        if control.control_id == CiJob.PLATFORM_TESTS.value
+    )
+    catalog = canonical_fixture.trust.ci_execution_authority.resolve_control_catalog(
+        canonical_fixture.trust.ci_execution_authority_context,
+        canonical_fixture.receipt.authority.source_tree_sha256,
+        canonical_fixture.receipt.run_id,
+    )
+    job = next(item for item in catalog.jobs if item.job is CiJob.PLATFORM_TESTS)
+    bindings = tuple(
+        binding
+        for binding in catalog.requirement_case_bindings
+        if binding.job is job.job
+    )
+    forged_log = b"1 passed\n"
+    if forgery == "static-marker":
+        forged_log += b"".join(
+            b"CI_REQUIREMENT_CASE=" + ci_requirement_case_evidence_bytes(binding)
+            for binding in sorted(
+                bindings,
+                key=lambda item: (item.requirement_id, item.case_id),
+            )
+        )
+    log_attachment = next(
+        attachment
+        for attachment in canonical_fixture.receipt.attachments
+        if attachment.sha256 == original.raw_log_sha256
+    )
+    forged_log_sha256 = _write(
+        canonical_fixture.evidence / log_attachment.path,
+        forged_log,
+    )
+    unsigned = original.model_copy(
+        update={
+            "raw_log_sha256": forged_log_sha256,
+            "execution_attestation": None,
+            "seal": None,
+        }
+    )
+    current_run = canonical_fixture.trust.ci_execution_authority.resolve_current(
+        canonical_fixture.trust.ci_execution_authority_context
+    )
+    record = GateResult(
+        job=job.job,
+        executed_count=unsigned.observed_positive_count,
+        output_sha256=forged_log_sha256,
+        argv=job.argv,
+        count_kind=job.count_kind,
+        parser_version=job.parser_version,
+        category=job.category,
+        environment_profile=job.environment_profile,
+        control_ids=job.control_ids,
+        attachment_sha256=unsigned.attachment_sha256,
+        started_at="2026-07-14T09:00:00Z",
+        finished_at="2026-07-14T09:01:00Z",
+        catalog_root_sha256=catalog.catalog_root_sha256,
+        catalog_source_root_sha256=catalog.source_root_sha256,
+        catalog_run_id=canonical_fixture.receipt.run_id,
+        requirement_ids=job.requirement_ids,
+        prerequisites=job.prerequisites,
+        blockers=job.blockers,
+    )
+    lease = canonical_fixture.trust.ci_execution_authority.issue_execution_lease(
+        current_run,
+        job.job,
+    )
+    canonical_fixture.trust.ci_execution_authority.authorize_execution_lease(
+        lease,
+        current_run,
+        catalog,
+        job,
+    )
+    attestation = canonical_fixture.trust.ci_execution_authority.attest_execution(
+        lease,
+        record,
+        "test-toolchain",
+    )
+    attested = unsigned.model_copy(update={"execution_attestation": attestation})
+    forged = attested.model_copy(
+        update={
+            "seal": _seal(
+                attested,
+                ClaimKind.CI,
+                canonical_fixture.receipt,
+                _issuer(canonical_fixture.trust, ClaimKind.CI),
+            )
+        }
+    )
+    attachments = tuple(
+        attachment.model_copy(update={"sha256": forged_log_sha256})
+        if attachment.path == log_attachment.path
+        else attachment
+        for attachment in canonical_fixture.receipt.attachments
+    )
+    controls = tuple(
+        forged if control.control_id == original.control_id else control
+        for control in canonical_fixture.receipt.controls
+    )
+    forged_receipt = canonical_fixture.receipt.model_copy(
+        update={"attachments": attachments, "controls": controls}
+    )
+    forged_receipt = _reseal_receipt_anchors(
+        forged_receipt,
+        canonical_fixture.trust,
+    )
+
+    with pytest.raises(ReleaseContractError, match="derived from its log"):
+        _ = canonical_fixture.finalizer.finalize(forged_receipt)
 
 
 def test_caller_finalization_epoch_is_rejected(canonical_fixture: _Fixture) -> None:
@@ -1155,6 +1738,10 @@ def test_envelope_payload_signature_identity_and_replay_tampering_are_rejected(
         environment="test",
         expected_session_id="canonical",
         expected_lease_generation="canonical",
+        ci_execution_authority=canonical_fixture.trust.ci_execution_authority,
+        ci_execution_authority_context=(
+            canonical_fixture.trust.ci_execution_authority_context
+        ),
         evidence_issuers=canonical_fixture.trust.evidence_issuers,
         authorization_authority=_AuthorizationAuthority(),
         authorization_authority_id="test-release-authorization",

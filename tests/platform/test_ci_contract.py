@@ -6,6 +6,7 @@ import sys
 import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
+from urllib.parse import quote
 
 import pytest
 from pydantic import ValidationError
@@ -17,20 +18,27 @@ from tools.platform_policy.ci_contract import (
     CiExecutionAttestation,
     CiExecutionLease,
     CiJob,
+    CiRequirementCaseBinding,
+    CiRequirementCaseObservation,
     CiRunState,
     EvidenceIntegrityError,
     GateResult,
     GeneratedContract,
+    RequiredSecurityCaseBinding,
     RequiredSecurityCatalog,
+    SecurityCaseEvidence,
     SecurityEvidenceMapping,
     StaleGeneratedContractError,
     TaskAttemptBundle,
     ci_catalog_root,
     ci_catalog_source_root,
+    ci_requirement_case_evidence_bytes,
+    ci_requirement_case_marker_bytes,
     load_checked_in_ci_catalog,
     load_published_ci_generation,
     load_task_attempt_bundle,
     security_catalog_source_bytes,
+    verify_ci_requirement_case_output,
     verify_evidence,
     verify_evidence_files,
     verify_generated_contract,
@@ -62,8 +70,20 @@ def _fixed_source_identity(_root: Path) -> str:
 def _security_catalog(
     high_threat_ids: tuple[str, ...] = ("HIGH-1",),
 ) -> RequiredSecurityCatalog:
+    bindings = tuple(
+        RequiredSecurityCaseBinding(
+            threat_id=threat_id,
+            case_id=f"case-{index}",
+            source_sha256="a" * 64,
+            test_sha256="b" * 64,
+            denial_observation_sha256="c" * 64,
+            postcondition_observation_sha256="d" * 64,
+        )
+        for index, threat_id in enumerate(high_threat_ids)
+    )
     provisional = RequiredSecurityCatalog(
         high_threat_ids=high_threat_ids,
+        case_bindings=bindings,
         source_root_sha256="0" * 64,
     )
     source_root = hashlib.sha256(security_catalog_source_bytes(provisional)).hexdigest()
@@ -73,17 +93,36 @@ def _security_catalog(
 TEST_SECURITY_CATALOG = _security_catalog()
 
 
+def _case_evidence(
+    binding: RequiredSecurityCaseBinding,
+) -> SecurityCaseEvidence:
+    return SecurityCaseEvidence(
+        threat_id=binding.threat_id,
+        case_id=binding.case_id,
+        source_sha256=binding.source_sha256,
+        test_sha256=binding.test_sha256,
+        denial_observation_sha256=binding.denial_observation_sha256,
+        postcondition_observation_sha256=binding.postcondition_observation_sha256,
+        outcome="passed",
+    )
+
+
 def _seal_control_catalog(
     source_identity: str,
     jobs: tuple[CiCatalogJob, ...],
+    requirement_case_bindings: tuple[CiRequirementCaseBinding, ...] = (),
+    unverified_requirement_ids: tuple[str, ...] = (),
 ) -> CiControlCatalog:
     provisional = CiControlCatalog.model_construct(
         version=1,
         source_identity=source_identity,
+        requirements_sha256="e" * 64,
         source_root_sha256="0" * 64,
         catalog_root_sha256="0" * 64,
         security_catalog_id="test-high-threat",
         jobs=jobs,
+        requirement_case_bindings=requirement_case_bindings,
+        unverified_requirement_ids=unverified_requirement_ids,
     )
     with_source = provisional.model_copy(
         update={"source_root_sha256": ci_catalog_source_root(provisional)}
@@ -92,6 +131,32 @@ def _seal_control_catalog(
         update={"catalog_root_sha256": ci_catalog_root(with_source)}
     )
     return CiControlCatalog.model_validate(complete.model_dump())
+
+
+def _requirement_case_binding(
+    requirement_id: str,
+    job: CiJob,
+) -> CiRequirementCaseBinding:
+    provisional = CiRequirementCaseBinding.model_construct(
+        requirement_id=requirement_id,
+        job=job,
+        case_id=f"case-{requirement_id}",
+        source_path="synthetic/source.py",
+        source_sha256="a" * 64,
+        test_path="synthetic/test_source.py",
+        test_sha256="b" * 64,
+        test_node_id=f"synthetic/test_source.py::test_{requirement_id}",
+        observation_sha256="0" * 64,
+    )
+    return CiRequirementCaseBinding.model_validate(
+        provisional.model_copy(
+            update={
+                "observation_sha256": hashlib.sha256(
+                    ci_requirement_case_evidence_bytes(provisional)
+                ).hexdigest()
+            }
+        ).model_dump()
+    )
 
 
 def _control_catalog(source_identity: str) -> CiControlCatalog:
@@ -104,19 +169,40 @@ def _control_catalog(source_identity: str) -> CiControlCatalog:
             category="test",
             environment_profile="test-ci",
             control_ids=(f"CONTROL-{job}",),
-            requirement_ids=requirement_ids[index * 3 : (index + 1) * 3],
+            requirement_ids=requirement_ids[index :: len(CiJob)],
         )
         for index, job in enumerate(CiJob)
     )
-    return _seal_control_catalog(source_identity, jobs)
+    bindings = tuple(
+        _requirement_case_binding(requirement_id, job.job)
+        for job in jobs
+        for requirement_id in job.requirement_ids
+    )
+    return _seal_control_catalog(source_identity, jobs, bindings)
 
 
 TEST_CONTROL_CATALOG = _control_catalog(SOURCE_TREE_SHA256)
 
 
+def _unverified_control_catalog(source_identity: str) -> CiControlCatalog:
+    jobs = tuple(
+        job.model_copy(update={"requirement_ids": ()})
+        for job in TEST_CONTROL_CATALOG.jobs
+    )
+    return _seal_control_catalog(
+        source_identity,
+        jobs,
+        unverified_requirement_ids=tuple(sorted(ci_contract.TRUSTED_REQUIREMENT_IDS)),
+    )
+
+
+UNVERIFIED_TEST_CONTROL_CATALOG = _unverified_control_catalog(SOURCE_TREE_SHA256)
+
+
 class MemoryCiAuthority:
     catalog_mode: Literal["fresh", "stale-source", "altered-control"]
     security_stale: bool
+    catalog_override: CiControlCatalog | None
 
     def __init__(
         self,
@@ -127,9 +213,11 @@ class MemoryCiAuthority:
             "altered-control",
         ] = "fresh",
         security_stale: bool = False,
+        catalog_override: CiControlCatalog | None = None,
     ) -> None:
         self.catalog_mode = catalog_mode
         self.security_stale = security_stale
+        self.catalog_override = catalog_override
         self.anchors: dict[tuple[str, str], str] = {}
         self.current: dict[str, CiCurrentRun] = {}
         self.leases: dict[str, CiExecutionLease] = {}
@@ -237,6 +325,10 @@ class MemoryCiAuthority:
             toolchain=toolchain,
             executed_count=record.executed_count,
             output_sha256=record.output_sha256,
+            attachment_sha256=record.attachment_sha256,
+            security_catalog_root_sha256=record.security_catalog_root_sha256,
+            security_threat_ids=record.security_threat_ids,
+            security_evidence_roots=record.security_evidence_roots,
             outcome=record.outcome,
             started_at=record.started_at,
             finished_at=record.finished_at,
@@ -296,9 +388,11 @@ class MemoryCiAuthority:
         run_id: str,
     ) -> CiControlCatalog:
         _ = authority_context, run_id
+        if self.catalog_override is not None:
+            return self.catalog_override
         if self.catalog_mode == "stale-source":
-            return _control_catalog("c" * 64)
-        catalog = _control_catalog(source_identity)
+            return _unverified_control_catalog("c" * 64)
+        catalog = _unverified_control_catalog(source_identity)
         if self.catalog_mode == "altered-control":
             first = catalog.jobs[0].model_copy(
                 update={"control_ids": ("ALTERED-CONTROL",)}
@@ -306,6 +400,9 @@ class MemoryCiAuthority:
             return _seal_control_catalog(
                 source_identity,
                 (first, *catalog.jobs[1:]),
+                unverified_requirement_ids=tuple(
+                    sorted(ci_contract.TRUSTED_REQUIREMENT_IDS)
+                ),
             )
         return catalog
 
@@ -377,6 +474,76 @@ def test_control_catalog_rejects_missing_duplicate_and_substituted_requirements(
     for invalid_jobs in invalid_catalogs:
         with pytest.raises(ValueError, match="invalid CI control catalog"):
             _ = _seal_control_catalog(SOURCE_TREE_SHA256, tuple(invalid_jobs))
+
+
+def test_checked_in_catalog_rejects_aggregate_only_requirement_claims(
+    tmp_path: Path,
+) -> None:
+    catalog_path = tmp_path / "ci-contract.json"
+    _ = catalog_path.write_text(
+        json.dumps({"catalog": TEST_CONTROL_CATALOG.model_dump(mode="json")}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        EvidenceIntegrityError,
+        match="cannot claim semantic requirement evidence",
+    ):
+        _ = load_checked_in_ci_catalog(catalog_path)
+
+
+def test_aggregate_success_cannot_replace_observed_requirement_case() -> None:
+    binding = TEST_CONTROL_CATALOG.requirement_case_bindings[0]
+
+    with pytest.raises(
+        EvidenceIntegrityError,
+        match="requirement case evidence mismatch",
+    ):
+        verify_ci_requirement_case_output(b"1 passed\n", (binding,))
+
+    with pytest.raises(
+        EvidenceIntegrityError,
+        match="requirement case evidence mismatch",
+    ):
+        verify_ci_requirement_case_output(
+            b"1 passed\nCI_REQUIREMENT_CASE="
+            + ci_requirement_case_evidence_bytes(binding),
+            (binding,),
+        )
+
+    observation = CiRequirementCaseObservation(
+        requirement_id=binding.requirement_id,
+        job=binding.job,
+        case_id=binding.case_id,
+        source_path=binding.source_path,
+        source_sha256=binding.source_sha256,
+        test_path=binding.test_path,
+        test_sha256=binding.test_sha256,
+        test_node_id=binding.test_node_id,
+        execution_output_sha256="c" * 64,
+        case_executed_count=1,
+        outcome="passed",
+    )
+    verify_ci_requirement_case_output(
+        b"1 passed\n" + ci_requirement_case_marker_bytes(observation),
+        (binding,),
+    )
+
+
+def test_requirement_case_rejects_same_source_and_test_path() -> None:
+    # Given: a binding that substitutes one test file for both semantic roles.
+    binding = TEST_CONTROL_CATALOG.requirement_case_bindings[0]
+
+    # When / Then: the catalog boundary rejects the ambiguous binding.
+    with pytest.raises(ValidationError, match="invalid CI requirement case binding"):
+        _ = CiRequirementCaseBinding.model_validate(
+            binding.model_copy(
+                update={
+                    "source_path": binding.test_path,
+                    "source_sha256": binding.test_sha256,
+                }
+            ).model_dump()
+        )
 
 
 def test_security_evidence_rejects_forged_marker_without_case_evidence() -> None:
@@ -544,21 +711,14 @@ def publish_generation(
 def _security_output() -> bytes:
     cases = tuple(
         (
-            identifier,
+            binding.threat_id,
             (
                 b"SECURITY_CASE="
-                + json.dumps(
-                    {
-                        "case_id": f"case-{index}",
-                        "outcome": "passed",
-                        "threat_id": identifier,
-                    },
-                    separators=(",", ":"),
-                ).encode()
+                + _case_evidence(binding).model_dump_json().encode()
                 + b"\n"
             ),
         )
-        for index, identifier in enumerate(TEST_SECURITY_CATALOG.high_threat_ids)
+        for binding in TEST_SECURITY_CATALOG.case_bindings
     )
     evidence = b"".join(line for _, line in cases)
     mappings = [
@@ -584,7 +744,9 @@ def _security_roots(output: bytes) -> tuple[str, ...]:
 
 
 def result(job: CiJob, count: int, output: bytes | None = None) -> GateResult:
-    catalog_job = next(item for item in TEST_CONTROL_CATALOG.jobs if item.job is job)
+    catalog_job = next(
+        item for item in UNVERIFIED_TEST_CONTROL_CATALOG.jobs if item.job is job
+    )
     if output is None:
         output = _security_output() if job is CiJob.SECURITY else b"1 passed"
     security_roots = _security_roots(output) if job is CiJob.SECURITY else ()
@@ -604,8 +766,8 @@ def result(job: CiJob, count: int, output: bytes | None = None) -> GateResult:
         attachment_sha256=security_roots,
         started_at="2026-07-13T00:00:00Z",
         finished_at="2026-07-13T00:00:01Z",
-        catalog_root_sha256=TEST_CONTROL_CATALOG.catalog_root_sha256,
-        catalog_source_root_sha256=TEST_CONTROL_CATALOG.source_root_sha256,
+        catalog_root_sha256=UNVERIFIED_TEST_CONTROL_CATALOG.catalog_root_sha256,
+        catalog_source_root_sha256=UNVERIFIED_TEST_CONTROL_CATALOG.source_root_sha256,
         catalog_run_id="test-run",
         security_catalog_root_sha256=(
             TEST_SECURITY_CATALOG.source_root_sha256 if job is CiJob.SECURITY else None
@@ -704,8 +866,19 @@ def test_execution_attestation_rejects_forged_and_wrong_bound_values() -> None:
                 )
             }
         ),
+        signed.model_copy(
+            update={
+                "execution_attestation": attestation.model_copy(
+                    update={"attachment_sha256": ("c" * 64,)}
+                )
+            }
+        ),
         signed.model_copy(update={"catalog_root_sha256": "b" * 64}),
         signed.model_copy(update={"catalog_run_id": "wrong-run"}),
+        signed.model_copy(update={"attachment_sha256": ("c" * 64,)}),
+        signed.model_copy(update={"security_catalog_root_sha256": "d" * 64}),
+        signed.model_copy(update={"security_threat_ids": ("T99",)}),
+        signed.model_copy(update={"security_evidence_roots": ("e" * 64,)}),
     ):
         with pytest.raises(EvidenceIntegrityError):
             _ = ci_contract.verify_execution_attestation(
@@ -802,6 +975,25 @@ def test_ci_publication_rejects_unredacted_log_bytes(tmp_path: Path) -> None:
 
     with pytest.raises(EvidenceIntegrityError, match="unredacted secret"):
         publish_generation(tmp_path, records, outputs)
+
+
+@pytest.mark.parametrize("passes", [4, 16, 33])
+def test_evidence_sanitizer_rejects_arbitrarily_nested_url_encoding(
+    passes: int,
+) -> None:
+    encoded = "Authorization: Bearer nested-material"
+    for _ in range(passes):
+        encoded = quote(encoded, safe="")
+
+    with pytest.raises(EvidenceIntegrityError, match="unredacted secret"):
+        ci_contract.require_evidence_sanitized(encoded.encode())
+
+
+def test_evidence_sanitizer_rejects_mixed_url_and_unicode_encoding() -> None:
+    encoded = rb"\u0041uthorization%3A%20Bearer%20mixed-material"
+
+    with pytest.raises(EvidenceIntegrityError, match="unredacted secret"):
+        ci_contract.require_evidence_sanitized(encoded)
 
 
 def test_ci_publication_rejects_stale_superseded_run(tmp_path: Path) -> None:
@@ -918,6 +1110,170 @@ def test_ci_publication_recomputes_checkout_source_identity(
                     current_run,
                 ),
             )
+
+
+@pytest.mark.parametrize(
+    "forgery",
+    ["missing-marker", "altered-marker", "stale-source", "stale-test"],
+)
+def test_ci_publication_rejects_unobserved_or_stale_requirement_cases(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    forgery: str,
+) -> None:
+    # Given: one mapped requirement with a coherent signed job descriptor.
+    source_path = tmp_path / "requirement_subject.py"
+    test_path = tmp_path / "test_requirement_subject.py"
+    _ = source_path.write_text("BOUND = True\n", encoding="utf-8")
+    _ = test_path.write_text(
+        "def test_bound_requirement() -> None:\n    assert True\n",
+        encoding="utf-8",
+    )
+    provisional = CiRequirementCaseBinding.model_construct(
+        requirement_id="F01",
+        job=CiJob.PLATFORM_TESTS,
+        case_id="case-F01",
+        source_path=source_path.name,
+        source_sha256=hashlib.sha256(source_path.read_bytes()).hexdigest(),
+        test_path=test_path.name,
+        test_sha256=hashlib.sha256(test_path.read_bytes()).hexdigest(),
+        test_node_id=f"{test_path.name}::test_bound_requirement",
+        observation_sha256="0" * 64,
+    )
+    case_binding = CiRequirementCaseBinding.model_validate(
+        provisional.model_copy(
+            update={
+                "observation_sha256": hashlib.sha256(
+                    ci_requirement_case_evidence_bytes(provisional)
+                ).hexdigest()
+            }
+        ).model_dump()
+    )
+    jobs = tuple(
+        job.model_copy(
+            update={
+                "requirement_ids": ("F01",) if job.job is CiJob.PLATFORM_TESTS else ()
+            }
+        )
+        for job in UNVERIFIED_TEST_CONTROL_CATALOG.jobs
+    )
+    catalog = _seal_control_catalog(
+        SOURCE_TREE_SHA256,
+        jobs,
+        (case_binding,),
+        tuple(sorted(ci_contract.TRUSTED_REQUIREMENT_IDS.difference({"F01"}))),
+    )
+    observation = CiRequirementCaseObservation(
+        requirement_id="F01",
+        job=CiJob.PLATFORM_TESTS,
+        case_id="case-F01",
+        source_path=case_binding.source_path,
+        source_sha256=case_binding.source_sha256,
+        test_path=case_binding.test_path,
+        test_sha256=case_binding.test_sha256,
+        test_node_id=case_binding.test_node_id,
+        execution_output_sha256="c" * 64,
+        case_executed_count=1,
+        outcome="passed",
+    )
+    if forgery == "altered-marker":
+        observation = observation.model_copy(update={"source_sha256": "f" * 64})
+    platform_output = (
+        b"1 passed\n"
+        if forgery == "missing-marker"
+        else b"1 passed\n" + ci_requirement_case_marker_bytes(observation)
+    )
+    if forgery == "stale-source":
+        _ = source_path.write_text("BOUND = False\n", encoding="utf-8")
+    if forgery == "stale-test":
+        _ = test_path.write_text(
+            "def test_bound_requirement() -> None:\n    assert False\n",
+            encoding="utf-8",
+        )
+    outputs = tuple(
+        platform_output
+        if job.job is CiJob.PLATFORM_TESTS
+        else _security_output()
+        if job.job is CiJob.SECURITY
+        else b"1 passed\n"
+        for job in catalog.jobs
+    )
+    authority = MemoryCiAuthority(catalog_override=catalog)
+    current_run = CiCurrentRun(
+        run_id="test-run",
+        attempt_id="test-attempt",
+        authority_context=AUTHORITY_CONTEXT,
+        source_tree_sha256=SOURCE_TREE_SHA256,
+        started_at="2026-07-13T00:00:00Z",
+        state=CiRunState.ACTIVE,
+    )
+    authority.begin(current_run)
+    records: list[GateResult] = []
+    for job, output in zip(catalog.jobs, outputs, strict=True):
+        security_roots = _security_roots(output) if job.job is CiJob.SECURITY else ()
+        attachments = (
+            (case_binding.observation_sha256,)
+            if job.job is CiJob.PLATFORM_TESTS
+            else security_roots
+        )
+        record = GateResult(
+            job=job.job,
+            executed_count=1,
+            output_sha256=hashlib.sha256(output).hexdigest(),
+            argv=job.argv,
+            count_kind=job.count_kind,
+            parser_version=job.parser_version,
+            category=job.category,
+            environment_profile=job.environment_profile,
+            control_ids=job.control_ids,
+            attachment_sha256=attachments,
+            started_at="2026-07-13T00:00:00Z",
+            finished_at="2026-07-13T00:00:01Z",
+            catalog_root_sha256=catalog.catalog_root_sha256,
+            catalog_source_root_sha256=catalog.source_root_sha256,
+            catalog_run_id=current_run.run_id,
+            requirement_ids=job.requirement_ids,
+            security_catalog_root_sha256=(
+                TEST_SECURITY_CATALOG.source_root_sha256
+                if job.job is CiJob.SECURITY
+                else None
+            ),
+            security_threat_ids=(
+                TEST_SECURITY_CATALOG.high_threat_ids
+                if job.job is CiJob.SECURITY
+                else ()
+            ),
+            security_evidence_roots=security_roots,
+        )
+        lease = authority.issue_execution_lease(current_run, job.job)
+        authority.authorize_execution_lease(lease, current_run, catalog, job)
+        records.append(
+            record.model_copy(
+                update={
+                    "execution_attestation": authority.attest_execution(
+                        lease,
+                        record,
+                        "test-toolchain",
+                    )
+                }
+            )
+        )
+    monkeypatch.setattr(ci_runner, "source_tree_identity", _fixed_source_identity)
+    publication = CiPublicationBinding(
+        AUTHORITY_CONTEXT,
+        SOURCE_TREE_SHA256,
+        authority,
+        current_run,
+    )
+
+    # When / Then: publication independently rejects the forged semantic evidence.
+    with pytest.raises(EvidenceIntegrityError, match="CI requirement case"):
+        _ = publish_ci_generation(
+            tmp_path,
+            tuple(records),
+            outputs,
+            publication,
+        )
 
 
 def test_ci_publication_cleanup_fifo_preserves_originating_failure(
@@ -1925,9 +2281,66 @@ def test_checked_in_ci_catalog_matches_runtime_and_normative_authorities() -> No
     security = verified[CiJob.SECURITY]
 
     assert set(verified) == set(CiJob)
-    assert len(mapped_requirements) == len(set(mapped_requirements)) == 81
-    assert set(mapped_requirements) == set(expected_requirements)
+    assert mapped_requirements == ()
+    assert set(catalog.unverified_requirement_ids) == set(expected_requirements)
     assert set(security.control_ids) == {f"T{number:02d}" for number in range(1, 14)}
+
+
+def test_provider_repository_evidence_is_current_but_not_authoritative() -> None:
+    root = Path(__file__).parents[2]
+    evidence_path = root / "tools/evidence/provider-qualification-contract.json"
+    document = cast("dict[str, object]", json.loads(evidence_path.read_bytes()))
+    catalog = load_checked_in_ci_catalog(root / ".ci/ci-contract.json")
+    expected_requirements = {
+        "AC-PROVIDER-AUTHORITY",
+        "AC-PROVIDER-MIGRATION",
+        "AC-PROVIDER-RUN-BINDING",
+    }
+
+    assert document["authoritativeLiveQualification"] is False
+    assert set(cast("list[str]", document["requirements"])) == expected_requirements
+    assert expected_requirements <= ci_contract.TRUSTED_REQUIREMENT_IDS
+    assert expected_requirements <= set(catalog.unverified_requirement_ids)
+    assert catalog.requirement_case_bindings == ()
+    assert cast("dict[str, object]", document["ciAuthority"]) == {
+        "trustedRequirementIdsPresent": True,
+        "checkedInBootstrapCatalog": "unverified",
+        "checkedInRequirementBindings": 0,
+        "freshExternalRequirementBindingsPresent": False,
+        "explanation": (
+            "The checked-in catalog is intentionally non-authoritative. Exact "
+            "semantic requirement bindings must be supplied by the fresh external "
+            "CI authority and parent-observed at execution time."
+        ),
+    }
+
+    logs_by_digest: dict[str, bytes] = {}
+    verifications = cast("list[dict[str, object]]", document["verification"])
+    for verification in verifications:
+        log_path = root / cast("str", verification["rawLog"])
+        raw_log = log_path.read_bytes()
+        digest = hashlib.sha256(raw_log).hexdigest()
+        assert verification["exitCode"] == 0
+        assert digest == verification["rawLogSha256"]
+        logs_by_digest[digest] = raw_log
+
+    mapped_requirements: set[str] = set()
+    case_mappings = cast("list[dict[str, object]]", document["repositoryCaseMap"])
+    for mapping in case_mappings:
+        mapped_requirements.add(cast("str", mapping["requirementId"]))
+        cases = cast("list[dict[str, object]]", mapping["cases"])
+        for case in cases:
+            source = root / cast("str", case["sourcePath"])
+            test = root / cast("str", case["testPath"])
+            source_digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            test_digest = hashlib.sha256(test.read_bytes()).hexdigest()
+            assert source_digest == case["sourceSha256"]
+            assert test_digest == case["testSha256"]
+            log_digest = cast("str", case["observedInRawLogSha256"])
+            raw_log = logs_by_digest[log_digest]
+            node_id = cast("str", case["testNodeId"])
+            assert f"{node_id} PASSED".encode() in raw_log
+    assert mapped_requirements == expected_requirements
 
 
 def security_catalog_authority(catalog_id: str) -> RequiredSecurityCatalog:

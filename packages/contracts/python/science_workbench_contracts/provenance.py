@@ -24,6 +24,7 @@ class HashPin(Task6ContractModel):
 class ProvenanceManifest(Task6ContractModel):
     source_run_id: Uuid7
     action_plan_sha256: Sha256
+    research_intent_sha256: Sha256
     code_sha256: Sha256
     environment_sha256: Sha256
     runtime_adapter_id: NonEmptyText

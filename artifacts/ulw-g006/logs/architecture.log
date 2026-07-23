@@ -8,7 +8,7 @@ test_rejects_unresolved_placeholder (test_architecture.ArchitectureVerifierTests
 test_rejects_untested_high_threat (test_architecture.ArchitectureVerifierTests.test_rejects_untested_high_threat) ... ok
 
 ----------------------------------------------------------------------
-Ran 8 tests in 0.810s
+Ran 8 tests in 0.557s
 
 OK
 architecture-check: PASS (9 decisions, 11 boundaries, 13 High threats, 8 classified fields)

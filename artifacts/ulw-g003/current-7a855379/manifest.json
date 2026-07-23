@@ -1,0 +1,380 @@
+{
+  "authoritativePublication": false,
+  "captureCommand": "PRODUCT_UI_CAPTURE_DIR=<capture-dir> pnpm exec playwright test tests/e2e/product-journey.spec.ts",
+  "capturedAtUtc": "2026-07-15T15:11:43Z",
+  "coverage": {
+    "playwrightTests": 18,
+    "routes": [
+      "workspace",
+      "upload",
+      "approval",
+      "run",
+      "artifacts",
+      "artifact-detail",
+      "review",
+      "export",
+      "providers"
+    ],
+    "screenshots": 57,
+    "viewports": [
+      188,
+      375,
+      384,
+      640,
+      768,
+      1280
+    ]
+  },
+  "initialManualInspection": {
+    "cjkLegible": true,
+    "horizontalOverflowObserved": false,
+    "representativeScreenshotsInspected": 8,
+    "statusActionHierarchyVisible": true
+  },
+  "screenshots": [
+    {
+      "height": 968,
+      "path": "desktop-1280-approval-zoom200.png",
+      "sha256": "8183dfa8cea589ec69932aaaff5e6965a3db034aa1bb868bd971ada96531b81a",
+      "width": 640
+    },
+    {
+      "height": 900,
+      "path": "desktop-1280-approval.png",
+      "sha256": "335d0d8efae14c7f4385b966f9a6bb956b422424f8a03781594e9974c7fd3e93",
+      "width": 1280
+    },
+    {
+      "height": 2391,
+      "path": "desktop-1280-artifact-detail-zoom200.png",
+      "sha256": "453608579840e50b2b9d28714766fc7cb411600dfb8749458241e492b1f6d228",
+      "width": 640
+    },
+    {
+      "height": 1662,
+      "path": "desktop-1280-artifact-detail.png",
+      "sha256": "b935fcca53a6738dbe2a4ff8d02c9fa29e97d094fccdd5b8e333cc898d588cf8",
+      "width": 1280
+    },
+    {
+      "height": 5107,
+      "path": "desktop-1280-artifacts-zoom200.png",
+      "sha256": "5c92dda944945916e98944aa56b5b805de552ae907313d25bbb3511f29e5ae02",
+      "width": 640
+    },
+    {
+      "height": 3156,
+      "path": "desktop-1280-artifacts.png",
+      "sha256": "c1858dc664ee287c85f24f7bac0ddee1b8ad8c007acb2ca3ae4288b0d3ab4503",
+      "width": 1280
+    },
+    {
+      "height": 1015,
+      "path": "desktop-1280-export-zoom200.png",
+      "sha256": "933e0c4bd5bffcd0cb627821ce10a903100ba44e27a2ab40e8348ddeffc743d0",
+      "width": 640
+    },
+    {
+      "height": 900,
+      "path": "desktop-1280-export.png",
+      "sha256": "291144f3ec374b27096454ee8cb9c2301755bfac779493abbb29089e315a6e9c",
+      "width": 1280
+    },
+    {
+      "height": 900,
+      "path": "desktop-1280-providers-zoom200.png",
+      "sha256": "12a83dd57ac9ceebb1e1f3773e9819a9a369df9873f761ecc02ce2e4f32113e9",
+      "width": 640
+    },
+    {
+      "height": 900,
+      "path": "desktop-1280-providers.png",
+      "sha256": "69085472397fcb917bc8ab90bb296aa49906fe48475f749899832f296cb088ed",
+      "width": 1280
+    },
+    {
+      "height": 1139,
+      "path": "desktop-1280-review-zoom200.png",
+      "sha256": "5c0bf3440d3093851a5e2a5839d6d1a83ec14a56d53af12721cacffd506e4829",
+      "width": 640
+    },
+    {
+      "height": 1080,
+      "path": "desktop-1280-review.png",
+      "sha256": "50840dbbd59b87799665e6ccf8fbfff6d2214e371b42d6dea9bc4c37bc267bfc",
+      "width": 1280
+    },
+    {
+      "height": 1080,
+      "path": "desktop-1280-run-zoom200.png",
+      "sha256": "848fd65f7d59a905ce3910216de275455049b6a36a483c3c431f6320437f8fc3",
+      "width": 640
+    },
+    {
+      "height": 900,
+      "path": "desktop-1280-run.png",
+      "sha256": "e124c5880c2bf3cc7e297cd4a955d9973e8a61a443fa9897bd7d545862dc096d",
+      "width": 1280
+    },
+    {
+      "height": 2478,
+      "path": "desktop-1280-upload-zoom200.png",
+      "sha256": "bb6a0120e051e1215df5a6603ae88700bfc6db950526607d93a4d9eb07d11247",
+      "width": 640
+    },
+    {
+      "height": 2035,
+      "path": "desktop-1280-upload.png",
+      "sha256": "e75a91ce219df702b6afb14c90b13ac4ce3a3dc81d5bb81f1398aee19411746d",
+      "width": 1280
+    },
+    {
+      "height": 3327,
+      "path": "desktop-1280-workspace-188.png",
+      "sha256": "827b4db83fcb392544e1fe052cdd1d704943fa1e73d8a205cf9e6a86bfdeba84",
+      "width": 188
+    },
+    {
+      "height": 1392,
+      "path": "desktop-1280-workspace-zoom200.png",
+      "sha256": "7c48ece30559f2f4382b2fcf0ae4b6c4806c0827147b2357fb8b97268ff49d5b",
+      "width": 640
+    },
+    {
+      "height": 1404,
+      "path": "desktop-1280-workspace.png",
+      "sha256": "54741363d720fff557a717029839f7d4fba5c3a70b008d1b71b24a9c92fc8412",
+      "width": 1280
+    },
+    {
+      "height": 1432,
+      "path": "mobile-375-approval-zoom200.png",
+      "sha256": "718db3ba2146fca10cf3a4c2a6132fac042997fa5b05cf63d20a1322dd727931",
+      "width": 188
+    },
+    {
+      "height": 991,
+      "path": "mobile-375-approval.png",
+      "sha256": "70d1aed7a4b3caf52b91488cb2f5f47c8eaf22abcf84b25231162372b3069f74",
+      "width": 375
+    },
+    {
+      "height": 3285,
+      "path": "mobile-375-artifact-detail-zoom200.png",
+      "sha256": "e03209b4bb378ee1b90e69602487bb3ce37163bb3e913313b641a98d77bc1873",
+      "width": 188
+    },
+    {
+      "height": 2543,
+      "path": "mobile-375-artifact-detail.png",
+      "sha256": "b78b862bb2344698e1105d9852e43a65e9ca54cdbef80f4e185ff4327a4b578f",
+      "width": 375
+    },
+    {
+      "height": 2828,
+      "path": "mobile-375-artifacts-zoom200.png",
+      "sha256": "ad13a7d9ed0c566a49f08c5468e7ae0242d27c4cdedd8e2caae781515be2e71d",
+      "width": 188
+    },
+    {
+      "height": 2095,
+      "path": "mobile-375-artifacts.png",
+      "sha256": "8f6cea81c8a94c444281155f5a516124ad9e589ffa6be44e333f9cb0a40d5e72",
+      "width": 375
+    },
+    {
+      "height": 1594,
+      "path": "mobile-375-export-zoom200.png",
+      "sha256": "b340f94dbfdad41b7db4c41b480dfab42cca794b3509d56859133b1ad7f00fb2",
+      "width": 188
+    },
+    {
+      "height": 1114,
+      "path": "mobile-375-export.png",
+      "sha256": "644c8413d2a6fb1cfbae9af77a64011b0a8f10598a885e3eb812ce26c3fb5040",
+      "width": 375
+    },
+    {
+      "height": 1038,
+      "path": "mobile-375-providers-zoom200.png",
+      "sha256": "e77b9a7129b27a65333f3488c241bb40bf3f9049ed2e7739f513d3f8eacef4ae",
+      "width": 188
+    },
+    {
+      "height": 860,
+      "path": "mobile-375-providers.png",
+      "sha256": "e946f4baabf183a2f997363aa0f3bde3d501c6c2fbfef109694761b6608ff95f",
+      "width": 375
+    },
+    {
+      "height": 2059,
+      "path": "mobile-375-review-zoom200.png",
+      "sha256": "2bd1468cd7228d709663835705d2662ab0b1397a1bda115e23c76d7536eb3cde",
+      "width": 188
+    },
+    {
+      "height": 1351,
+      "path": "mobile-375-review.png",
+      "sha256": "ee4ab829c1b81210d1ea118b0553269766f6879db77381f8904ab0603b47bb3c",
+      "width": 375
+    },
+    {
+      "height": 1491,
+      "path": "mobile-375-run-zoom200.png",
+      "sha256": "74df4d1645170184c0618c9f1198dbcae67062b0dddda6964c1846b8edfd31ba",
+      "width": 188
+    },
+    {
+      "height": 1133,
+      "path": "mobile-375-run.png",
+      "sha256": "1b5f311f3b97c01429c4753cf14735cb7af15784aaf155ed10f4959f205bbc14",
+      "width": 375
+    },
+    {
+      "height": 3409,
+      "path": "mobile-375-upload-zoom200.png",
+      "sha256": "5f37983ebb14c2c15dc8dd4d51ac096c3aac836eb46e0820c22d8e39fa9ec775",
+      "width": 188
+    },
+    {
+      "height": 2626,
+      "path": "mobile-375-upload.png",
+      "sha256": "caacc0a946e8b5cd49e51c49d5f5200c98e2ec34adec3e1cec63348c32dcd9e0",
+      "width": 375
+    },
+    {
+      "height": 1636,
+      "path": "mobile-375-workspace-188.png",
+      "sha256": "87d59802e3ef38d8d2d8394f3c00e4b984503a043bcbed4b8f6ce50930717778",
+      "width": 188
+    },
+    {
+      "height": 859,
+      "path": "mobile-375-workspace-zoom200.png",
+      "sha256": "7235de66e23f814b955ddf8c64d7dc900e4671b3eadb7eb920b73d613cd2c408",
+      "width": 188
+    },
+    {
+      "height": 812,
+      "path": "mobile-375-workspace.png",
+      "sha256": "6894a7cdfad023ba8e5a5efc4edce8ce32fc64117447fd0ba6bda776385c3ea0",
+      "width": 375
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-approval-zoom200.png",
+      "sha256": "916d261332e8829065a1ac3601e07bd01660e7155a1c99bef00be241be1fc358",
+      "width": 384
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-approval.png",
+      "sha256": "b5903b0b43aa6077e607590ce9cf3b38f356bd5a48087d9474909c0f6da969fc",
+      "width": 768
+    },
+    {
+      "height": 2516,
+      "path": "tablet-768-artifact-detail-zoom200.png",
+      "sha256": "8f889921d8414edae1b733bf3c94c9e22d6cafb9b86875927ba197ecba7c9cfd",
+      "width": 384
+    },
+    {
+      "height": 1890,
+      "path": "tablet-768-artifact-detail.png",
+      "sha256": "0b28ea62bd59831e825c857b83b3cfa0a71aa37f377c6dc93f907943bd68bbf7",
+      "width": 768
+    },
+    {
+      "height": 5464,
+      "path": "tablet-768-artifacts-zoom200.png",
+      "sha256": "7a7b6306a74c90567b972cf679efc9e72c3d5934ee8bfc7d0c4fe0d6764ce889",
+      "width": 384
+    },
+    {
+      "height": 3854,
+      "path": "tablet-768-artifacts.png",
+      "sha256": "611456be04c4b34cb152665d631a5dc83ac3a52615d14772c8b7295622435e1a",
+      "width": 768
+    },
+    {
+      "height": 1114,
+      "path": "tablet-768-export-zoom200.png",
+      "sha256": "f39235658b6dd91bf09c207454cb1e56b061cf82b819e1f82bb689eec9ffa81d",
+      "width": 384
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-export.png",
+      "sha256": "daa31b00e17c1920ca351081a332c51f6a03e7d98743600b0b78a52d4bbbdb5e",
+      "width": 768
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-providers-zoom200.png",
+      "sha256": "e5d7ba99aa2eacb72c0414e101ae2c1cec709ad67512a9752e97c1d02d6feb86",
+      "width": 384
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-providers.png",
+      "sha256": "4924f2690022b43cae390f19883c34a5d85c071581690088d7c1998f3fc7ef9c",
+      "width": 768
+    },
+    {
+      "height": 1351,
+      "path": "tablet-768-review-zoom200.png",
+      "sha256": "5ffa233c0301aec405810ae3a4ca35949068b3bff952ec777c52b209663301ac",
+      "width": 384
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-review.png",
+      "sha256": "896cea12d0ce2ba8c06e4e634974c00e80564f9cc51d896774d06ee211e0450d",
+      "width": 768
+    },
+    {
+      "height": 1133,
+      "path": "tablet-768-run-zoom200.png",
+      "sha256": "07670c538f6cf2a048d103c2c1053ce438d71372b86d170569d0a13e8445310f",
+      "width": 384
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-run.png",
+      "sha256": "72fb674c2773568abd33e48adfe2666e2a61d91bd6adc90e76551d8c53f97152",
+      "width": 768
+    },
+    {
+      "height": 2626,
+      "path": "tablet-768-upload-zoom200.png",
+      "sha256": "b44357adbfe7bef7d9aa024130b3cf13dd19f9b8d0fde7b84bcea9b588f406e0",
+      "width": 384
+    },
+    {
+      "height": 2412,
+      "path": "tablet-768-upload.png",
+      "sha256": "df5ee5c6afeeaf785034fcc9e1f744c18c3b93ed19600d96783667e547168c5b",
+      "width": 768
+    },
+    {
+      "height": 2482,
+      "path": "tablet-768-workspace-188.png",
+      "sha256": "5460e19864296230b56fa720ced010d21877a15d57e1fa45725335746d176ab3",
+      "width": 188
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-workspace-zoom200.png",
+      "sha256": "823b42d95401146419a1d37c3f26f9184fc237594db0c076e14566c626cf0d3f",
+      "width": 384
+    },
+    {
+      "height": 1024,
+      "path": "tablet-768-workspace.png",
+      "sha256": "494842fc0a8f901f343c26644644450f41a63fec8632833648ae63cb5a0ae8e5",
+      "width": 768
+    }
+  ],
+  "sourceTreeSha256": "7a855379a546b3c8df4db455bbd375443517a51039c3b001e6bf03493a72f3d4",
+  "verdict": "pending-independent-57-of-57-review"
+}

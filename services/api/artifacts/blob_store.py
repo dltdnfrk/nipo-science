@@ -5,8 +5,14 @@ import os
 import re
 from pathlib import Path, PurePosixPath
 from typing import Final, final
-from uuid import uuid4
 
+from .blob_filesystem import (
+    discard_regular_file,
+    open_blob_directory,
+    prepare_private_root,
+    publish_blob,
+    read_bounded_file,
+)
 from .store_contract import BlobIntegrityError, BlobWriteError
 
 OBJECT_KEY_PATTERN: Final = re.compile(
@@ -20,79 +26,56 @@ class PrivateBlobStore:
 
     def __init__(self, root: Path) -> None:
         """Create or validate a non-symlink private storage root."""
-        if root.is_symlink():
-            raise BlobIntegrityError
-        root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        root.chmod(0o700)
-        self._root = root.resolve(strict=True)
+        self._root = prepare_private_root(root)
 
     def put(self, object_key: str, payload: bytes, expected_sha256: str) -> bool:
         """Create one immutable object or verify an identical existing object."""
         if hashlib.sha256(payload).hexdigest() != expected_sha256:
             raise BlobIntegrityError
-        path = self._path(object_key)
-        pending = path.with_name(f".{path.name}.{uuid4().hex}.pending")
+        relative = self._relative(object_key)
         try:
-            path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            self._reject_symlink_chain(path.parent)
-            descriptor = os.open(
-                pending,
-                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-                0o600,
+            directory = open_blob_directory(
+                self._root,
+                relative.parts[:-1],
+                create=True,
             )
-            with os.fdopen(descriptor, "wb") as stream:
-                _ = stream.write(payload)
-                stream.flush()
-                os.fsync(stream.fileno())
-            try:
-                os.link(pending, path)
-            except FileExistsError:
-                if self.read(object_key) != payload:
-                    raise BlobIntegrityError from None
-                return False
-            else:
-                return True
+        except BlobIntegrityError:
+            raise
         except OSError as error:
             raise BlobWriteError from error
+        name = relative.name
+        try:
+            return publish_blob(directory, name, payload)
         finally:
-            try:
-                pending.unlink(missing_ok=True)
-            except OSError as error:
-                raise BlobWriteError from error
+            os.close(directory)
 
     def read(self, object_key: str) -> bytes:
         """Read one regular non-symlink object and verify its key digest."""
-        path = self._path(object_key)
-        if path.is_symlink() or not path.is_file():
-            raise BlobIntegrityError
-        payload = path.read_bytes()
-        expected = PurePosixPath(object_key).name
+        relative = self._relative(object_key)
+        try:
+            directory = open_blob_directory(
+                self._root,
+                relative.parts[:-1],
+                create=False,
+            )
+        except FileNotFoundError as error:
+            raise BlobIntegrityError from error
+        try:
+            payload = read_bounded_file(directory, relative.name)
+        finally:
+            os.close(directory)
+        expected = relative.name
         if hashlib.sha256(payload).hexdigest() != expected:
             raise BlobIntegrityError
         return payload
 
     def discard(self, object_key: str) -> None:
         """Remove one exact object during metadata rollback compensation."""
-        path = self._path(object_key)
-        if path.is_symlink():
-            raise BlobIntegrityError
-        try:
-            path.unlink(missing_ok=True)
-        except OSError as error:
-            raise BlobWriteError from error
+        relative = self._relative(object_key)
+        discard_regular_file(self._root, relative.parts[:-1], relative.name)
 
-    def _path(self, object_key: str) -> Path:
+    @staticmethod
+    def _relative(object_key: str) -> PurePosixPath:
         if OBJECT_KEY_PATTERN.fullmatch(object_key) is None:
             raise BlobIntegrityError
-        relative = PurePosixPath(object_key)
-        path = self._root.joinpath(*relative.parts)
-        if not path.is_relative_to(self._root):
-            raise BlobIntegrityError
-        return path
-
-    def _reject_symlink_chain(self, directory: Path) -> None:
-        current = directory
-        while current != self._root:
-            if current.is_symlink():
-                raise BlobIntegrityError
-            current = current.parent
+        return PurePosixPath(object_key)

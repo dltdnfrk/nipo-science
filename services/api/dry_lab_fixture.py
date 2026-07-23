@@ -11,6 +11,10 @@ from typing import Final, final, override
 
 from pydantic import TypeAdapter, ValidationError
 
+from science_workbench_science.research_intent import (
+    ResearchIntentError,
+    research_intent_from_mapping,
+)
 from science_workbench_science.vertical import DryLabVertical, FixtureFailure
 
 _HTML_PATH = Path(__file__).parents[2] / "apps" / "web" / "g002-fixture.html"
@@ -80,8 +84,15 @@ def make_handler(  # noqa: C901  # Handler methods intentionally remain coupled.
             )
 
         def _plan(self, body: JsonObject) -> None:
+            try:
+                research_intent = research_intent_from_mapping(
+                    body.get("research_intent")
+                )
+            except ResearchIntentError as error:
+                raise FixtureFailure(error.code) from error
             plan = fixture.create_plan(
-                lease_id=_string_value(body, "lease_id", "fresh")
+                research_intent=research_intent,
+                lease_id=_string_value(body, "lease_id", "fresh"),
             )
             self._json(
                 HTTPStatus.CREATED,
@@ -89,7 +100,7 @@ def make_handler(  # noqa: C901  # Handler methods intentionally remain coupled.
             )
 
         def _approve(self, body: JsonObject) -> None:
-            approval = fixture.approve(_optional_string(body.get("plan_digest")))
+            approval = fixture.approve(_string_value(body, "plan_digest"))
             self._json(
                 HTTPStatus.ACCEPTED,
                 {

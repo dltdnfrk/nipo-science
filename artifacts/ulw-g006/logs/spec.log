@@ -20,7 +20,7 @@ test_rejects_review_api_drift (test_verify_spec.VerifySpecTests.test_rejects_rev
 Reject drift from the persisted Review polling API. ... ok
 
 ----------------------------------------------------------------------
-Ran 10 tests in 0.005s
+Ran 10 tests in 0.004s
 
 OK
 spec-verification: PASS (v0.4; 81 IDs; 12 P0 features)

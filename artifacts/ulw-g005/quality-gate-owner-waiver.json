@@ -1,0 +1,101 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "The final release architecture reviews 241 and 243 approved the descriptor-confined release, recovery, retention, authority, and audit framework; review 244 approved the resumed Docker-exposed fixes with no blocking findings.",
+    "commands": [
+      "agent://241-G006ReleaseClosureReview3",
+      "agent://243-G006ReleaseClosureReview4",
+      "agent://244-G006ResumedLiveClosureReview"
+    ],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "All 27 canonical local gates pass with 3366 parser-derived checks, including retention, recovery, export, lifecycle, legal-hold, break-glass, migration, RLS, and artifact persistence behavior. The historical owner-waived GKE attempt remains fail-closed and is not counted as deployment evidence.",
+    "e2eCommands": [
+      ".venv/bin/pytest -q",
+      "canonical ci_commands(root) direct execution",
+      "make --no-print-directory test-retention"
+    ],
+    "redTeamCommands": [
+      "make --no-print-directory test-security",
+      "canonical recovery and release gates"
+    ],
+    "artifactRefs": [
+      {
+        "id": "g005-qa-report",
+        "kind": "operations-test-report",
+        "path": "science-workbench/artifacts/ulw-g005/qa-report.json",
+        "description": "Checksummed lifecycle, retention, deployment-contract, and recovery source evidence"
+      },
+      {
+        "id": "g005-nondeployment-receipt",
+        "kind": "owner-waived-deployment-attempt-receipt",
+        "path": "science-workbench/artifacts/ulw-g005/deployment-live-attempt.json",
+        "description": "Checksummed fail-closed proof that no GKE or synthetic deployment evidence was promoted"
+      },
+      {
+        "id": "g005-canonical-gates",
+        "kind": "canonical-gate-attempt-report",
+        "path": "science-workbench/artifacts/ulw-g006/canonical-gates.json",
+        "description": "Current 27-of-27 canonical local gate evidence"
+      }
+    ],
+    "contractCoverage": [
+      {
+        "id": "g005-owner-waived-operations-contract",
+        "contractRef": "Ultragoal G005 revised nondeployment objective",
+        "obligation": "Prove local review, correction, export, retention, legal-hold, break-glass and recovery behavior while recording that real deployment is owner-waived and synthetic deployment evidence is forbidden",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "g005-operations-surface"
+        ],
+        "adversarialCaseRefs": [
+          "g005-recovery-security-sweep"
+        ]
+      }
+    ],
+    "surfaceEvidence": [
+      {
+        "id": "g005-operations-surface",
+        "contractRef": "G005 local operations and recovery",
+        "surface": "Python/Postgres canonical operations gates",
+        "invocation": "canonical ci_commands(root) direct execution",
+        "verdict": "passed",
+        "artifactRefs": [
+          "g005-qa-report",
+          "g005-canonical-gates"
+        ]
+      }
+    ],
+    "adversarialCases": [
+      {
+        "id": "g005-recovery-security-sweep",
+        "contractRef": "G005 recovery and lifecycle safety",
+        "scenario": "Exercise retention deletion, legal holds, break-glass expiry, export correction chains, recovery epochs, no side-effect replay, and absent deployment authorities",
+        "expectedBehavior": "All local safety gates pass; missing deployment authorities fail closed; no synthetic deployment proof is emitted",
+        "verdict": "passed",
+        "artifactRefs": [
+          "g005-qa-report",
+          "g005-nondeployment-receipt"
+        ]
+      }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "The revised G005 objective is fully covered by the current all-green local canonical inventory and checksummed nondeployment waiver evidence. No deployment success is claimed.",
+    "fullRerun": true,
+    "rerunCommands": [
+      ".venv/bin/pytest -q",
+      "canonical ci_commands(root) direct execution"
+    ],
+    "blockers": []
+  }
+}

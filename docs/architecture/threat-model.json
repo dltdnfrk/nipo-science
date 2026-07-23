@@ -41,7 +41,7 @@
     {
       "id": "T07", "name": "malicious-files-and-archives", "severity": "High", "owner": "ingestion-security",
       "controls": ["archives-rejected-in-p0", "size-mime-magic-extension-validation", "malware-scan-before-read", "normalized-name-no-symlink-or-traversal", "active-content-isolated-or-downloaded"],
-      "executable_test": "make test-upload", "evidence_path": "tools/evidence/task-10-science-workbench-mvp.qa.json"
+      "executable_test": "make test-security CASE=malicious-files-and-archives", "evidence_path": "tools/evidence/security/T07-malicious-files-and-archives.json"
     },
     {
       "id": "T08", "name": "sandbox-escape", "severity": "High", "owner": "runner-security",
@@ -55,7 +55,7 @@
     },
     {
       "id": "T10", "name": "approval-replay", "severity": "High", "owner": "tool-policy",
-      "controls": ["digest-binds-org-run-requester-tool-args-scopes-expiry", "single-consume-in-execution-start-transaction", "cross-tenant-and-expired-digest-rejected"],
+      "controls": ["digest-binds-org-run-requester-tool-args-scopes-expiry", "research-intent-digest-bound", "single-consume-in-execution-start-transaction", "cross-tenant-and-expired-digest-rejected"],
       "executable_test": "make test-security CASE=approval-replay", "evidence_path": "tools/evidence/security/T10-approval-replay.json"
     },
     {
@@ -72,6 +72,16 @@
       "id": "T13", "name": "dependency-and-supply-chain-compromise", "severity": "High", "owner": "supply-chain-security",
       "controls": ["lockfiles-and-digest-pinned-images", "signature-sbom-vulnerability-and-license-gates", "trusted-build-provenance", "runtime-updaters-disabled", "release-binary-allowlist"],
       "executable_test": "make test-security CASE=supply-chain", "evidence_path": "tools/evidence/security/T13-supply-chain.json"
+    },
+    {
+      "id": "T14", "name": "qualification-signer-substitution-or-replay", "severity": "High", "owner": "runtime-security",
+      "controls": ["signer-private-key-absent-from-evaluator-runtime-and-database", "strict-public-key-set", "historical-verification-key-retained-permanently-or-by-archive-verifier", "subject-and-revision-bound-receipt", "append-only-receipt-history", "ordered-profile-receipt-adoption-not-atomic-triple", "adoption-failure-leaves-no-database-receipt-or-pointer", "deployment-supplied-protected-runtime-policy-file-pinned-by-sha256", "exact-runtime-identity-verification", "authority-socket-owner-and-mode-validation"],
+      "executable_test": "make test-provider-runtime", "evidence_path": "tools/evidence/provider-qualification-contract.json"
+    },
+    {
+      "id": "T15", "name": "database-role-qualification-forgery", "severity": "High", "owner": "data-security",
+      "controls": ["ordinary-app-role-cannot-write-receipts-current-pointer-or-runs", "dedicated-noinherit-login-to-science-workbench-qualification-nologin-role", "dedicated-noinherit-login-to-science-workbench-dispatcher-nologin-role", "dedicated-noinherit-login-to-science-workbench-provider-cleanup-nologin-nobypassrls-role", "cleanup-role-has-no-direct-table-access", "cleanup-executes-only-four-fixed-security-definer-due-functions", "fixed-adopter-append-and-cas-no-callback", "adopter-cas-rechecks-exact-connection-snapshot-including-created-at", "dedicated-dispatcher-exact-run-insert", "dedicated-cleanup-credential-absent-from-app-and-provider-runtime", "forced-requester-rls", "0004-provider-security-converges-stale-0003-without-fabricating-lost-evidence", "exact-current-receipt-status-and-selected-model-run-trigger", "immutable-run-binding"],
+      "executable_test": "make test-provider-runtime", "evidence_path": "tools/evidence/provider-qualification-contract.json"
     }
   ]
 }

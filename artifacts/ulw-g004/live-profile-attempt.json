@@ -1,40 +1,38 @@
 {
-  "schemaVersion": 2,
-  "goalId": "G004",
-  "blockerStoryId": "G009",
   "adapterId": "openai_codex",
-  "attemptedAt": "2026-07-14T01:43:53.272756Z",
-  "runtime": {
-    "version": "codex-cli 0.144.1",
-    "officialSubscriptionLogin": true,
-    "loginMode": "ChatGPT"
-  },
-  "command": ".venv/bin/python -m services.api.provider_live_capture --cases tests/g004/fixtures/golden_session_cases.json --output artifacts/ulw-g004/openai-codex-live-profile.json",
-  "exitCode": 2,
-  "elapsedSeconds": 90.481,
-  "result": "blocked",
-  "stableError": "codex qualification attempt failed",
-  "network": {
-    "chatgptDnsResolved": true,
-    "addresses": [
-      "104.18.32.47",
-      "172.64.155.209"
-    ],
-    "outboundDnsBlockerResolved": true
-  },
-  "directProtocolProbe": {
-    "result": "timed_out",
-    "timeoutSeconds": 90,
-    "outputPublished": false,
-    "sensitivePatternDetected": false,
-    "observedCause": "The official logged-in Codex runtime did not complete the first pinned qualification attempt before the fixed 90-second fail-closed deadline."
-  },
-  "dockerRuntime": {
-    "available": false,
-    "exitCode": 1,
-    "observedCause": "Docker API socket /Users/hyunjun/.docker/run/docker.sock is absent."
-  },
-  "profilePublished": false,
+  "attemptedAtLocalDate": "2026-07-15",
+  "attemptedAtPrecision": "session-observed",
+  "authoritativeQualification": false,
+  "blockerStoryId": "G009",
+  "command": "uv run python -m services.api.provider_live_capture --cases tests/g004/fixtures/golden_session_cases.json --output .cache/live-codex-final/profile-runtime-0.144.4.json --receipt-output .cache/live-codex-final/receipt-runtime-0.144.4.json --codex-executable /opt/homebrew/Caskroom/codex/0.144.4/codex-aarch64-apple-darwin --approved-runtime-policy openai-codex-0.144.4-darwin-arm64 --operator-account-ref acct_operator_verified_20260715 --authority-public-keys /etc/science-workbench/qualification-public-keys.json --authority-socket /run/science-workbench/qualification-authority.sock --org-id $ORG_ID --user-id $USER_ID --connection-id $CONNECTION_ID --connection-revision $NEXT_CONNECTION_REVISION",
+  "currentLiveQualificationIssued": false,
   "fabricatedEvidence": false,
-  "requiredHumanAction": "Start an authorized Docker daemon and restore a responsive official Codex subscription runtime, then rerun the pinned live profile and forced-RLS lifecycle without weakening either gate."
+  "goalId": "G004",
+  "observedFailure": {
+    "kind": "subscription-usage-limit",
+    "providerEvent": "turn.failed",
+    "resetAt": "2026-07-20T22:57:00+09:00",
+    "stableError": "codex qualification attempt failed"
+  },
+  "outputPublished": false,
+  "priorSuccessfulObservation": {
+    "currentAuthority": false,
+    "note": "The same pinned executable completed 10 scenarios x 3 before the current receipt and trust-flow changes; that older serialized profile is historical observation only and cannot authorize the current runtime.",
+    "scenarioRuns": 30
+  },
+  "recordedAt": "2026-07-14T20:09:45.833095Z",
+  "requiredAction": "After the subscription limit resets, provision the external signing authority, exact public-key file, and dedicated NOINHERIT adopter login; rerun the approved-policy command and require the signed receipt to be publicly verified and atomically adopted before any live qualification is accepted.",
+  "result": "blocked",
+  "runtime": {
+    "executableOwnerUid": 501,
+    "executableSha256": "3302acbda5f53de1a71ebdb0c0f2aae0d47f9324aa9fb6b4e78a47014fd51c7d",
+    "loginMode": "ChatGPT",
+    "officialSubscriptionLogin": true,
+    "platformMachine": "arm64",
+    "platformSystem": "Darwin",
+    "policyId": "openai-codex-0.144.4-darwin-arm64",
+    "version": "codex-cli 0.144.4"
+  },
+  "schemaVersion": 3,
+  "stagedRuntimeDirectoriesCleaned": true
 }

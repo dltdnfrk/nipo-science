@@ -32,17 +32,23 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .ci_contract import (
     CiControlCatalog,
+    CiExecutionAttestation,
+    CiGenerationManifestAuthority,
     CiJob,
+    CiRunState,
     EvidenceIntegrityError,
     GateResult,
+    ci_requirement_case_evidence_bytes,
     rederive_gate_count,
     require_evidence_sanitized,
+    verify_ci_requirement_case_output,
+    verify_execution_attestations,
 )
 
 SHA256 = r"^[0-9a-f]{64}$"
 NFR_COUNT = 10
 MIN_FINALIZATION_NONCE_LENGTH: Final = 16
-EXPECTED_REQUIREMENT_COUNT = 81
+EXPECTED_REQUIREMENT_COUNT = 84
 GOAL_STATUSES = frozenset(
     {
         "pending",
@@ -393,6 +399,7 @@ class ControlEvidence(StrictModel):
     manifest_sha256: str | None = Field(default=None, pattern=SHA256)
     observed_epoch: int | None = Field(default=None, ge=0)
     coverage_sha256: str | None = Field(default=None, pattern=SHA256)
+    execution_attestation: CiExecutionAttestation | None = None
     seal: DetachedEvidenceSeal | None = None
 
     @model_validator(mode="after")
@@ -2209,6 +2216,8 @@ class FinalizationTrust:
     environment: Literal["production", "test"]
     expected_session_id: str
     expected_lease_generation: str
+    ci_execution_authority: CiGenerationManifestAuthority
+    ci_execution_authority_context: str
     evidence_issuers: tuple[EvidenceIssuerTrust, ...]
     authorization_authority: ReleaseAuthorizationConsumer
     authorization_authority_id: str
@@ -2431,11 +2440,20 @@ def _verify_canonical_control_logs(
     catalog: CiControlCatalog,
     controls: dict[str, ControlEvidence],
     evidence_by_hash: dict[str, bytes],
+    source_root: Path,
 ) -> None:
     """Verify each catalog control and rederive its count from the declared log."""
+    if catalog.unverified_requirement_ids:
+        msg = "CI catalog contains requirements without semantic evidence"
+        raise _contract_error(msg)
     attachment_hashes = {item.sha256 for item in receipt.attachments}
     for job in catalog.jobs:
         control = controls[job.job.value]
+        bindings = tuple(
+            binding
+            for binding in catalog.requirement_case_bindings
+            if binding.job is job.job
+        )
         if (
             control.category != CI_JOB_CATEGORIES[job.job]
             or control.argv != job.argv
@@ -2457,6 +2475,33 @@ def _verify_canonical_control_logs(
         ):
             msg = f"control does not match canonical catalog: {job.job.value}"
             raise _contract_error(msg)
+        for binding in bindings:
+            expected_observation = ci_requirement_case_evidence_bytes(binding)
+            if (
+                sha256_bytes(expected_observation) != binding.observation_sha256
+                or binding.observation_sha256 not in control.attachment_sha256
+                or evidence_by_hash.get(binding.observation_sha256)
+                != expected_observation
+                or sha256_bytes(
+                    _read_regular_bytes(
+                        source_root / binding.source_path,
+                        "CI requirement source",
+                    )
+                )
+                != binding.source_sha256
+                or sha256_bytes(
+                    _read_regular_bytes(
+                        source_root / binding.test_path,
+                        "CI requirement test",
+                    )
+                )
+                != binding.test_sha256
+            ):
+                msg = (
+                    "requirement case evidence does not match its source and "
+                    f"observation: {binding.case_id}"
+                )
+                raise _contract_error(msg)
         if (
             job.count_kind == "analyzer-inventory"
             and control.observed_positive_count != job.analyzer_inventory_count
@@ -2482,6 +2527,10 @@ def _verify_canonical_control_logs(
             requirement_ids=control.requirement_ids,
         )
         try:
+            verify_ci_requirement_case_output(
+                evidence_by_hash[control.raw_log_sha256],
+                bindings,
+            )
             rederive_gate_count(
                 gate_result,
                 evidence_by_hash[control.raw_log_sha256],
@@ -2489,6 +2538,95 @@ def _verify_canonical_control_logs(
         except EvidenceIntegrityError as exc:
             msg = f"control count is not derived from its log: {job.job.value}"
             raise _contract_error(msg) from exc
+
+
+def _verify_control_execution_attestations(
+    receipt: ReleaseReceipt,
+    catalog: CiControlCatalog,
+    controls: dict[str, ControlEvidence],
+    trust: FinalizationTrust,
+) -> None:
+    """Require independent lease-bound receipts for all canonical CI controls."""
+    authority = trust.ci_execution_authority
+    authority_context = trust.ci_execution_authority_context
+    try:
+        current_run = authority.resolve_current(authority_context)
+    except (AttributeError, LookupError, TypeError, ValueError):
+        msg = "CI execution attestation authority is unavailable"
+        raise _contract_error(msg) from None
+    common_generations = {
+        (control.authority_context_id, control.authority_generation_id)
+        for control in controls.values()
+    }
+    common_manifests = {control.manifest_sha256 for control in controls.values()}
+    if (
+        current_run.state is not CiRunState.SUCCESS
+        or current_run.authority_context != authority_context
+        or current_run.run_id != receipt.run_id
+        or current_run.attempt_id != receipt.attempt_id
+        or current_run.source_tree_sha256 != receipt.authority.source_tree_sha256
+        or current_run.generation_id is None
+        or common_generations != {(authority_context, current_run.generation_id)}
+        or len(common_manifests) != 1
+        or None in common_manifests
+    ):
+        msg = "CI execution attestation does not match the current generation"
+        raise _contract_error(msg)
+    manifest_sha256 = next(item for item in common_manifests if item is not None)
+    try:
+        anchored_manifest = authority.resolve(
+            authority_context,
+            current_run.generation_id,
+        )
+    except (AttributeError, LookupError, TypeError, ValueError):
+        msg = "CI execution attestation manifest is unavailable"
+        raise _contract_error(msg) from None
+    if anchored_manifest != manifest_sha256:
+        msg = "CI execution attestation manifest is not authority-bound"
+        raise _contract_error(msg)
+    records: list[GateResult] = []
+    for job in catalog.jobs:
+        control = controls[job.job.value]
+        attestation = control.execution_attestation
+        if attestation is None:
+            msg = f"CI execution attestation is missing: {job.job.value}"
+            raise _contract_error(msg)
+        records.append(
+            GateResult(
+                job=job.job,
+                executed_count=control.observed_positive_count,
+                output_sha256=control.raw_log_sha256,
+                argv=control.argv,
+                count_kind=job.count_kind,
+                parser_version=job.parser_version,
+                analyzer_inventory_root_sha256=job.analyzer_inventory_root_sha256,
+                category=job.category,
+                environment_profile=job.environment_profile,
+                control_ids=job.control_ids,
+                attachment_sha256=control.attachment_sha256,
+                security_catalog_root_sha256=(attestation.security_catalog_root_sha256),
+                security_threat_ids=attestation.security_threat_ids,
+                security_evidence_roots=attestation.security_evidence_roots,
+                started_at=attestation.started_at,
+                finished_at=attestation.finished_at,
+                outcome="success",
+                catalog_root_sha256=catalog.catalog_root_sha256,
+                catalog_source_root_sha256=catalog.source_root_sha256,
+                catalog_run_id=receipt.run_id,
+                requirement_ids=control.requirement_ids,
+                prerequisites=job.prerequisites,
+                blockers=job.blockers,
+                execution_attestation=attestation,
+            )
+        )
+    try:
+        _ = verify_execution_attestations(authority, tuple(records), current_run)
+        if authority.resolve_current(authority_context) != current_run:
+            msg = "CI execution attestation generation changed during verification"
+            raise _contract_error(msg)
+    except (AttributeError, EvidenceIntegrityError, LookupError, TypeError, ValueError):
+        msg = "CI execution attestation verification failed"
+        raise _contract_error(msg) from None
 
 
 def _verify_finalization_candidate(
@@ -2546,12 +2684,22 @@ def _verify_finalization_candidate(
     except ValueError as exc:
         msg = "command catalog authority is invalid"
         raise _contract_error(msg) from exc
+    if catalog.requirements_sha256 != sha256_bytes(resolved.requirements):
+        msg = "CI catalog is stale for the requirements authority"
+        raise _contract_error(msg)
     expected = {job.value: job for job in CiJob}
     controls = {item.control_id: item for item in receipt.controls}
     if len(controls) != len(receipt.controls) or set(controls) != set(expected):
         msg = "controls do not match the canonical 27-control catalog"
         raise _contract_error(msg)
-    _verify_canonical_control_logs(receipt, catalog, controls, evidence_by_hash)
+    _verify_canonical_control_logs(
+        receipt,
+        catalog,
+        controls,
+        evidence_by_hash,
+        context.science_root,
+    )
+    _verify_control_execution_attestations(receipt, catalog, controls, trust)
     verify_coverage_matrix(receipt, resolved.requirements, resolved.goals)
     goals = load_json_object_bytes(resolved.goals, "goals").get("goals")
     if not isinstance(goals, list) or any(

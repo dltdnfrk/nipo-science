@@ -17,6 +17,7 @@ function canonicalPins(pins: readonly HashPin[]): readonly HashPin[] {
 const PROVENANCE_MANIFEST_FIELDS = {
   source_run_id: Uuid7Schema,
   action_plan_sha256: Sha256Schema,
+  research_intent_sha256: Sha256Schema,
   code_sha256: Sha256Schema,
   environment_sha256: Sha256Schema,
   runtime_adapter_id: NonEmptyTextSchema,
@@ -40,6 +41,7 @@ export function provenanceManifestSha256(manifest: ProvenanceManifestPayload): s
     execution_hashes: canonicalPins(manifest.execution_hashes),
     input_hashes: canonicalPins(manifest.input_hashes),
     output_hashes: canonicalPins(manifest.output_hashes),
+    research_intent_sha256: manifest.research_intent_sha256,
     runtime_adapter_id: manifest.runtime_adapter_id,
     runtime_connection_id: manifest.runtime_connection_id,
     skill_hashes: canonicalPins(manifest.skill_hashes),

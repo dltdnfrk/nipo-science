@@ -1,6 +1,8 @@
 """Typed immutable records for the test-principal Artifact fixture."""
 
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Literal
 
 
 class ArtifactVersionConflictError(ValueError):
@@ -41,6 +43,8 @@ class ArtifactVersion:
     environment_sha256: str
     lineage_version_ids: tuple[str, ...]
     preview_token: str
+    created_at: datetime
+    status: Literal["immutable"]
 
 
 @dataclass(frozen=True, slots=True)

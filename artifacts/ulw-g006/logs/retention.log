@@ -41,6 +41,6 @@ tests/platform/test_retention.py::test_policy_change_rejects_unbound_audit_evide
 tests/platform/test_retention.py::test_candidate_run_challenges_and_manifests_are_unique_per_run PASSED [ 97%]
 tests/platform/test_retention.py::test_released_hold_leaves_candidate_available_for_later_retry PASSED [100%]
 
-============================== 34 passed in 0.05s ==============================
+============================== 34 passed in 0.06s ==============================
 All checks passed!
 0 errors, 0 warnings, 0 notes

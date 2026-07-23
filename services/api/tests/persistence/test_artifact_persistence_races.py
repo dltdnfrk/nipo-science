@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Final
+from pathlib import Path
+from typing import Final
 from uuid import UUID
 
 import pytest
@@ -37,9 +39,6 @@ from services.api.tests.persistence.test_rls_contracts import (
 from services.api.tests.persistence.test_rls_contracts import (
     EXECUTION as EXECUTION_A,
 )
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 pytestmark = pytest.mark.usefixtures("migrated_database")
 DIRECT_ARCHIVED_VERSION: Final = "018f0d7d-6b17-7a91-8b31-2f7331677e70"
@@ -110,6 +109,137 @@ def test_filesystem_failure_removes_pending_blob_and_releases_claim(
         version_draft(artifact.id, reference, 0),
     )
     assert service.read_content(SCOPE_A, version.id) == b"retryable filesystem output"
+
+
+@pytest.mark.parametrize("failure_point", ["link", "directory_fsync"])
+def test_blob_publication_failure_never_commits_metadata_and_exact_retry_is_unique(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_point: str,
+) -> None:
+    seed_artifact_version()
+    id_start = 52 if failure_point == "link" else 56
+    service, _, watcher = build_artifact_service(tmp_path, id_start=id_start)
+    artifact = service.create_artifact(SCOPE_A, "Durable publication retry")
+    payload = f"durable publication boundary:{failure_point}".encode()
+    reference = watcher.register(
+        SCOPE_A,
+        UUID(EXECUTION_A),
+        payload,
+        "text/plain",
+    )
+    request = version_draft(artifact.id, reference, 0)
+    original_fsync = os.fsync
+    original_link = os.link
+    link_completed = False
+    failed = False
+
+    def fail_selected_link(
+        source: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        destination: str | bytes | os.PathLike[str] | os.PathLike[bytes],
+        *,
+        src_dir_fd: int | None = None,
+        dst_dir_fd: int | None = None,
+        follow_symlinks: bool = True,
+    ) -> None:
+        nonlocal failed, link_completed
+        if failure_point == "link" and not failed:
+            failed = True
+            message = "injected final link failure"
+            raise OSError(message)
+        original_link(
+            source,
+            destination,
+            src_dir_fd=src_dir_fd,
+            dst_dir_fd=dst_dir_fd,
+            follow_symlinks=follow_symlinks,
+        )
+        link_completed = True
+
+    def fail_selected_fsync(descriptor: int) -> None:
+        nonlocal failed
+        if (
+            failure_point == "directory_fsync"
+            and link_completed
+            and not failed
+            and stat.S_ISDIR(os.fstat(descriptor).st_mode)
+        ):
+            failed = True
+            message = "injected final directory fsync failure"
+            raise OSError(message)
+        original_fsync(descriptor)
+
+    monkeypatch.setattr(os, "link", fail_selected_link)
+    monkeypatch.setattr(os, "fsync", fail_selected_fsync)
+
+    with pytest.raises(ArtifactCommitError):
+        _ = service.create_version(SCOPE_A, request)
+
+    assert failed
+    assert psql(
+        "SELECT count(*) FROM artifact_versions WHERE artifact_id = "
+        f"'{artifact.id}'"
+    ).stdout.strip() == "0"
+    assert not tuple(path for path in tmp_path.rglob("*") if path.is_file())
+
+    recovered = service.create_version(SCOPE_A, request)
+    replayed = service.create_version(SCOPE_A, request)
+    assert recovered == replayed
+    assert service.read_content(SCOPE_A, recovered.id) == payload
+    assert psql(
+        "SELECT count(*) FROM artifact_versions WHERE artifact_id = "
+        f"'{artifact.id}'"
+    ).stdout.strip() == "1"
+    blob_files = tuple(path for path in tmp_path.rglob("*") if path.is_file())
+    assert len(blob_files) == 1
+    assert not tuple(tmp_path.rglob("*.pending"))
+
+
+def test_recovery_rename_failure_precedes_metadata_and_allows_exact_retry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seed_artifact_version()
+    service, _, watcher = build_artifact_service(tmp_path, id_start=54)
+    artifact = service.create_artifact(SCOPE_A, "Recovery publication retry")
+    payload = b"recovery rename retry"
+    reference = watcher.register(
+        SCOPE_A,
+        UUID(EXECUTION_A),
+        payload,
+        "text/plain",
+    )
+    request = version_draft(artifact.id, reference, 0)
+    original_replace = Path.replace
+    fail_once = True
+
+    def fail_first_replace(source: Path, target: Path) -> Path:
+        nonlocal fail_once
+        if fail_once:
+            fail_once = False
+            message = "injected recovery rename failure"
+            raise OSError(message)
+        return original_replace(source, target)
+
+    monkeypatch.setattr(Path, "replace", fail_first_replace)
+
+    with pytest.raises(ArtifactCommitError):
+        _ = service.create_version(SCOPE_A, request)
+
+    assert psql(
+        "SELECT count(*) FROM artifact_versions WHERE artifact_id = "
+        f"'{artifact.id}'"
+    ).stdout.strip() == "0"
+    assert not tuple(path for path in tmp_path.rglob("*") if path.is_file())
+
+    recovered = service.create_version(SCOPE_A, request)
+    replayed = service.create_version(SCOPE_A, request)
+    assert recovered == replayed
+    assert service.read_content(SCOPE_A, recovered.id) == payload
+    assert psql(
+        "SELECT count(*) FROM artifact_versions WHERE artifact_id = "
+        f"'{artifact.id}'"
+    ).stdout.strip() == "1"
 
 
 def test_archived_project_blocks_durable_session_attachment(tmp_path: Path) -> None:

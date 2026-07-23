@@ -48,8 +48,32 @@ def test_matches_shared_python_and_typescript_canonical_provenance_digest() -> N
     assert provenance.manifest_sha256 == EXPECTED_PROVENANCE_DIGEST
     international = provenance.model_copy(update={"runtime_adapter_id": "한글😀"})
     assert provenance_manifest_sha256(international) == (
-        "ad225bd977785536450bffe5a25e67b37814074467f15835820787e0a76779be"
+        "fd60c52910ff439d32fe75069cf014742eccd08f8fe2989cb75af64870b666f5"
     )
+
+
+def test_research_intent_digest_is_pinned_by_provenance_and_export() -> None:
+    # Given: the canonical dry-lab contract after plan approval and review.
+    contract = DryLabRunContract.model_validate_json(
+        FIXTURE.read_text(encoding="utf-8")
+    )
+
+    # Then: scientific purpose remains an explicit, identical provenance/export pin.
+    assert contract.provenance.research_intent_sha256
+    assert (
+        contract.provenance.research_intent_sha256
+        == contract.export.research_intent_sha256
+        == contract.action_plan.research_intent_sha256
+    )
+
+    # When/Then: changing only the Export pin breaks the immutable chain.
+    mutated_export = contract.export.model_copy(
+        update={"research_intent_sha256": "d" * 64}
+    )
+    with pytest.raises(ValidationError, match="digest pins"):
+        _ = DryLabRunContract.model_validate(
+            contract.model_dump(mode="python") | {"export": mutated_export}
+        )
 
 
 @pytest.mark.parametrize("target", PROVENANCE_MUTATION_TARGETS)

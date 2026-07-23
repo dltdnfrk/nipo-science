@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "policies": [
+    {
+      "policy_id": "openai-codex-0.144.4-darwin-arm64",
+      "adapter_id": "openai_codex",
+      "platform_system": "Darwin",
+      "platform_machine": "arm64",
+      "runtime_version": "codex-cli-0.144.4",
+      "executable_sha256": "3302acbda5f53de1a71ebdb0c0f2aae0d47f9324aa9fb6b4e78a47014fd51c7d"
+    }
+  ]
+}

@@ -11,8 +11,8 @@
   "scripts": {
     "contracts:lint": "biome check packages/contracts",
     "contracts:typecheck": "tsc -p packages/contracts/tsconfig.json",
-    "contracts:test": "vitest run packages/contracts/tests",
-    "test:e2e:artifacts": "playwright test tests/e2e/artifacts.spec.ts"
+    "contracts:test": "vitest run --dir packages/contracts/tests",
+    "test:e2e:artifacts": "playwright test tests/e2e/artifacts.spec.ts tests/e2e/product-accessibility.spec.ts tests/e2e/product-journey.spec.ts tests/e2e/provider-settings.spec.ts tests/e2e/provider-settings-rendering.spec.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.2",

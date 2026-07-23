@@ -90,7 +90,7 @@ def upgrade_workspace() -> None:
         uuid_ref("project_id"),
         sa.Column("connector_id", sa.Text(), nullable=False),
         sa.Column("base_url", sa.Text(), nullable=False),
-        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column("enabled", sa.Boolean(), nullable=False, server_default=sa.false()),
         created_at(),
         tenant_unique(),
         tenant_fk("project_id", "projects"),
@@ -99,6 +99,13 @@ def upgrade_workspace() -> None:
             "project_id",
             "connector_id",
             name="uq_connectors_registry",
+        ),
+        sa.CheckConstraint(
+            "(connector_id = 'pubmed' AND "
+            "base_url = 'https://pubmed.ncbi.nlm.nih.gov') OR "
+            "(connector_id = 'openalex' AND "
+            "base_url = 'https://api.openalex.org')",
+            name="canonical_connector_registry",
         ),
     )
     _ = op.create_table(

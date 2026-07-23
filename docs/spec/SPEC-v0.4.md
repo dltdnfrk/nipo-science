@@ -18,12 +18,13 @@ The product is a research-support workbench. It MUST NOT make clinical diagnoses
 The primary P0 outcome is this ordered, observable chain:
 
 1. A researcher supplies a validated spectrum, image, table, or report.
-2. The system creates a versioned ActionPlan. Approval fixes an immutable plan digest before execution.
-3. The approved plan runs deterministic Python in an isolated Session Kernel.
-4. The execution creates normalized CSV, PNG, Markdown, and evidence Ledger Artifact Versions.
-5. Provenance pins input checksums, code, environment, runtime, Skill, source identifiers, execution, and output checksums.
-6. A persisted Review verifies the pinned record without re-execution.
-7. Export pins selected versions and creates a checksummed reproducibility pack.
+2. The researcher supplies a complete `ResearchIntent` stating the question, why the research matters, intended benefit, success criteria, domain and safety constraints, stop conditions, declared research mode, and data origin.
+3. The system creates a versioned ActionPlan. Approval fixes the canonical `ResearchIntent` digest and plan digest before execution.
+4. The approved plan runs deterministic Python in an isolated Session Kernel.
+5. The execution creates normalized CSV, PNG, Markdown, and evidence Ledger Artifact Versions.
+6. Provenance pins the `ResearchIntent`, input checksums, code, environment, runtime, Skill, source identifiers, execution, and output checksums.
+7. A persisted Review verifies the pinned record without re-execution.
+8. Export pins selected versions and creates a checksummed reproducibility pack.
 
 No stage may be skipped in the release vertical. Artifact Versions, approved ActionPlans, Executions, Run events, Review inputs, Findings, and Export selections are immutable. A retry creates a new Run. Kernel or lease loss MUST NOT automatically replay Python, tools, connectors, or other side effects.
 
@@ -47,7 +48,7 @@ No stage may be skipped in the release vertical. Artifact Versions, approved Act
 | F08 | PubMed and OpenAlex connectors preserving source identifiers, retrieval time, raw references, and partial failure. |
 | F09 | Persisted Reviewer v1 over pinned evidence, with no execution or write capability. |
 | F10 | Version-pinned Export Pack with selected artifacts, manifest, provenance, and checksums. |
-| F11 | Project Tool Grant and Plan Approval only. There is no monetary governance behavior. |
+| F11 | Project Tool Grant and Plan Approval bound to a complete, canonical `ResearchIntent` only. There is no monetary governance behavior. |
 | F13 | Encrypted application Connector and Broker credentials. Provider OAuth connections are a separate requester-owned domain. |
 
 F12 and other P1/P2 concepts are outside the MVP release gate. P0 is exactly F01-F11 and F13.
@@ -57,6 +58,16 @@ F12 and other P1/P2 concepts are outside the MVP release gate. P0 is exactly F01
 Model execution uses the provider-neutral `AgentRuntimeAdapter`, not a metered platform Provider Adapter. Every connection is a requester-owned `provider_connections` record keyed to `requester_user_id`; it is never an organization default binding. A Run MUST persist an explicit `provider_connection_id` selected by its requester. The server verifies ownership, enabled state, health, model eligibility, and qualification before dispatch.
 
 Only official subscription OAuth is allowed. There is no API-key/BYOK mode, unofficial OAuth or token scraping, subscription-token import, or browser-cookie reuse. OAuth secrets remain in the runtime connection vault and MUST NOT enter messages, model context, execution input, artifacts, logs, exports, or F13 credential APIs.
+
+Live qualification is scoped to an adapter and its pinned runtime, not to a provider account. The runtime identity is the exact adapter ID, runtime version, and executable SHA-256 selected by a deployment-supplied, protected policy file pinned to its exact SHA-256; the validated executable bytes are staged privately and those exact bytes are executed. The checked-in Darwin arm64 entry in `config/provider-runtime-policies.json` is development and test evidence only, not a production admission policy. Production supplies the policy for its exact platform through the deployment configuration boundary. Package replacement, policy-file replacement, version drift, or executable digest drift invalidates current qualification and blocks dispatch. `operator_account_ref` is operator-supplied correlation metadata and MUST NOT be treated as proof of which OAuth account the CLI used or compared with official completion account metadata as an authorization decision. Requester and account ownership remain independently bound by the official OAuth completion and the requester-owned connection record.
+
+The live-capture evaluator sends the exact claim to an external Unix-socket qualification authority. Only that authority holds signing material, and it receives no database credential. The evaluator, application runtime, standalone capture CLI, database adopter, and dispatcher receive public keys only and MUST fail closed when the authority, key, receipt, subject, or runtime binding is unavailable or invalid. Authority, qualification adopter, Run dispatcher, and cleanup worker are separate processes with non-reused deployment credentials. `science_workbench_qualification`, `science_workbench_dispatcher`, and `science_workbench_provider_cleanup` are `NOLOGIN`, `NOINHERIT`, `NOBYPASSRLS` capability roles; separate deployment-managed dedicated `NOINHERIT` LOGINs may assume only their respective role. The cleanup capability has no direct table visibility or mutation privilege. It may execute only four fixed `SECURITY DEFINER` functions for a database-time-clamped, 100-row due-candidate list, exact locked due-work validation, and the two exact completion mutations. Its credential is never resident in the ordinary application or provider runtime. The ordinary application role cannot append a receipt, choose a current receipt, or insert a Run. The adopter owns the exact receipt append and connection compare-and-swap SQL without a caller-supplied database callback; the dispatcher owns exact qualified Run insertion.
+
+Capture publishes the profile first, publishes the signed receipt sidecar second, and requests database adoption third. Each file publication and the adopter transaction are individually atomic, but the ordered sequence is not one atomic triple. Adoption compare-and-swap rechecks the exact requester/connection/revision, connection creation time, runtime-home reference, account, eligible models, selected model, health, adapter, and receipt/runtime binding. Adoption failure may leave profile and receipt sidecars, but they remain non-authoritative and the adopter transaction leaves no database receipt or current pointer. `provider_qualification_receipts` is immutable append-only signed history. A refresh appends a new receipt and advances the connection pointer without rewriting the prior receipt. Every model-backed Run is inserted through the dedicated dispatcher with the exact current receipt ID and digest, connection revision, selected model, profile digest, runtime version, and executable digest; these fields are immutable for the Run. Restart reloads and publicly verifies the stored receipt before it can authorize dispatch. Because immutable history remains verifiable, every historical public key is retained permanently in the active key set or in a permanently available archive verifier; rotation never deletes a key required by a stored receipt.
+
+On a fresh upgrade, current revision 0003 copies every observable prior unsigned signal to `provider_qualification_legacy_evidence` with classification `legacy_unverified`, including a bare `healthy` connection with no qualification metadata or timestamp, then clears its authorization effect and normalizes unsigned `healthy` to `pending`. Remediation revision `0004_provider_security` converges roles, privileges, and guards for a deployment already stamped 0003. If an older 0003 already demoted a bare `healthy` row without preserving evidence, 0004 leaves that row `pending` and history empty rather than fabricating a record; operators must recover the historical fact from a pre-0003 backup under approved remediation or requalify it as new state. Legacy evidence never grants authorization. Downgrade refuses to destroy either signed or legacy qualification history.
+
+Repository tests and local PostgreSQL exercises verify the authority client, public verifier, adoption, dispatch, cleanup, migration, and role code paths; they are not external live qualification. The current external attempt is blocked by the provider subscription usage limit, so no deployment-signed or adopted live qualification is claimed and release remains blocked until a fresh external attempt succeeds.
 
 | Adapter ID | Launch status | Required behavior |
 |---|---|---|
@@ -80,6 +91,10 @@ F11 contains only:
 
 - Project Tool Grants with `allow | ask | deny`, defaulting to `deny`.
 - An immutable, one-use Plan Approval bound to organization, Run, requester, tool, canonical arguments hash, network scope, secret scope, and expiry.
+
+Every executable ActionPlan additionally binds one complete `ResearchIntent`. It records the human-owned question, why the research matters, intended benefit, success criteria, constraints, stop conditions, declared mode (`ai_for_science | copilot | bounded_agentic`), and data origin (`observed | synthetic | mixed`). Text is already boundary-trimmed at the contract boundary; whitespace-only or normalization-colliding list entries are rejected rather than silently rewritten. These fields have no server-authored or preselected scientific defaults. Changing any field changes both the intent digest and plan digest and therefore requires a new approval.
+
+Synthetic or mixed data requires an explicit distinct generator and validator, each identified by its own declared reference. Unlabelled synthetic data, a shared declared reference, or a universal assumed real-to-synthetic ratio fails closed. This declaration does not itself prove organizational or model independence; qualified evaluator identity and validation-result evidence remain a separate release increment. The contract does not infer that synthetic data is acceptable for a domain.
 
 `deny` creates zero Execution side effects. `ask` persists the ActionPlan and waits. Only the requester may approve; an Owner may reject another user's pending request but cannot approve it. Mutation, expiry, replay, or cross-tenant consumption invalidates the approval. There are no budget, cost-cap, spend, cost-approval, monetary event, monetary error, or monetary metric schemas or behaviors.
 
@@ -112,7 +127,7 @@ PubMed and OpenAlex are fixed-host application connectors. Results preserve orig
 
 F13 credentials serve only application-side Connectors and approved Broker operations. They are KMS envelope-encrypted, ciphertext-only at rest, masked in APIs, short-lived in consumer memory, rotatable, revocable, and audited. Sandbox access uses a signed one-use broker handle for one registry operation; plaintext never enters user code, stdout, stderr, Artifact, or model context. Provider OAuth material lives only in requester-owned `provider_connections`; F13 credentials cannot authenticate `AgentRuntimeAdapter`, and provider OAuth material cannot be stored or manipulated through F13 APIs. The acceptance IDs `AC-F13`, `AC-F13-B`, `AC-F13-C`, and `AC-F13-D` are immutable identifiers.
 
-Artifact Version content cannot change after creation. Every version records checksum, size, media type, producing Execution, environment hash, input dependencies, code hash, runtime connection/adapter identity without secrets, and Skill/source hashes. Export selects explicit Version IDs and includes CSV, PNG, Markdown, Ledger, `manifest.json`, checksums, provenance, ActionPlan, and Review status. It rejects traversal, links, normalized collisions, unselected latest-version races, and credentials.
+Artifact Version content cannot change after creation. Every version records checksum, size, media type, producing Execution, environment hash, input dependencies, code hash, runtime connection/adapter identity without secrets, and Skill/source hashes. Export selects explicit Version IDs and includes CSV, PNG, Markdown, Ledger, `manifest.json`, checksums, provenance, ActionPlan, the pinned `ResearchIntent` digest, and Review status. It rejects traversal, links, normalized collisions, unselected latest-version races, and credentials.
 
 ## 8. Data model and public API
 
@@ -156,9 +171,9 @@ The current reproducible development stack is exact: Node `24.17.0`, pnpm `11.12
 
 The exact acceptance IDs are:
 
-`AC-F01`, `AC-F01-B`, `AC-F01-C`, `AC-F01-D`, `AC-F01-E`, `AC-F02`, `AC-F03`, `AC-F04`, `AC-F04-B`, `AC-F05`, `AC-F05-B`, `AC-F06`, `AC-F06-B`, `AC-F07`, `AC-F08`, `AC-F09`, `AC-F10`, `AC-F11`, `AC-F11-B`, `AC-F13`, `AC-F13-B`, `AC-F13-C`, `AC-F13-D`, `AC-SAFE`, `AC-TENANT`, `AC-COMPLIANCE`, `AC-DATA`, and `AC-NFR`.
+`AC-F01`, `AC-F01-B`, `AC-F01-C`, `AC-F01-D`, `AC-F01-E`, `AC-F02`, `AC-F03`, `AC-F04`, `AC-F04-B`, `AC-F05`, `AC-F05-B`, `AC-F06`, `AC-F06-B`, `AC-F07`, `AC-F08`, `AC-F09`, `AC-F10`, `AC-F11`, `AC-F11-B`, `AC-F13`, `AC-F13-B`, `AC-F13-C`, `AC-F13-D`, `AC-PROVIDER-AUTHORITY`, `AC-PROVIDER-RUN-BINDING`, `AC-PROVIDER-MIGRATION`, `AC-SAFE`, `AC-TENANT`, `AC-COMPLIANCE`, `AC-DATA`, and `AC-NFR`.
 
-Their Given/When/Then statements are normative in the ID-keyed manifest. In particular, AC-F11 tests only Tool Grant and Plan Approval; AC-F13-D tests the hard separation between requester OAuth connections and F13 application credentials; AC-SAFE enforces research-only non-clinical use; AC-DATA exercises deletion, restore tombstones, and Compliance Operator hold authority.
+Their Given/When/Then statements are normative in the ID-keyed manifest. In particular, AC-F11 covers every public Run/ActionPlan ResearchIntent boundary and its provenance binding; AC-F11-B covers Tool Grant and approval authority. AC-F13-D tests the hard separation between requester OAuth connections and F13 application credentials. AC-PROVIDER-AUTHORITY covers the external signer and narrow adopter credential boundary; AC-PROVIDER-RUN-BINDING covers durable immutable receipt and Run provenance; AC-PROVIDER-MIGRATION covers non-authoritative legacy preservation. AC-SAFE enforces research-only non-clinical use; AC-DATA exercises deletion, restore tombstones, and Compliance Operator hold authority.
 
 Golden Sessions are exactly GS01-GS10. Enabled runtimes run GS01-GS10 three times; scientific primitives and artifacts are checksum-deterministic while free-form prose is evaluated structurally. GS08 prompt-injection, GS09 secret-redaction, and GS10 tenant-isolation safety checks require 100%. The required `openai_codex` profile must pass; each optional adapter is evaluated independently and remains disabled without a complete profile. Reviewer catch rate is at least 90% and false-positive rate at most 10% on a versioned corpus.
 
@@ -168,6 +183,6 @@ NFR01-NFR10 cover 72-hour reliability, CRUD P95 at most 500 ms, visible provider
 
 A requirement is Done only when its ID maps to implementation, automated tests, raw evidence, evidence checksum, owner, and rollback note; unit/integration/contract/E2E/security/recovery tests pass; API and user documentation agree; redaction is proven; migrations are forward/backward/forward verified; Korean UI and accessibility are observed; and Critical/High security plus P0 product defects are zero.
 
-Release requires 100% of F01-F11/F13 acceptance, AC-SAFE, AC-TENANT, AC-COMPLIANCE, AC-DATA, AC-NFR, SEC01-SEC16, RV01-RV05, and the required runtime gate. The complete dry-lab chain must be observed through HTTP and a production browser and independently verified from the Export Pack. Missing `openai_codex` qualification, any automatic fallback, any provider API-key/BYOK surface, an enabled unqualified optional adapter, a connectable GLM adapter, a Reviewer execution capability, a monetary semantic, an unsupported legal-hold actor, or a false gVisor control claim blocks release.
+Release requires 100% of F01-F11/F13 acceptance, AC-PROVIDER-AUTHORITY, AC-PROVIDER-RUN-BINDING, AC-PROVIDER-MIGRATION, AC-SAFE, AC-TENANT, AC-COMPLIANCE, AC-DATA, AC-NFR, SEC01-SEC16, RV01-RV05, and the required runtime gate. The complete dry-lab chain must be observed through HTTP and a production browser and independently verified from the Export Pack. Missing `openai_codex` qualification, any automatic fallback, any provider API-key/BYOK surface, an enabled unqualified optional adapter, a connectable GLM adapter, a Reviewer execution capability, a monetary semantic, an unsupported legal-hold actor, or a false gVisor control claim blocks release.
 
 Product name, brand, pricing, launch jurisdiction and legal copy, pilot cohort, on-call owner, and deployment authorization remain external owner decisions. This specification authorizes implementation and verification only; it does not authorize deployment or a commit.

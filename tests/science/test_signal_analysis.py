@@ -1,6 +1,12 @@
 import hashlib
+from io import BytesIO
+
+import pytest
+from PIL import Image
+from pydantic import ValidationError
 
 from science_workbench_science import (
+    ImageInput,
     MeasurementUnit,
     OutcomeStatus,
     ProbeInput,
@@ -39,6 +45,28 @@ def test_image_color_and_connected_region_extraction_are_fixed() -> None:
     assert normalized.regions[0].mean_rgb == (200.0, 20.0, 20.0)
 
 
+def test_image_region_threshold_is_required_at_the_input_boundary() -> None:
+    payload = image_input().model_dump()
+    del payload["region_threshold"]
+
+    with pytest.raises(ValidationError, match="region_threshold"):
+        _ = ImageInput.model_validate(payload)
+
+
+def test_explicit_image_threshold_controls_region_segmentation() -> None:
+    source = image_input()
+
+    segmented = normalize_image(
+        source.model_copy(update={"region_threshold": 48.0})
+    )
+    suppressed = normalize_image(
+        source.model_copy(update={"region_threshold": 200.0})
+    )
+
+    assert len(segmented.regions) == 1
+    assert suppressed.regions == ()
+
+
 def test_spectrum_plot_is_byte_deterministic_across_two_runs() -> None:
     normalized = normalize_spectrum(spectrum_input())
     first = render_spectrum_png(normalized)
@@ -46,11 +74,20 @@ def test_spectrum_plot_is_byte_deterministic_across_two_runs() -> None:
 
     assert first == second
     assert first.startswith(b"\x89PNG\r\n\x1a\n")
-    assert len(first) == 4_829
-    assert hashlib.sha256(first).hexdigest() == (
-        "6804068e27501bab92984bbc2f9b12b1ac5d74614ab3745b7e7ee71d650e9963"
-    )
     assert hashlib.sha256(second).hexdigest() == hashlib.sha256(first).hexdigest()
+
+    # Platform-independent content invariants instead of a compressed-byte pin:
+    # freetype (text antialiasing) and zlib (IDAT compression) versions differ
+    # across OSes, so exact byte length/sha only ever held on one platform.
+    # Determinism within the environment is asserted above; the rendered
+    # structure is asserted on decoded pixels.
+    image = Image.open(BytesIO(first))
+    assert image.size == (640, 360)
+    assert image.mode == "RGB"
+    colors = {color for _, color in image.getcolors(maxcolors=100_000) or ()}
+    assert (0x33, 0x41, 0x55) in colors  # axes
+    assert (0x25, 0x63, 0xEB) in colors  # corrected-signal curve
+    assert (0xDC, 0x26, 0x26) in colors  # peak markers
 
 
 def test_unrepresentable_spectrum_arithmetic_is_explicit_invalid_data() -> None:

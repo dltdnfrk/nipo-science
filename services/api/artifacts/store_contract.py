@@ -57,6 +57,14 @@ class ArtifactStore(Protocol):
         """Create one Project-owned Artifact."""
         ...
 
+    def artifact(
+        self,
+        scope: ArtifactScope,
+        artifact_id: UUID,
+    ) -> ArtifactRecord | None:
+        """Read one exact authorized Artifact."""
+        ...
+
     def commit_version(
         self,
         scope: ArtifactScope,
@@ -87,8 +95,8 @@ class ArtifactStore(Protocol):
         self,
         scope: ArtifactScope,
         version_id: UUID,
-    ) -> tuple[StoreOutcome, bytes | None]:
-        """Read content atomically with the active-Project authorization check."""
+    ) -> tuple[StoreOutcome, ArtifactVersion | None, bytes | None]:
+        """Read Version and content atomically with active-Project authorization."""
         ...
 
     def lineage(

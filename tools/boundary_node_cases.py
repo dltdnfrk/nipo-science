@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 OUTSIDE = ".." + "/dry" + "lab/out"
-ABS_OUT = "/Users/hyunjun/Documents/MUNI/shared/out"
+ABS_OUT = "/opt/science-workbench-boundary/out"
 WRITE_FLAGS = "fs.constants.O_WRONLY | fs.constants.O_CREAT"
 
 

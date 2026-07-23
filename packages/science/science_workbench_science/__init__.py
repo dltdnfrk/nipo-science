@@ -31,6 +31,7 @@ from .outputs import (
     SpectrumPeak,
 )
 from .plots import render_spectrum_png
+from .research_intent import DataOrigin, ResearchIntent, ResearchMode
 from .spectrum import normalize_spectrum
 
 __all__ = [
@@ -38,6 +39,7 @@ __all__ = [
     "AnalysisIssue",
     "CalibrationMetadata",
     "ColumnStatistics",
+    "DataOrigin",
     "EvidenceRecord",
     "HypothesisBranch",
     "HypothesisRecord",
@@ -54,6 +56,8 @@ __all__ = [
     "ProbeAnalysis",
     "ProbeInput",
     "ReportInput",
+    "ResearchIntent",
+    "ResearchMode",
     "SpectrumInput",
     "SpectrumPeak",
     "TableInput",

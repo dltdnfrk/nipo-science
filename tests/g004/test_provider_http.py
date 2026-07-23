@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from http.client import HTTPConnection
 from threading import Barrier, Event, Lock
@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Literal, cast, override
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+import pytest
 from pydantic import TypeAdapter
 from services.api.product_app import (
     ProductServer,
@@ -23,20 +24,61 @@ from services.api.product_app import (
     ProviderOAuthBroker,
     run_product_server,
 )
+from services.api.provider_model_id import PROVIDER_MODEL_ID_MAX_CHARACTERS
+from services.api.provider_run_dispatch import (
+    DispatchedProviderRun,
+    ProviderRunDispatcher,
+    ProviderRunDispatchRequest,
+)
 from services.api.provider_runtime import (
+    PROVIDER_RUNTIME_HOME_CLEANUP_POLICY,
+    DispatchAuthorization,
     Health,
     OAuthClaim,
     OfficialOAuthCompletion,
     ProviderCleanupReceipt,
+    ProviderCompletionAdoption,
     ProviderConnection,
+    ProviderConnectionSnapshot,
     ProviderPersistence,
     ProviderPrincipal,
     ProviderRevokeMutation,
     ProviderRuntimeService,
+    ProviderUpsertControl,
 )
 
 _RESPONSE_ADAPTER = TypeAdapter(dict[str, object])
 _LOOPBACK = "127.0.0.1"
+
+
+def _research_intent() -> dict[str, object]:
+    return {
+        "question": "제공자 모델이 보정 데이터 분석을 재현 가능하게 지원하는가?",
+        "rationale": "실행 전에 연구 목적과 모델 선택을 함께 고정한다.",
+        "intended_benefit": "승인된 계획만 제공자 실행으로 전달한다.",
+        "success_criteria": ["동일한 계획 다이제스트가 전달된다."],
+        "constraints": ["비임상 연구 데이터만 사용한다."],
+        "stop_conditions": ["승인이 없거나 만료되면 중단한다."],
+        "research_mode": "bounded_agentic",
+        "data_origin": "observed",
+    }
+
+
+def _provider_run_body(model_id: str = "codex-mini") -> dict[str, object]:
+    return {
+        "execution_mode": "provider_model",
+        "session_id": "018f0d7d-6b17-7a91-8b31-2f7331677c01",
+        "prompt": "보정값을 분석하고 재현성 근거를 남긴다.",
+        "research_intent": _research_intent(),
+        "input": {
+            "filename": "calibrated.csv",
+            "media_type": "text/csv",
+            "content": "sample,value,calibration\na,1.0,cal-1\n",
+        },
+        "connection_id": "018f0d7d-6b17-7a91-8b31-2f7331677d10",
+        "model_id": model_id,
+    }
+
 
 def _clock() -> datetime:
     return datetime(2026, 7, 13, tzinfo=UTC)
@@ -71,6 +113,8 @@ class _Broker(ProviderOAuthBroker):
     def __init__(self) -> None:
         self.authorizations: list[tuple[str, str, str, str]] = []
         self.exchanges: list[tuple[str, str, str]] = []
+        self.adopted_completions: list[str] = []
+        self.abandoned_completions: list[str] = []
         self.health_checks: int = 0
         self._lock: Lock = Lock()
 
@@ -85,7 +129,9 @@ class _Broker(ProviderOAuthBroker):
             self.authorizations.append((adapter_id, state, flow, redirect_uri))
         return ProviderAuthorization(
             authorization_url=f"https://provider.example.test/authorize?state={state}",
-            device_instruction="Use the official device page" if flow == "device" else None,
+            device_instruction="Use the official device page"
+            if flow == "device"
+            else None,
         )
 
     @override
@@ -100,7 +146,23 @@ class _Broker(ProviderOAuthBroker):
             "account-redacted",
             ("codex-mini", "codex-max"),
             {"issuer": "official"},
+            claim.claim_id,
+            claim.expires_at,
         )
+
+    @override
+    def adopt_completion(
+        self, adoption: ProviderCompletionAdoption, connection: ProviderConnection
+    ) -> None:
+        assert connection.connection_id == adoption.connection_id
+        with self._lock:
+            self.adopted_completions.append(adoption.staging_lease_id)
+
+    @override
+    def abandon_completion(self, completion: OfficialOAuthCompletion) -> None:
+        with self._lock:
+            if completion.staging_lease_id not in self.adopted_completions:
+                self.abandoned_completions.append(completion.staging_lease_id)
 
     @override
     def health(self, connection: ProviderConnection) -> Health:
@@ -108,6 +170,19 @@ class _Broker(ProviderOAuthBroker):
         with self._lock:
             self.health_checks += 1
         return "healthy"
+
+
+class _AuthorizationUrlBroker(_Broker):
+    def __init__(self, authorization_url: str) -> None:
+        super().__init__()
+        self.authorization_url: str = authorization_url
+
+    @override
+    def authorize(
+        self, adapter_id: str, state: str, flow: str, redirect_uri: str
+    ) -> ProviderAuthorization:
+        authorization = super().authorize(adapter_id, state, flow, redirect_uri)
+        return replace(authorization, authorization_url=self.authorization_url)
 
 
 class _DiagnosticSink(ProviderDiagnosticSink):
@@ -125,7 +200,38 @@ class _DiagnosticSink(ProviderDiagnosticSink):
 
 class _UnexpectedBrokerFailureError(Exception):
     """A broker failure outside the product's expected exception hierarchy."""
+
+
 _UNEXPECTED_BROKER_FAILURE_MESSAGE = "broker fixture failure"
+
+
+class _RunDispatcher(ProviderRunDispatcher):
+    def __init__(self) -> None:
+        self.calls: list[tuple[ProviderPrincipal, ProviderRunDispatchRequest]] = []
+
+    @override
+    def dispatch(
+        self,
+        principal: ProviderPrincipal,
+        request: ProviderRunDispatchRequest,
+    ) -> DispatchedProviderRun:
+        self.calls.append((principal, request))
+        return DispatchedProviderRun(
+            request.run_id,
+            DispatchAuthorization(
+                "openai_codex",
+                request.connection_id,
+                request.model_id,
+                "018f0d7d-6b17-7a91-8b31-2f7331677d11",
+                "1" * 64,
+                2,
+                "2" * 64,
+                "codex-cli-0.144.1",
+                "3" * 64,
+            ),
+        )
+
+
 
 
 class _UnexpectedFailureBroker(_Broker):
@@ -146,6 +252,21 @@ class _UnexpectedFailureBroker(_Broker):
         assert self.release_authorize.wait(timeout=1)
         raise _UnexpectedBrokerFailureError(_UNEXPECTED_BROKER_FAILURE_MESSAGE)
 
+
+class _FailingAdoptionBroker(_Broker):
+    def __init__(self) -> None:
+        super().__init__()
+        self.fail_adoption: bool = True
+
+    @override
+    def adopt_completion(
+        self, adoption: ProviderCompletionAdoption, connection: ProviderConnection
+    ) -> None:
+        if self.fail_adoption:
+            raise _UnexpectedBrokerFailureError(_UNEXPECTED_BROKER_FAILURE_MESSAGE)
+        super().adopt_completion(adoption, connection)
+
+
 class _Persistence(ProviderPersistence):
     """Thread-safe, observable test-only persistence boundary."""
 
@@ -155,10 +276,20 @@ class _Persistence(ProviderPersistence):
         self.upsert_inputs: list[
             tuple[ProviderPrincipal, ProviderConnection, str, int | None]
         ] = []
-        self.revoke_inputs: list[
-            tuple[ProviderPrincipal, ProviderRevokeMutation]
-        ] = []
+        self.revoke_inputs: list[tuple[ProviderPrincipal, ProviderRevokeMutation]] = []
+        self.discarded_runtime_home_refs: list[str] = []
+        self.superseded_runtime_home_refs: list[str] = []
+        self.snapshots: dict[
+            ProviderPrincipal, dict[str, ProviderConnectionSnapshot]
+        ] = {}
         self._lock: Lock = Lock()
+
+    @override
+    def load(
+        self, principal: ProviderPrincipal
+    ) -> tuple[ProviderConnectionSnapshot, ...]:
+        with self._lock:
+            return tuple(self.snapshots.get(principal, {}).values())
 
     @override
     def upsert(
@@ -166,13 +297,55 @@ class _Persistence(ProviderPersistence):
         principal: ProviderPrincipal,
         connection: ProviderConnection,
         runtime_home_ref: str,
-        expected_revision: int | None,
+        control: ProviderUpsertControl,
     ) -> None:
+        expected_revision = control.expected_revision
+        superseded_runtime_home_ref = control.superseded_runtime_home_ref
         with self._lock:
             self.upsert_count += 1
             self.upsert_inputs.append(
                 (principal, connection, runtime_home_ref, expected_revision)
             )
+            if superseded_runtime_home_ref is not None:
+                current = self.snapshots.get(principal, {}).get(connection.connection_id)
+                if current is None or current.runtime_home_ref != superseded_runtime_home_ref:
+                    raise OSError(_PERSISTENCE_UNAVAILABLE_MESSAGE)
+                self.superseded_runtime_home_refs.append(superseded_runtime_home_ref)
+            self.snapshots.setdefault(principal, {})[connection.connection_id] = (
+                ProviderConnectionSnapshot(
+                    connection,
+                    runtime_home_ref,
+                    completion_adoption=control.completion_adoption,
+                )
+            )
+
+    @override
+    def confirm_completion_adoption(
+        self, principal: ProviderPrincipal, connection_id: str, staging_lease_id: str
+    ) -> None:
+        with self._lock:
+            snapshot = self.snapshots.get(principal, {}).get(connection_id)
+            if (
+                snapshot is None
+                or snapshot.completion_adoption is None
+                or snapshot.completion_adoption.staging_lease_id != staging_lease_id
+            ):
+                raise OSError(_PERSISTENCE_UNAVAILABLE_MESSAGE)
+            self.snapshots[principal][connection_id] = replace(
+                snapshot, completion_adoption=None
+            )
+
+    @override
+    def discard_runtime_home(
+        self, principal: ProviderPrincipal, runtime_home_ref: str
+    ) -> None:
+        with self._lock:
+            if any(
+                snapshot.runtime_home_ref == runtime_home_ref
+                for snapshot in self.snapshots.get(principal, {}).values()
+            ):
+                return
+            self.discarded_runtime_home_refs.append(runtime_home_ref)
 
     @override
     def revoke(
@@ -181,7 +354,7 @@ class _Persistence(ProviderPersistence):
         with self._lock:
             self.revoke_count += 1
             self.revoke_inputs.append((principal, mutation))
-        return ProviderCleanupReceipt(
+        receipt = ProviderCleanupReceipt(
             mutation.proposed.connection_id,
             mutation.proposed.adapter_id,
             mutation.requested_at,
@@ -189,6 +362,15 @@ class _Persistence(ProviderPersistence):
             mutation.requested_at,
             "0" * 64,
         )
+        with self._lock:
+            self.snapshots.setdefault(principal, {})[
+                mutation.proposed.connection_id
+            ] = ProviderConnectionSnapshot(
+                mutation.proposed,
+                f"vault://runtime/destroyed/{mutation.proposed.connection_id}",
+                receipt,
+            )
+        return receipt
 
 
 _PERSISTENCE_UNAVAILABLE_MESSAGE = "persistence unavailable"
@@ -201,10 +383,16 @@ class _FailingPersistence(_Persistence):
         principal: ProviderPrincipal,
         connection: ProviderConnection,
         runtime_home_ref: str,
-        expected_revision: int | None,
+        control: ProviderUpsertControl,
     ) -> None:
-        del principal, connection, runtime_home_ref, expected_revision
+        del (
+            principal,
+            connection,
+            runtime_home_ref,
+            control,
+        )
         raise OSError(_PERSISTENCE_UNAVAILABLE_MESSAGE)
+
 
 class _FailingRevokePersistence(_Persistence):
     @override
@@ -215,13 +403,15 @@ class _FailingRevokePersistence(_Persistence):
         raise OSError(_PERSISTENCE_UNAVAILABLE_MESSAGE)
 
 
-
-
 def _runtime(
     clock: _MutableClock | Callable[[], datetime],
     persistence: _Persistence | None = None,
 ) -> ProviderRuntimeService:
-    return ProviderRuntimeService(clock, persistence=persistence or _Persistence())
+    return ProviderRuntimeService(
+        clock,
+        persistence=persistence or _Persistence(),
+        cleanup_policy=PROVIDER_RUNTIME_HOME_CLEANUP_POLICY,
+    )
 
 
 def _error_code(response: _Response) -> str:
@@ -233,6 +423,7 @@ def _error_code(response: _Response) -> str:
     assert isinstance(error["message"], str)
     assert isinstance(error["request_id"], str)
     return error["code"]
+
 
 def _request(
     server: ProductServer,
@@ -252,7 +443,9 @@ def _request(
     try:
         connection.request(request.method, request.path, body, request_headers)
         response = connection.getresponse()
-        return _Response(response.status, _RESPONSE_ADAPTER.validate_json(response.read()))
+        return _Response(
+            response.status, _RESPONSE_ADAPTER.validate_json(response.read())
+        )
     finally:
         connection.close()
 
@@ -285,8 +478,191 @@ def _same_origin(server: ProductServer, cookie: str, **extra: str) -> dict[str, 
         "Origin": f"http://{_LOOPBACK}:{server.server_port}",
         "Sec-Fetch-Site": "same-origin",
         "Sec-Fetch-Mode": "cors",
+        "X-CSRF-Token": server.fixture_csrf_token(),
         **extra,
     }
+
+
+def test_provider_run_dispatches_only_after_digest_bound_approval() -> None:
+    dispatcher = _RunDispatcher()
+    server = run_product_server(
+        authenticated_fixture=True,
+        clock=_clock,
+        options=ProductServerOptions(
+            provider_run_dispatcher=dispatcher,
+        ),
+    )
+    try:
+        cookie = server.fixture_session_cookie()
+        created = _request(
+            server,
+            _Request("POST", "/api/v1/runs"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload=_provider_run_body(),
+        )
+        run_id = cast("str", created.body["run_id"])
+        plan_digest = cast("str", created.body["plan_digest"])
+        approved = _request(
+            server,
+            _Request("POST", f"/api/v1/runs/{run_id}/approve"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload={"plan_digest": plan_digest},
+        )
+        executed = _request(
+            server,
+            _Request("POST", f"/api/v1/runs/{run_id}/execute"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload={"token": approved.body["token"]},
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert created.status == 201
+    assert created.body["stage"] == "plan"
+    assert cast("dict[str, object]", created.body["provider"])[
+        "dispatch_status"
+    ] == "awaiting_approval"
+    assert approved.status == 202
+    assert executed.status == 202
+    assert executed.body["stage"] == "execute"
+    assert cast("dict[str, object]", executed.body["provider"])[
+        "dispatch_status"
+    ] == "queued"
+    assert len(dispatcher.calls) == 1
+    principal, request = dispatcher.calls[0]
+    assert principal == ProviderPrincipal("user-mineral", "org-mineral")
+    assert request.connection_id == "018f0d7d-6b17-7a91-8b31-2f7331677d10"
+    assert request.model_id == "codex-mini"
+    assert request.run_id == run_id
+    assert request.action_plan_digest == plan_digest
+    assert request.research_intent_sha256 == created.body["research_intent_sha256"]
+
+
+def test_provider_run_execution_fails_closed_without_consuming_approval() -> None:
+    server = run_product_server(authenticated_fixture=True, clock=_clock)
+    try:
+        cookie = server.fixture_session_cookie()
+        created = _request(
+            server,
+            _Request("POST", "/api/v1/runs"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload=_provider_run_body(),
+        )
+        run_id = cast("str", created.body["run_id"])
+        approved = _request(
+            server,
+            _Request("POST", f"/api/v1/runs/{run_id}/approve"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload={"plan_digest": created.body["plan_digest"]},
+        )
+        first = _request(
+            server,
+            _Request("POST", f"/api/v1/runs/{run_id}/execute"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload={"token": approved.body["token"]},
+        )
+        second = _request(
+            server,
+            _Request("POST", f"/api/v1/runs/{run_id}/execute"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload={"token": approved.body["token"]},
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert created.status == 201
+    assert approved.status == 202
+    assert first.status == second.status == 503
+    assert first.body == second.body == {"error": "provider_dispatch_unavailable"}
+
+
+def test_provider_run_accepts_model_id_at_contract_limit() -> None:
+    model_id = "m" * PROVIDER_MODEL_ID_MAX_CHARACTERS
+    dispatcher = _RunDispatcher()
+    server = run_product_server(
+        authenticated_fixture=True,
+        clock=_clock,
+        options=ProductServerOptions(provider_run_dispatcher=dispatcher),
+    )
+    try:
+        cookie = server.fixture_session_cookie()
+        response = _request(
+            server,
+            _Request("POST", "/api/v1/runs"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload=_provider_run_body(model_id),
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.status == 201
+    assert dispatcher.calls == []
+
+
+def test_provider_run_rejects_model_id_above_contract_limit() -> None:
+    dispatcher = _RunDispatcher()
+    server = run_product_server(
+        authenticated_fixture=True,
+        clock=_clock,
+        options=ProductServerOptions(provider_run_dispatcher=dispatcher),
+    )
+    try:
+        cookie = server.fixture_session_cookie()
+        response = _request(
+            server,
+            _Request("POST", "/api/v1/runs"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload=_provider_run_body(
+                "m" * (PROVIDER_MODEL_ID_MAX_CHARACTERS + 1)
+            ),
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.status == 400
+    assert dispatcher.calls == []
+
+
+def test_provider_run_rejects_the_legacy_four_field_shortcut() -> None:
+    dispatcher = _RunDispatcher()
+    server = run_product_server(
+        authenticated_fixture=True,
+        clock=_clock,
+        options=ProductServerOptions(provider_run_dispatcher=dispatcher),
+    )
+    try:
+        cookie = server.fixture_session_cookie()
+        response = _request(
+            server,
+            _Request("POST", "/api/v1/runs"),
+            cookie=cookie,
+            headers=_same_origin(server, cookie),
+            payload={
+                "execution_mode": "provider_model",
+                "session_id": "018f0d7d-6b17-7a91-8b31-2f7331677c01",
+                "connection_id": "018f0d7d-6b17-7a91-8b31-2f7331677d10",
+                "model_id": "codex-mini",
+            },
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+
+    assert response.status == 400
+    assert dispatcher.calls == []
 
 
 def _initiate(
@@ -525,13 +901,19 @@ def test_provider_lifecycle_is_same_origin_idempotent_and_redacted() -> None:
         adapter_items = cast("list[dict[str, object]]", adapters)
         assert set(adapter_items[0]) == {
             "id",
+            "name",
             "required",
             "default",
             "connectable",
             "disabled_reason",
+            "availability_label",
         }
         assert adapter_items[0]["id"] == "openai_codex"
+        assert adapter_items[0]["name"] == "OpenAI Codex"
         assert adapter_items[-1]["id"] == "zai_glm"
+        assert adapter_items[-1]["availability_label"] == (
+            "GLM 비활성화 · unsupported_auth"
+        )
         assert adapter_items[0]["default"] is True
 
         request_body: dict[str, object] = {
@@ -572,13 +954,18 @@ def test_provider_lifecycle_is_same_origin_idempotent_and_redacted() -> None:
             "device_instruction",
         }
         assert "vault" not in json.dumps(initiated.body)
+        assert str(initiated.body["authorization_url"]).startswith(
+            "https://provider.example.test/authorize?state="
+        )
 
         _, connection = _connect(server, cookie)
         completion_replay = _request(
             server,
             _Request("POST", "/api/v1/provider-connections/oauth/complete"),
             cookie=cookie,
-            headers=_same_origin(server, cookie, **{"Idempotency-Key": "replay-complete"}),
+            headers=_same_origin(
+                server, cookie, **{"Idempotency-Key": "replay-complete"}
+            ),
             payload={
                 "state": initiated.body["state"],
                 "flow": "callback",
@@ -595,6 +982,55 @@ def test_provider_lifecycle_is_same_origin_idempotent_and_redacted() -> None:
         server.server_close()
 
 
+@pytest.mark.parametrize(
+    "authorization_url",
+    [
+        "javascript:alert(1)",
+        "https://attacker.test@provider.example.test/authorize",
+        "https://provider.example.test:443/authorize",
+        "https://provider.example.test/authorize/../authorize",
+        "https://provider.example.test.attacker.test/authorize",
+        "https://provider.example.test/authorize#fragment",
+    ],
+)
+def test_provider_authorization_projection_rejects_noncanonical_urls(
+    authorization_url: str,
+) -> None:
+    server = run_product_server(
+        authenticated_fixture=True,
+        clock=_clock,
+        options=ProductServerOptions(
+            provider_runtime=_runtime(_clock),
+            provider_oauth_broker=_AuthorizationUrlBroker(authorization_url),
+            provider_diagnostic_sink=_DiagnosticSink(),
+        ),
+    )
+    try:
+        cookie = server.fixture_session_cookie()
+        response = _request(
+            server,
+            _Request("POST", "/api/v1/provider-connections"),
+            cookie=cookie,
+            headers=_same_origin(
+                server,
+                cookie,
+                **{"Idempotency-Key": f"unsafe-{hash(authorization_url)}"},
+            ),
+            payload={
+                "adapter_id": "openai_codex",
+                "flow": "callback",
+                "redirect_uri": "/settings/providers",
+            },
+        )
+
+        assert response.status == 503
+        assert _error_code(response) == "provider_unavailable"
+        assert authorization_url not in json.dumps(response.body)
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def test_provider_mutations_reject_unauthenticated_and_cross_origin_requests() -> None:
     server = run_product_server(
         clock=_clock,
@@ -602,7 +1038,7 @@ def test_provider_mutations_reject_unauthenticated_and_cross_origin_requests() -
             provider_runtime=_runtime(_clock),
             provider_oauth_broker=_Broker(),
             provider_diagnostic_sink=_DiagnosticSink(),
-        )
+        ),
     )
     try:
         body: dict[str, object] = {
@@ -637,6 +1073,8 @@ def test_provider_mutations_reject_unauthenticated_and_cross_origin_requests() -
     finally:
         server.shutdown()
         server.server_close()
+
+
 def test_provider_dependencies_are_capability_forbidden() -> None:
     server = run_product_server(authenticated_fixture=True, clock=_clock)
     try:
@@ -660,8 +1098,10 @@ def test_provider_dependencies_are_capability_forbidden() -> None:
             },
         )
         assert missing_get.status == missing_mutation.status == 403
-        assert _error_code(missing_get) == _error_code(missing_mutation) == (
-            "capability_disabled"
+        assert (
+            _error_code(missing_get)
+            == _error_code(missing_mutation)
+            == ("capability_disabled")
         )
     finally:
         server.shutdown()
@@ -709,14 +1149,17 @@ def test_provider_revoke_persistence_failure_is_canonical_and_non_mutating() -> 
         server.shutdown()
         server.server_close()
 
+
 def test_provider_adapter_and_persistence_failures_have_documented_statuses() -> None:
-    failing_runtime = _runtime(_clock, _FailingPersistence())
+    failing_persistence = _FailingPersistence()
+    failing_runtime = _runtime(_clock, failing_persistence)
+    broker = _Broker()
     server = run_product_server(
         authenticated_fixture=True,
         clock=_clock,
         options=ProductServerOptions(
             provider_runtime=failing_runtime,
-            provider_oauth_broker=_Broker(),
+            provider_oauth_broker=broker,
             provider_diagnostic_sink=_DiagnosticSink(),
         ),
     )
@@ -764,6 +1207,59 @@ def test_provider_adapter_and_persistence_failures_have_documented_statuses() ->
         assert _error_code(disabled) == "adapter_disabled"
         assert persistence.status == 503
         assert _error_code(persistence) == "provider_unavailable"
+        assert failing_persistence.discarded_runtime_home_refs == []
+        assert len(broker.abandoned_completions) == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_failed_broker_adoption_is_reconciled_from_the_durable_outbox() -> None:
+    broker = _FailingAdoptionBroker()
+    persistence = _Persistence()
+    server = run_product_server(
+        authenticated_fixture=True,
+        clock=_clock,
+        options=ProductServerOptions(
+            provider_runtime=_runtime(_clock, persistence),
+            provider_oauth_broker=broker,
+            provider_diagnostic_sink=_DiagnosticSink(),
+        ),
+    )
+    try:
+        cookie = server.fixture_session_cookie()
+        initiated = _initiate(server, cookie, "callback", "adoption-outbox")
+        failed = _request(
+            server,
+            _Request("POST", "/api/v1/provider-connections/oauth/complete"),
+            cookie=cookie,
+            headers=_same_origin(
+                server, cookie, **{"Idempotency-Key": "adoption-outbox-complete"}
+            ),
+            payload={
+                "state": initiated["state"],
+                "flow": "callback",
+                "redirect_uri": "/settings/providers",
+            },
+        )
+
+        assert failed.status == 503
+        snapshot = next(iter(persistence.snapshots.values()))
+        pending = next(iter(snapshot.values()))
+        assert pending.completion_adoption is not None
+        assert broker.abandoned_completions == []
+
+        broker.fail_adoption = False
+        recovered = _request(
+            server,
+            _Request("GET", "/api/v1/provider-connections"),
+            cookie=cookie,
+        )
+
+        assert recovered.status == 200
+        assert len(broker.adopted_completions) == 1
+        current = next(iter(next(iter(persistence.snapshots.values())).values()))
+        assert current.completion_adoption is None
     finally:
         server.shutdown()
         server.server_close()
@@ -883,9 +1379,7 @@ def _exercise_cancel_single_flight(
     server: ProductServer, cookie: str, runtime: ProviderRuntimeService
 ) -> None:
     state = _initiate(server, cookie, "device", "cancel-single")["state"]
-    alternate_state = _initiate(
-        server, cookie, "device", "cancel-conflict"
-    )["state"]
+    alternate_state = _initiate(server, cookie, "device", "cancel-conflict")["state"]
     assert isinstance(state, str)
     assert isinstance(alternate_state, str)
     request = _Request("POST", "/api/v1/provider-connections/oauth/cancel")
@@ -1091,6 +1585,7 @@ def test_provider_http_same_key_operations_are_single_flight() -> None:
         assert (completed[0].status, completed[1].status) == (200, 200)
         assert completed[0].body == completed[1].body
         assert len(broker.exchanges) == 1
+        assert len(broker.adopted_completions) == 1
     finally:
         server.shutdown()
         server.server_close()
@@ -1187,6 +1682,7 @@ def test_unexpected_broker_exception_terminalizes_idempotency_entry() -> None:
         server.shutdown()
         server.server_close()
 
+
 def test_provider_http_rejects_invalid_oauth_claims_before_exchange() -> None:
     broker = _Broker()
     clock = _MutableClock()
@@ -1259,9 +1755,7 @@ def test_cancelled_oauth_state_is_non_disclosing() -> None:
         initiated = _initiate(server, cookie, "device", "cancel-device")
         state = initiated["state"]
         assert isinstance(state, str)
-        cancel_request = _Request(
-            "POST", "/api/v1/provider-connections/oauth/cancel"
-        )
+        cancel_request = _Request("POST", "/api/v1/provider-connections/oauth/cancel")
 
         unauthenticated = _request(
             server,
@@ -1327,7 +1821,11 @@ def test_cancelled_oauth_state_is_non_disclosing() -> None:
             payload={**completion_payload, "state": "missing-state"},
         )
         assert cancelled_completion.status == missing_completion.status == 404
-        assert _error_code(cancelled_completion) == _error_code(missing_completion) == "not_found"
+        assert (
+            _error_code(cancelled_completion)
+            == _error_code(missing_completion)
+            == "not_found"
+        )
         assert state not in json.dumps(cancelled_completion.body)
         assert "missing-state" not in json.dumps(missing_completion.body)
         assert len(broker.exchanges) == 0

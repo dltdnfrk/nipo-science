@@ -1,7 +1,7 @@
 ============================= test session starts ==============================
-platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- <repo>/.venv/bin/python3
 cachedir: .pytest_cache
-rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+rootdir: <repo>
 configfile: pyproject.toml
 plugins: anyio-4.14.1
 collecting ... collected 8 items
@@ -31,7 +31,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 input = None, capture_output = True, timeout = None, check = True
 popenargs = (['docker', 'compose', '-f', 'compose.yaml', 'config', '--format', ...],)
-kwargs = {'cwd': PosixPath('/Users/hyunjun/Documents/MUNI/science-workbench'), 'text': True, 'stdout': -1, 'stderr': -1}
+kwargs = {'cwd': PosixPath('<repo>'), 'text': True, 'stdout': -1, 'stderr': -1}
 
     def run(*popenargs,
             input=None, capture_output=False, timeout=None, check=False, **kwargs):
@@ -118,7 +118,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 input = None, capture_output = True, timeout = None, check = True
 popenargs = (['docker', 'compose', '-f', 'compose.yaml', 'config', '--format', ...],)
-kwargs = {'cwd': PosixPath('/Users/hyunjun/Documents/MUNI/science-workbench'), 'text': True, 'stdout': -1, 'stderr': -1}
+kwargs = {'cwd': PosixPath('<repo>'), 'text': True, 'stdout': -1, 'stderr': -1}
 
     def run(*popenargs,
             input=None, capture_output=False, timeout=None, check=False, **kwargs):

@@ -1,17 +1,19 @@
 {
   "schemaVersion": 2,
   "goalId": "G005",
-  "revision": "877e5f33a1b8ed54d8446f0e93e124d30a105c7e",
-  "sourceSha256": "1dbcd9431d903c841d26aba3f510f733ab367e95b010fea4aec2ee968bb04f1b",
-  "capturedAtUtc": "2026-07-14T01:43:53.272756Z",
+  "blockerStoryId": "G010",
+  "revision": "328a69f806493db099df8375640017b8a6272360",
+  "sourceSha256": "625769883c0f3f53c4c4466667f11623172209261c359bcaceeda291d05c8ed0",
+  "capturedAtUtc": "2026-07-14T12:54:25.096689Z",
   "status": "human_blocked",
   "attempt": {
     "surface": "live-gke",
     "command": ".venv/bin/python -c 'from tools.platform_policy.deployment_capture import capture_live_gke; capture_live_gke()'",
     "exitCode": 1,
+    "elapsedSeconds": 0.088,
     "errorType": "ValueError",
     "error": "collector command could not be started",
-    "cause": "The fixed root-owned collector cannot be descriptor-executed on this macOS host and the authorized Linux evidence host is not provisioned here."
+    "cause": "The fixed root-owned collector path is unsupported on this macOS host and no authorized Linux evidence host is provisioned."
   },
   "runtime": {
     "kubectlCurrentContext": {
@@ -19,9 +21,18 @@
       "stderr": "error: current-context is not set"
     },
     "dockerDaemon": {
-      "exitCode": 1,
-      "stderr": "failed to connect to the docker API at unix:///Users/hyunjun/.docker/run/docker.sock: connect: no such file or directory"
+      "available": true,
+      "exitCode": 0,
+      "version": "29.3.0"
     }
+  },
+  "localVerification": {
+    "canonicalGatesPassed": 27,
+    "canonicalGatesTotal": 27,
+    "executedCount": 2832,
+    "pythonTestsPassed": 1107,
+    "pythonSubtestsPassed": 218,
+    "playwrightTestsPassed": 30
   },
   "requiredHumanAction": [
     "Provision or select authorized staging and production GKE contexts on a supported Linux evidence host.",

@@ -48,6 +48,7 @@ export const ExportManifestSchema = z
     id: Uuid7Schema,
     source_run_id: Uuid7Schema,
     review_id: Uuid7Schema,
+    research_intent_sha256: Sha256Schema,
     selected_artifact_version_ids: z.array(Uuid7Schema).min(1).readonly(),
     artifact_entries: z.array(ExportArtifactEntrySchema).min(1).readonly(),
     manifest_path: z.literal("manifest.json"),

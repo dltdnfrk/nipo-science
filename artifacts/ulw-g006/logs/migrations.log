@@ -1,2 +1,50 @@
-error: Docker engine is unavailable
-make: *** [prepare-postgres-image] Error 1
+docker.io/library/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15: Pulling from library/postgres
+Digest: sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+Status: Image is up to date for postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+docker.io/library/postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 34 items
+
+tests/connectors/test_registry.py::test_canonical_connector_registrations_are_disabled_by_default[pubmed-https://pubmed.ncbi.nlm.nih.gov] PASSED [  2%]
+tests/connectors/test_registry.py::test_canonical_connector_registrations_are_disabled_by_default[openalex-https://api.openalex.org] PASSED [  5%]
+tests/connectors/test_registry.py::test_noncanonical_connector_registrations_are_rejected[payload0] PASSED [  8%]
+tests/connectors/test_registry.py::test_noncanonical_connector_registrations_are_rejected[payload1] PASSED [ 11%]
+tests/connectors/test_registry.py::test_noncanonical_connector_registrations_are_rejected[payload2] PASSED [ 14%]
+tests/connectors/test_registry.py::test_noncanonical_connector_registrations_are_rejected[payload3] PASSED [ 17%]
+tests/connectors/test_registry.py::test_noncanonical_connector_registrations_are_rejected[payload4] PASSED [ 20%]
+tests/connectors/test_registry.py::test_noncanonical_connector_registrations_are_rejected[payload5] PASSED [ 23%]
+tests/connectors/test_registry.py::test_canonical_connector_can_be_explicitly_enabled PASSED [ 26%]
+services/api/tests/persistence/test_schema_artifacts.py::test_task_8_artifacts_exist_when_database_contract_is_inspected PASSED [ 29%]
+services/api/tests/persistence/test_schema_artifacts.py::test_all_p0_tables_are_declared_when_manifest_is_parsed PASSED [ 32%]
+services/api/tests/persistence/test_schema_artifacts.py::test_migration_builds_schema_and_rls_when_revision_runs PASSED [ 35%]
+services/api/tests/persistence/test_schema_artifacts.py::test_migration_renders_every_authoritative_policy PASSED [ 38%]
+services/api/tests/persistence/test_schema_artifacts.py::test_one_typed_schema_inventory_is_the_authority PASSED [ 41%]
+services/api/tests/persistence/test_schema_artifacts.py::test_monetary_terms_are_absent_when_schema_sources_are_inspected PASSED [ 44%]
+services/api/tests/persistence/test_connector_registry.py::test_database_accepts_only_canonical_connectors_disabled_by_default PASSED [ 47%]
+services/api/tests/persistence/test_connector_registry.py::test_database_rejects_noncanonical_connector_pairs[case0] PASSED [ 50%]
+services/api/tests/persistence/test_connector_registry.py::test_database_rejects_noncanonical_connector_pairs[case1] PASSED [ 52%]
+services/api/tests/persistence/test_connector_registry.py::test_database_rejects_noncanonical_connector_pairs[case2] PASSED [ 55%]
+services/api/tests/persistence/test_connector_registry.py::test_database_rejects_noncanonical_connector_pairs[case3] PASSED [ 58%]
+services/api/tests/persistence/test_principal.py::test_signed_token_is_verified_when_principal_is_current PASSED [ 61%]
+services/api/tests/persistence/test_principal.py::test_token_is_rejected_when_signature_is_tampered PASSED [ 64%]
+services/api/tests/persistence/test_principal.py::test_token_is_rejected_when_principal_is_expired PASSED [ 67%]
+services/api/tests/persistence/test_principal.py::test_adapter_is_disabled_when_environment_is_production PASSED [ 70%]
+services/api/tests/persistence/test_principal.py::test_adapter_is_rejected_when_signing_key_is_too_short PASSED [ 73%]
+services/api/tests/persistence/test_principal.py::test_signed_principal_is_rejected_after_membership_is_removed PASSED [ 76%]
+services/api/tests/persistence/test_upgrade_migrations.py::test_upgrade_from_0001_preserves_legacy_rows_and_converges_to_head PASSED [ 79%]
+services/api/tests/persistence/test_upgrade_migrations.py::test_upgrade_from_0001_fails_closed_for_unpinned_action_plans PASSED [ 82%]
+services/api/tests/persistence/test_migrations.py::test_revision_round_trips_when_database_is_empty PASSED [ 85%]
+services/api/tests/persistence/test_migrations.py::test_session_authentication_boundary_belongs_only_to_head_revision PASSED [ 88%]
+services/api/tests/persistence/test_migrations.py::test_catalog_hash_round_trips_when_head_is_downgraded_to_0001 PASSED [ 91%]
+services/api/tests/persistence/test_migrations.py::test_schema_matches_snapshot_when_revision_is_current PASSED [ 94%]
+services/api/tests/persistence/test_migrations.py::test_upgrade_preserves_seeded_database_content PASSED [ 97%]
+services/api/tests/persistence/test_migrations.py::test_postgresql_version_is_18_4_when_stack_is_running PASSED [100%]
+
+============================= 34 passed in 18.11s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes

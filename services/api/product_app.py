@@ -2,25 +2,37 @@
 
 from __future__ import annotations
 
+import hmac
 import json
 import re
 import secrets
 import traceback as traceback_module
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from html import escape
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from threading import Condition, Lock, Thread
 from typing import TYPE_CHECKING, Final, Protocol, cast, final, override
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from pydantic import TypeAdapter, ValidationError
 
-from services.api.artifacts.runtime import Uuid7Factory
-from services.api.product_dry_lab import ProductDryLabService
+from services.api.artifacts.http import ArtifactHttpResponse, ArtifactHttpService
+from services.api.artifacts.runtime import UUID7_VERSION, Uuid7Factory
+from services.api.bounded_http import BoundedThreadingHttpServer
+from services.api.product_artifacts import ProductArtifactService
+from services.api.product_dry_lab import (
+    DryLabResourceKind,
+    LocalRunCreate,
+    ProductDryLabService,
+    ProviderRunCreate,
+)
 from services.api.product_tenancy import (
     InMemoryTenantRepository,
     ProjectView,
@@ -28,6 +40,7 @@ from services.api.product_tenancy import (
     TenantPrincipal,
     TenantRepository,
 )
+from services.api.provider_model_id import provider_model_id_is_valid
 from services.api.provider_runtime import (
     ERROR_ACCOUNT_UNAVAILABLE,
     ERROR_ADAPTER_DISABLED,
@@ -51,6 +64,7 @@ from services.api.provider_runtime import (
     OAuthInitiation,
     OfficialOAuthCompletion,
     ProviderCleanupReceipt,
+    ProviderCompletionAdoption,
     ProviderConnection,
     ProviderPrincipal,
     ProviderRuntimeError,
@@ -59,6 +73,9 @@ from services.api.provider_runtime import (
 
 if TYPE_CHECKING:
     from types import TracebackType
+
+    from services.api.artifacts.models import IdFactory
+    from services.api.provider_run_dispatch import ProviderRunDispatcher
 
 Clock = Callable[[], datetime]
 type JsonScalar = None | bool | int | float | str
@@ -90,32 +107,93 @@ class _ProviderIdempotencyEntry:
 
 
 _JSON_OBJECT_ADAPTER: Final[TypeAdapter[JsonObject]] = TypeAdapter(JsonObject)
-_INTENT_COOKIE: Final = "product_intent"
-_SESSION_COOKIE: Final = "product_session"
+_DEVELOPMENT_INTENT_COOKIE: Final = "product_intent"
+_DEVELOPMENT_SESSION_COOKIE: Final = "product_session"
+_DEVELOPMENT_CSRF_COOKIE: Final = "product_csrf"
+_PRODUCTION_INTENT_COOKIE: Final = "__Host-swb_intent"
+_PRODUCTION_SESSION_COOKIE: Final = "__Host-swb_session"
+_PRODUCTION_CSRF_COOKIE: Final = "__Host-swb_csrf"
 
 _SECONDS_PER_MINUTE: Final = 60
 _MINUTES_PER_HOUR: Final = 60
-_COOKIE_SEPARATOR: Final = "="
 _MAGIC_LINK_MAX_AGE: Final = 15 * _SECONDS_PER_MINUTE
 _SESSION_MAX_AGE: Final = 24 * _MINUTES_PER_HOUR * _SECONDS_PER_MINUTE
 _MAGIC_LINK_TTL: Final = timedelta(minutes=15)
 _SESSION_IDLE_TTL: Final = timedelta(hours=8)
 _SESSION_ABSOLUTE_TTL: Final = timedelta(hours=24)
+_MAX_JSON_BODY_BYTES: Final = 1_000_000
 _NOT_FOUND: Final = b'{"error":"not_found"}'
 _UNAUTHORIZED: Final = b'{"error":"unauthorized"}'
 _BAD_REQUEST: Final = b'{"error":"invalid_request"}'
+_SERVICE_UNAVAILABLE: Final = b'{"error":"service_unavailable"}'
+_INVALID_RESEARCH_INTENT: Final = b'{"error":"research-intent-invalid"}'
+_PROVIDER_DISPATCH_UNAVAILABLE: Final = b'{"error":"provider_dispatch_unavailable"}'
 _FORBIDDEN: Final = b'{"error":"invalid_origin"}'
+_INVALID_CSRF: Final = b'{"error":"invalid_csrf"}'
+_PAYLOAD_TOO_LARGE: Final = b'{"error":"request_too_large"}'
 _MAGIC_LINK_RESPONSE: Final = b'{"status":"ok"}'
 _PROVIDER_IDEMPOTENCY_TTL: Final = timedelta(minutes=10)
 _PROVIDER_IDEMPOTENCY_CAPACITY: Final = 256
+_PROVIDER_AUTHORIZATION_MAX_LENGTH: Final = 2_048
+_PROVIDER_ADAPTER_ID: Final[re.Pattern[str]] = re.compile(
+    r"^[a-z][a-z0-9_]{0,63}$"
+)
+_PROVIDER_AUTHORIZATION_POLICY_MARKER: Final = (
+    "__PRODUCT_PROVIDER_AUTHORIZATION_POLICY__"
+)
+_FIXTURE_PROVIDER_AUTHORIZATION_ENDPOINTS: Final = (
+    ("openai_codex", "https://provider.example.test/authorize"),
+)
+_UNSAFE_PROVIDER_AUTHORIZATION_MESSAGE: Final = (
+    "provider authorization endpoint is not allowed"
+)
+_PRODUCT_CONTENT_SECURITY_POLICY: Final = (
+    "default-src 'none'; base-uri 'none'; connect-src 'self'; "
+    "frame-ancestors 'none'; frame-src 'self' blob:; "
+    "img-src 'self' blob: data:; object-src 'none'; "
+    "script-src 'self'; style-src 'self'; form-action 'self'"
+)
+_RUN_ACTION_PATH_PARTS: Final = 6
 _PROVIDER_DEPENDENCIES_MESSAGE: Final = (
     "provider_diagnostic_sink is required with provider dependencies"
 )
 _PROVIDER_DIAGNOSTIC_SINK_MESSAGE: Final = "provider diagnostic sink is unavailable"
 _PROVIDER_ERROR_ENVELOPE_MESSAGE: Final = "provider error envelope is invalid"
+_PUBLIC_ORIGIN_MESSAGE: Final = "public_origin must be a canonical HTTP(S) origin"
+_FIXTURE_SESSION_UNAVAILABLE_MESSAGE: Final = "fixture session is unavailable"
+_FIXTURE_SESSION_ALREADY_INITIALIZED_MESSAGE: Final = (
+    "fixture session token is already initialized"
+)
+_FIXTURE_SESSION_REQUIRES_AUTH_MESSAGE: Final = (
+    "fixture_session_token requires authenticated_fixture"
+)
+_DRY_LAB_FIXTURE_REQUIRES_AUTH_MESSAGE: Final = (
+    "ProductDryLabService requires authenticated_fixture"
+)
+_ARTIFACT_PRODUCTION_DEPENDENCIES_MESSAGE: Final = (
+    "durable Artifact HTTP requires an external session authority"
+)
+_EXTERNAL_SESSION_FIXTURE_MESSAGE: Final = (
+    "external session authority cannot be combined with a fixture principal"
+)
+_FIXTURE_PROJECT_ID: Final = "018f0d7d-6b17-7a91-8b31-2f7331677b01"
+_FIXTURE_ARCHIVED_PROJECT_ID: Final = "018f0d7d-6b17-7a91-8b31-2f7331677b02"
+_FIXTURE_FOREIGN_PROJECT_ID: Final = "018f0d7d-6b17-7a91-8b31-2f7331677b03"
+_FIXTURE_SESSION_ID: Final = "018f0d7d-6b17-7a91-8b31-2f7331677c01"
+_FIXTURE_ARCHIVED_SESSION_ID: Final = "018f0d7d-6b17-7a91-8b31-2f7331677c02"
+_FIXTURE_FOREIGN_SESSION_ID: Final = "018f0d7d-6b17-7a91-8b31-2f7331677c03"
 _DYNAMIC_PRODUCT_ROUTE: Final[re.Pattern[str]] = re.compile(
     r"^/(?:runs/[A-Za-z0-9][A-Za-z0-9_-]*(?:/approval)?|"
     r"(?:artifacts|reviews|exports)/[A-Za-z0-9][A-Za-z0-9_-]*)$"
+)
+_DRY_LAB_RESOURCE_API: Final[re.Pattern[str]] = re.compile(
+    r"^/api/v1/(?P<kind>runs|reviews|exports|artifacts)/"
+    r"(?P<resource_id>[A-Za-z0-9][A-Za-z0-9_-]*)$"
+)
+_ARTIFACT_RESOURCE_API: Final[re.Pattern[str]] = re.compile(
+    r"^/api/v1/artifacts/(?P<artifact_id>[A-Za-z0-9][A-Za-z0-9_-]*)"
+    r"(?:/versions(?:/(?P<version_id>[A-Za-z0-9][A-Za-z0-9_-]*)"
+    r"(?:/(?P<operation>download|attachments))?)?)?$"
 )
 
 
@@ -127,6 +205,22 @@ class Principal:
     organization_id: str
     email: str
     organization_name: str
+
+
+class SessionAuthority(Protocol):
+    """Resolve, verify, and revoke opaque authenticated browser sessions."""
+
+    def principal_for(self, token: str) -> Principal | None:
+        """Return an active server-derived principal."""
+        ...
+
+    def csrf_matches(self, token: str, supplied: str) -> bool:
+        """Verify a CSRF capability bound to the opaque session."""
+        ...
+
+    def revoke(self, token: str) -> None:
+        """Revoke the opaque session if it exists."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -179,6 +273,16 @@ class ProviderOAuthBroker(Protocol):
         """Exchange a server-validated official OAuth claim."""
         ...
 
+    def adopt_completion(
+        self, adoption: ProviderCompletionAdoption, connection: ProviderConnection
+    ) -> None:
+        """Durably adopt a staged lease and cancel its broker-owned cleanup TTL."""
+        ...
+
+    def abandon_completion(self, completion: OfficialOAuthCompletion) -> None:
+        """Durably defer or destroy an unadopted lease using broker-owned TTL."""
+        ...
+
     def health(self, connection: ProviderConnection) -> Health:
         """Return runtime health without qualification evidence."""
         ...
@@ -186,32 +290,91 @@ class ProviderOAuthBroker(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class ProductServerOptions:
-    """Bundled dependencies for tenant and provider HTTP surfaces."""
+    """Bundled dependencies for loopback tenant, provider, and fixture surfaces."""
 
     repository: TenantRepository | None = None
+    dry_lab: ProductDryLabService | None = None
     principal: Principal | None = None
     provider_runtime: ProviderRuntimeService | None = None
     provider_oauth_broker: ProviderOAuthBroker | None = None
     provider_diagnostic_sink: ProviderDiagnosticSink | None = None
-
-@dataclass(frozen=True, slots=True)
-class Project:
-    """A tenant-owned project fixture."""
-
-    id: str
-    organization_id: str
-    name: str
-    archived: bool = False
+    provider_authorization_endpoints: tuple[tuple[str, str], ...] = ()
+    public_origin: str | None = None
+    session_authority: SessionAuthority | None = None
+    artifact_http: ArtifactHttpService | None = None
+    provider_run_dispatcher: ProviderRunDispatcher | None = None
+    uuid7_factory: IdFactory | None = None
 
 
 @dataclass(frozen=True, slots=True)
-class ResearchSession:
-    """A tenant-owned research session fixture."""
+class _TrustedOrigin:
+    origin: str
+    authority: str
 
-    id: str
-    organization_id: str
-    project_id: str
-    name: str
+
+def _trusted_origin(value: str) -> _TrustedOrigin:
+    """Validate and split one canonical deployment-controlled public origin."""
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError as error:
+        raise ValueError(_PUBLIC_ORIGIN_MESSAGE) from error
+    hostname = parsed.hostname
+    if (
+        parsed.scheme not in {"http", "https"}
+        or hostname is None
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError(_PUBLIC_ORIGIN_MESSAGE)
+    ascii_hostname = hostname.encode("idna").decode("ascii")
+    host = f"[{ascii_hostname}]" if ":" in ascii_hostname else ascii_hostname
+    default_port = 80 if parsed.scheme == "http" else 443
+    authority = host if port in {None, default_port} else f"{host}:{port}"
+    origin = f"{parsed.scheme}://{authority}"
+    if value != origin:
+        raise ValueError(_PUBLIC_ORIGIN_MESSAGE)
+    return _TrustedOrigin(origin, authority)
+
+
+def _trusted_provider_authorization_endpoints(
+    entries: tuple[tuple[str, str], ...],
+) -> dict[str, str]:
+    endpoints: dict[str, str] = {}
+    for adapter_id, endpoint in entries:
+        try:
+            parsed = urlsplit(endpoint)
+            port = parsed.port
+        except ValueError as error:
+            raise ValueError(_UNSAFE_PROVIDER_AUTHORIZATION_MESSAGE) from error
+        if (
+            _PROVIDER_ADAPTER_ID.fullmatch(adapter_id) is None
+            or adapter_id in endpoints
+            or len(endpoint) > _PROVIDER_AUTHORIZATION_MAX_LENGTH
+            or parsed.scheme != "https"
+            or parsed.hostname is None
+            or parsed.username is not None
+            or parsed.password is not None
+            or port is not None
+            or not parsed.path.startswith("/")
+            or parsed.query
+            or parsed.fragment
+            or parsed.geturl() != endpoint
+        ):
+            raise ValueError(_UNSAFE_PROVIDER_AUTHORIZATION_MESSAGE)
+        endpoints[adapter_id] = endpoint
+    return endpoints
+
+
+def _bound_loopback_origin(server: BoundedThreadingHttpServer) -> _TrustedOrigin:
+    """Derive the local default from the bound socket, never request headers."""
+    host = cast("str", server.server_address[0])
+    port = server.server_address[1]
+    authority = f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+    return _TrustedOrigin(f"http://{authority}", authority)
 
 
 @dataclass(slots=True)
@@ -249,44 +412,15 @@ class ProductStore:
         self._lock = Lock()
         self._magic_links: dict[str, MagicLink] = {}
         self._sessions: dict[str, Session] = {}
+        self._csrf_key = secrets.token_bytes(32)
         self._delivery_token: str | None = None
-        self.projects: dict[str, Project] = {
-            "project-demo": Project(
-                "project-demo",
-                "org-mineral",
-                "스펙트럼 보정 실험",
-            ),
-            "project-archived": Project(
-                "project-archived",
-                "org-mineral",
-                "보관된 광물 비교",
-                archived=True,
-            ),
-            "project-foreign": Project(
-                "project-foreign",
-                "org-foreign",
-                "Foreign project",
-            ),
-        }
-        self.research_sessions: dict[str, ResearchSession] = {
-            "session-demo": ResearchSession(
-                "session-demo", "org-mineral", "project-demo", "보정 세션"
-            ),
-            "session-archived": ResearchSession(
-                "session-archived", "org-mineral", "project-archived", "보관 세션"
-            ),
-            "session-foreign": ResearchSession(
-                "session-foreign", "org-foreign", "project-foreign", "Foreign session"
-            ),
-        }
-        self.fixture_principal = fixture_principal or Principal(
-            "user-mineral", "org-mineral", "researcher@example.test", "한국 광물 연구실"
-        )
+        self.fixture_principal = fixture_principal
 
     def issue_magic_link(self, email: str) -> tuple[str | None, str]:
         """Create a test link only for the fixture principal and always issue intent."""
         intent = secrets.token_urlsafe(32)
-        if email != self.fixture_principal.email:
+        principal = self.fixture_principal
+        if principal is None or email != principal.email:
             return None, intent
 
         token = secrets.token_urlsafe(32)
@@ -295,7 +429,7 @@ class ProductStore:
             self._magic_links[digest] = MagicLink(
                 digest,
                 _digest(intent),
-                self.fixture_principal,
+                principal,
                 self._clock() + _MAGIC_LINK_TTL,
             )
         return token, intent
@@ -339,32 +473,53 @@ class ProductStore:
             )
             return session_token
 
-    def fixture_session_cookie(self) -> str:
-        """Create an authenticated test cookie without exposing an HTTP bypass."""
+    def fixture_session_token(self, token: str | None = None) -> str:
+        """Create an authenticated test session without exposing an HTTP bypass."""
+        principal = self.fixture_principal
+        if principal is None:
+            raise RuntimeError(_FIXTURE_SESSION_UNAVAILABLE_MESSAGE)
         now = self._clock()
-        token = secrets.token_urlsafe(32)
+        token = token or secrets.token_urlsafe(32)
         digest = _digest(token)
         with self._lock:
             self._sessions[digest] = Session(
                 digest,
-                self.fixture_principal,
+                principal,
                 now,
                 now,
                 now + _SESSION_ABSOLUTE_TTL,
             )
-        return f"{_SESSION_COOKIE}={token}"
+        return token
+
+    def csrf_token_for(self, token: str) -> str | None:
+        """Return the CSRF capability only while its browser session is valid."""
+        now = self._clock()
+        with self._lock:
+            session = self._sessions.get(_digest(token))
+            if not self._session_is_valid(session, now):
+                return None
+        return hmac.digest(self._csrf_key, token.encode("utf-8"), "sha256").hex()
+
+    def csrf_matches(self, token: str, supplied: str) -> bool:
+        """Verify one unguessable CSRF capability bound to the opaque session."""
+        expected = self.csrf_token_for(token)
+        return expected is not None and hmac.compare_digest(expected, supplied)
+
+    @staticmethod
+    def _session_is_valid(session: Session | None, now: datetime) -> bool:
+        return bool(
+            session is not None
+            and not session.revoked
+            and session.absolute_expires_at > now
+            and session.last_seen_at + _SESSION_IDLE_TTL > now
+        )
 
     def principal_for(self, token: str) -> Principal | None:
         """Resolve a currently valid session and update its idle timestamp."""
         now = self._clock()
         with self._lock:
             session = self._sessions.get(_digest(token))
-            if (
-                session is None
-                or session.revoked
-                or session.absolute_expires_at <= now
-                or session.last_seen_at + _SESSION_IDLE_TTL <= now
-            ):
+            if session is None or not self._session_is_valid(session, now):
                 return None
             session.last_seen_at = now
             return session.principal
@@ -379,21 +534,6 @@ class ProductStore:
 
 def _digest(value: str) -> str:
     return sha256(value.encode("utf-8")).hexdigest()
-
-
-def _cookies(header: str | None) -> dict[str, str]:
-    """Parse well-formed cookie pairs while ignoring malformed segments."""
-    if not header:
-        return {}
-
-    cookies: dict[str, str] = {}
-    for part in header.split(";"):
-        name, separator, value = part.strip().partition(_COOKIE_SEPARATOR)
-        if name and separator:
-            cookies[name] = value
-    return cookies
-
-
 
 
 def _utc_now() -> datetime:
@@ -430,7 +570,7 @@ def _provider_error_status(code: str) -> HTTPStatus:
     return HTTPStatus.SERVICE_UNAVAILABLE
 
 
-class ProductServer(ThreadingHTTPServer):
+class ProductServer(BoundedThreadingHttpServer):
     """HTTP server carrying auth state and an injected tenant repository."""
 
     def __init__(
@@ -440,46 +580,65 @@ class ProductServer(ThreadingHTTPServer):
         options: ProductServerOptions | None = None,
     ) -> None:
         """Initialize the loopback server with fixture auth and injected boundaries."""
-        provider_configured = (
-            options is not None
-            and (
-                options.provider_runtime is not None
-                or options.provider_oauth_broker is not None
-            )
-        )
-        if (
-            provider_configured
-            and options is not None
-            and options.provider_diagnostic_sink is None
-        ):
-            raise ValueError(_PROVIDER_DEPENDENCIES_MESSAGE)
-        super().__init__(address, ProductRequestHandler)
         options = options or ProductServerOptions()
+        configured_origin = (
+            _trusted_origin(options.public_origin)
+            if options.public_origin is not None
+            else None
+        )
+        provider_configured = (
+            options.provider_runtime is not None
+            or options.provider_oauth_broker is not None
+        )
+        if provider_configured and options.provider_diagnostic_sink is None:
+            raise ValueError(_PROVIDER_DEPENDENCIES_MESSAGE)
+        if options.session_authority is not None and options.principal is not None:
+            raise ValueError(_EXTERNAL_SESSION_FIXTURE_MESSAGE)
+        if options.artifact_http is not None and options.session_authority is None:
+            raise ValueError(_ARTIFACT_PRODUCTION_DEPENDENCIES_MESSAGE)
+        super().__init__(address, ProductRequestHandler)
+        trusted_origin = configured_origin or _bound_loopback_origin(self)
         self.daemon_threads: bool = True
+        self.public_origin: str = trusted_origin.origin
+        self.public_authority: str = trusted_origin.authority
+        self.secure_cookies: bool = trusted_origin.origin.startswith("https://")
+        self.intent_cookie_name: str = (
+            _PRODUCTION_INTENT_COOKIE
+            if self.secure_cookies
+            else _DEVELOPMENT_INTENT_COOKIE
+        )
+        self.session_cookie_name: str = (
+            _PRODUCTION_SESSION_COOKIE
+            if self.secure_cookies
+            else _DEVELOPMENT_SESSION_COOKIE
+        )
+        self.csrf_cookie_name: str = (
+            _PRODUCTION_CSRF_COOKIE
+            if self.secure_cookies
+            else _DEVELOPMENT_CSRF_COOKIE
+        )
         self.store: ProductStore = ProductStore(clock, options.principal)
-        repository = options.repository
-        if repository is None:
-            repository = InMemoryTenantRepository(
-                tuple(
-                    (
-                        project.organization_id,
-                        ProjectView(project.id, project.name, project.archived),
-                    )
-                    for project in self.store.projects.values()
-                ),
-                tuple(
-                    (
-                        session.organization_id,
-                        SessionView(session.id, session.project_id, session.name),
-                    )
-                    for session in self.store.research_sessions.values()
-                ),
-            )
-        self.repository: TenantRepository = repository
+        self.session_authority: SessionAuthority = (
+            options.session_authority or self.store
+        )
+        self.local_auth_enabled: bool = options.session_authority is None
+        self.artifact_http: ArtifactHttpService | None = options.artifact_http
+        self.repository: TenantRepository = (
+            options.repository or InMemoryTenantRepository((), ())
+        )
         self.clock: Clock = clock
+        self.uuid7_factory: IdFactory = options.uuid7_factory or Uuid7Factory()
         self.provider_runtime: ProviderRuntimeService | None = options.provider_runtime
+        self.provider_run_dispatcher: ProviderRunDispatcher | None = (
+            options.provider_run_dispatcher
+        )
         self.provider_oauth_broker: ProviderOAuthBroker | None = (
             options.provider_oauth_broker
+        )
+        self.provider_authorization_endpoints: dict[str, str] = (
+            _trusted_provider_authorization_endpoints(
+                options.provider_authorization_endpoints
+            )
         )
         self.provider_diagnostic_sink: ProviderDiagnosticSink | None = (
             options.provider_diagnostic_sink
@@ -491,14 +650,33 @@ class ProductServer(ThreadingHTTPServer):
         self._provider_idempotency_ready: Condition = Condition(
             self._provider_idempotency_lock
         )
-        self._fixture_session_cookie: str | None = None
-        self.dry_lab: ProductDryLabService = ProductDryLabService()
+        self._fixture_session_token: str | None = None
+        self.dry_lab: ProductDryLabService | None = options.dry_lab
 
-    def fixture_session_cookie(self) -> str:
+    def fixture_session_cookie(self, token: str | None = None) -> str:
         """Return the stable non-production authenticated fixture cookie value."""
-        if self._fixture_session_cookie is None:
-            self._fixture_session_cookie = self.store.fixture_session_cookie()
-        return self._fixture_session_cookie
+        session_token = self._ensure_fixture_session_token(token)
+        csrf_token = self.store.csrf_token_for(session_token)
+        if csrf_token is None:
+            raise RuntimeError(_FIXTURE_SESSION_UNAVAILABLE_MESSAGE)
+        return (
+            f"{self.session_cookie_name}={session_token}; "
+            f"{self.csrf_cookie_name}={csrf_token}"
+        )
+
+    def fixture_csrf_token(self) -> str:
+        """Return the CSRF capability paired with the authenticated fixture."""
+        csrf_token = self.store.csrf_token_for(self._ensure_fixture_session_token())
+        if csrf_token is None:
+            raise RuntimeError(_FIXTURE_SESSION_UNAVAILABLE_MESSAGE)
+        return csrf_token
+
+    def _ensure_fixture_session_token(self, requested: str | None = None) -> str:
+        if self._fixture_session_token is None:
+            self._fixture_session_token = self.store.fixture_session_token(requested)
+        elif requested is not None and requested != self._fixture_session_token:
+            raise ValueError(_FIXTURE_SESSION_ALREADY_INITIALIZED_MESSAGE)
+        return self._fixture_session_token
 
     def _make_idempotency_capacity(self, now: datetime) -> bool:
         """Prune expired entries and evict one completed entry when full."""
@@ -646,16 +824,18 @@ class ProductServer(ThreadingHTTPServer):
             return status, body
         return failure_guard.response()
 
-    @staticmethod
-    def provider_error(status: HTTPStatus, code: str) -> tuple[HTTPStatus, JsonObject]:
+    def provider_error(
+        self, status: HTTPStatus, code: str
+    ) -> tuple[HTTPStatus, JsonObject]:
         """Return the OpenAPI ErrorEnvelope for provider endpoints."""
         return status, {
             "error": {
                 "code": code,
                 "message": code.replace("_", " "),
-                "request_id": str(Uuid7Factory().new_uuid7()),
+                "request_id": str(self.uuid7_factory.new_uuid7()),
             }
         }
+
 
 @final
 class _ProviderIdempotencyFailureGuard:
@@ -671,6 +851,7 @@ class _ProviderIdempotencyFailureGuard:
         self._entry = entry
         self._request = request
         self._response: tuple[HTTPStatus, JsonObject] | None = None
+
     def __enter__(self) -> _ProviderIdempotencyFailureGuard:
         return self
 
@@ -748,6 +929,25 @@ class _ProviderDiagnosticWriteGuard:
         return True
 
 
+
+def _parse_dry_lab_run_action(path: str) -> tuple[str, str] | None:
+    parts = path.split("/")
+    if len(parts) != _RUN_ACTION_PATH_PARTS or parts[1:4] != ["api", "v1", "runs"]:
+        return None
+    run_id, action = parts[4:]
+    if not run_id or action not in {
+        "approve",
+        "reject",
+        "cancel",
+        "execute",
+        "review",
+        "export",
+        "cleanup",
+    }:
+        return None
+    return run_id, action
+
+
 class ProductRequestHandler(BaseHTTPRequestHandler):
     """Minimal same-origin HTTP handler with redacted request logging."""
 
@@ -774,50 +974,122 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path.startswith("/api/v1/provider-connections"):
             self._provider_mutation(path)
-        elif path == "/api/v1/auth/magic-link":
-            self._magic_link()
-        elif path == "/api/v1/auth/exchange":
-            self._exchange()
-        elif path == "/api/v1/auth/logout":
-            self._logout()
-        elif path.startswith("/api/v1/dry-lab/"):
+        elif self._local_auth_mutation(path):
+            return
+        elif path == "/api/v1/runs":
+            self._create_local_run()
+        elif path.startswith("/api/v1/runs/"):
             self._dry_lab_mutation(path)
-        elif path.startswith("/api/v1/sessions/") and path.endswith("/runs"):
-            self._start_run(path)
+        elif path == "/api/v1/artifacts":
+            self._artifact_create()
+        elif path.startswith("/api/v1/artifacts/"):
+            self._artifact_mutation(path, attach=True)
         else:
             self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+
+    def _local_auth_mutation(self, path: str) -> bool:
+        if path == "/api/v1/auth/logout":
+            self._logout()
+            return True
+        operation = {
+            "/api/v1/auth/magic-link": self._magic_link,
+            "/api/v1/auth/exchange": self._exchange,
+        }.get(path)
+        if operation is None:
+            return False
+        if self.product_server.local_auth_enabled:
+            operation()
+        else:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+        return True
 
     def do_DELETE(self) -> None:
         """Revoke a provider connection through the same-origin mutation boundary."""
         path = urlsplit(self.path).path
         if path.startswith("/api/v1/provider-connections/"):
             self._provider_mutation(path)
+        elif path.startswith("/api/v1/artifacts/"):
+            self._artifact_mutation(path, attach=False)
         else:
             self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
 
-    def _json(self) -> JsonObject | None:
-        """Read and validate a JSON request object."""
-        length = self.headers.get("Content-Length", "0")
+    def _json(self) -> tuple[JsonObject | None, HTTPStatus]:
+        """Read one unambiguously framed JSON object within the request budget."""
+        lengths = self.headers.get_all("Content-Length") or []
+        transfer_encodings = self.headers.get_all("Transfer-Encoding") or []
+        if len(lengths) != 1 or transfer_encodings:
+            return None, HTTPStatus.BAD_REQUEST
         try:
-            body = self.rfile.read(int(length))
-            return _JSON_OBJECT_ADAPTER.validate_json(body)
-        except (ValueError, ValidationError):
-            return None
+            length = int(lengths[0])
+        except ValueError:
+            return None, HTTPStatus.BAD_REQUEST
+        if length > _MAX_JSON_BODY_BYTES:
+            return None, HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+        if length <= 0 or str(length) != lengths[0]:
+            return None, HTTPStatus.BAD_REQUEST
+        try:
+            body = self.rfile.read(length)
+            data = _JSON_OBJECT_ADAPTER.validate_json(body)
+            return (
+                (data, HTTPStatus.OK)
+                if len(body) == length
+                else (None, HTTPStatus.BAD_REQUEST)
+            )
+        except (OSError, ValidationError):
+            return None, HTTPStatus.BAD_REQUEST
 
     def _same_origin_mutation(self) -> bool:
-        origin = self.headers.get("Origin")
-        expected = f"http://{self.headers.get('Host', '')}"
+        origins = self.headers.get_all("Origin") or []
+        hosts = self.headers.get_all("Host") or []
+        fetch_sites = self.headers.get_all("Sec-Fetch-Site") or []
+        fetch_modes = self.headers.get_all("Sec-Fetch-Mode") or []
         return (
-            origin == expected
-            and self.headers.get("Sec-Fetch-Site") == "same-origin"
-            and self.headers.get("Sec-Fetch-Mode") in {"cors", "same-origin"}
+            origins == [self.product_server.public_origin]
+            and hosts == [self.product_server.public_authority]
+            and fetch_sites == ["same-origin"]
+            and len(fetch_modes) == 1
+            and fetch_modes[0] in {"cors", "same-origin"}
         )
+
+    def _cookie_value(self, name: str) -> str | None:
+        """Resolve one unambiguous cookie value from one Cookie header."""
+        headers = self.headers.get_all("Cookie") or []
+        if len(headers) != 1:
+            return None
+        matches = [
+            value
+            for part in headers[0].split(";")
+            for cookie_name, separator, value in (part.strip().partition("="),)
+            if cookie_name == name and separator
+        ]
+        return matches[0] if len(matches) == 1 else None
+
+    def _csrf_matches(self, token: str) -> bool:
+        csrf_headers = self.headers.get_all("X-CSRF-Token") or []
+        return (
+            len(csrf_headers) == 1
+            and self.product_server.session_authority.csrf_matches(
+                token,
+                csrf_headers[0],
+            )
+        )
+
+    def _send_body_error(self, status: HTTPStatus) -> None:
+        body = (
+            _PAYLOAD_TOO_LARGE
+            if status == HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+            else _BAD_REQUEST
+        )
+        self._send(status, body)
 
     def _magic_link(self) -> None:
         if not self._same_origin_mutation():
             self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
             return
-        data = self._json()
+        data, status = self._json()
+        if data is None:
+            self._send_body_error(status)
+            return
         email = data.get("email") if data else None
         if not isinstance(email, str):
             self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
@@ -828,9 +1100,10 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             _MAGIC_LINK_RESPONSE,
             {
                 "Set-Cookie": _cookie(
-                    _INTENT_COOKIE,
+                    self.product_server.intent_cookie_name,
                     intent,
                     max_age=_MAGIC_LINK_MAX_AGE,
+                    secure=self.product_server.secure_cookies,
                 )
             },
         )
@@ -839,15 +1112,23 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         if not self._same_origin_mutation():
             self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
             return
-        data = self._json()
+        data, status = self._json()
+        if data is None:
+            self._send_body_error(status)
+            return
         token = data.get("token") if data else None
-        intent = _cookies(self.headers.get("Cookie")).get(_INTENT_COOKIE, "")
+        intent = self._cookie_value(self.product_server.intent_cookie_name) or ""
         if not isinstance(token, str):
             self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
             return
         session_token = self.product_server.store.exchange(token, intent)
         if session_token is None:
             self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        csrf_token = self.product_server.store.csrf_token_for(session_token)
+        if csrf_token is None:
+            self.product_server.store.revoke(session_token)
+            self._send(HTTPStatus.SERVICE_UNAVAILABLE, _SERVICE_UNAVAILABLE)
             return
         self._send(
             HTTPStatus.OK,
@@ -856,12 +1137,29 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
                 (
                     "Set-Cookie",
                     _cookie(
-                        _SESSION_COOKIE,
+                        self.product_server.session_cookie_name,
                         session_token,
                         max_age=_SESSION_MAX_AGE,
+                        secure=self.product_server.secure_cookies,
                     ),
                 ),
-                ("Set-Cookie", _expired_cookie(_INTENT_COOKIE)),
+                (
+                    "Set-Cookie",
+                    _cookie(
+                        self.product_server.csrf_cookie_name,
+                        csrf_token,
+                        max_age=_SESSION_MAX_AGE,
+                        secure=self.product_server.secure_cookies,
+                        http_only=False,
+                    ),
+                ),
+                (
+                    "Set-Cookie",
+                    _expired_cookie(
+                        self.product_server.intent_cookie_name,
+                        secure=self.product_server.secure_cookies,
+                    ),
+                ),
             ),
         )
 
@@ -869,29 +1167,66 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         if not self._same_origin_mutation():
             self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
             return
-        token = _cookies(self.headers.get("Cookie")).get(_SESSION_COOKIE)
+        token = self._session_token()
+        if token and not self._csrf_matches(token):
+            self._send(HTTPStatus.FORBIDDEN, _INVALID_CSRF)
+            return
         if token:
-            self.product_server.dry_lab.drop_session(_digest(token))
-            self.product_server.store.revoke(token)
+            dry_lab = self.product_server.dry_lab
+            if dry_lab is not None:
+                dry_lab.drop_session(_digest(token))
+            self.product_server.session_authority.revoke(token)
         self._send(
             HTTPStatus.NO_CONTENT,
             b"",
-            {"Set-Cookie": _expired_cookie(_SESSION_COOKIE)},
+            (
+                (
+                    "Set-Cookie",
+                    _expired_cookie(
+                        self.product_server.session_cookie_name,
+                        secure=self.product_server.secure_cookies,
+                    ),
+                ),
+                (
+                    "Set-Cookie",
+                    _expired_cookie(
+                        self.product_server.csrf_cookie_name,
+                        secure=self.product_server.secure_cookies,
+                        http_only=False,
+                    ),
+                ),
+            ),
         )
 
     def _session_token(self) -> str | None:
         """Return the opaque session cookie without exposing it to adapters."""
-        return _cookies(self.headers.get("Cookie")).get(_SESSION_COOKIE)
+        return self._cookie_value(self.product_server.session_cookie_name)
 
     def _principal(self) -> Principal | None:
         token = self._session_token()
-        return self.product_server.store.principal_for(token) if token else None
+        return (
+            self.product_server.session_authority.principal_for(token)
+            if token
+            else None
+        )
 
     def _tenant_principal(self, principal: Principal) -> TenantPrincipal:
         """Adapt server-derived auth state to the repository's RLS identity."""
         return TenantPrincipal(principal.user_id, principal.organization_id)
 
+    def _dry_lab_service(self) -> ProductDryLabService | None:
+        service = self.product_server.dry_lab
+        if service is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+        return service
+
     def _get_api(self, path: str) -> None:
+        if self.product_server.artifact_http is not None and (
+            (self.headers.get_all("Host") or [])
+            != [self.product_server.public_authority]
+        ):
+            self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
+            return
         principal = self._principal()
         if principal is None:
             if path.startswith("/api/v1/provider-connections"):
@@ -910,8 +1245,14 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             self._api_workspace(principal)
         elif path == "/api/v1/artifacts":
             self._api_artifacts()
-        elif path == "/api/v1/dry-lab/state":
-            self._dry_lab_state()
+        elif path.startswith("/api/v1/artifacts/"):
+            artifact_http = self.product_server.artifact_http
+            if artifact_http is None:
+                self._artifact_get(path)
+            else:
+                self._durable_artifact_get(artifact_http, path, principal)
+        elif _DRY_LAB_RESOURCE_API.fullmatch(path):
+            self._dry_lab_resource(path)
         elif path.startswith("/api/v1/projects/"):
             self._api_project(path, principal)
         elif path.startswith("/api/v1/sessions/"):
@@ -927,6 +1268,15 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             return
         provider_principal = self._provider_principal(principal)
         try:
+            for adoption, connection in runtime.pending_completion_adoptions(
+                provider_principal
+            ):
+                broker.adopt_completion(adoption, connection)
+                runtime.confirm_completion_adoption(
+                    provider_principal,
+                    connection.connection_id,
+                    adoption.staging_lease_id,
+                )
             if path == "/api/v1/provider-connections/registry":
                 self._send_json(
                     HTTPStatus.OK,
@@ -934,6 +1284,8 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
                         "adapters": [
                             {
                                 "id": adapter.adapter_id,
+                                "name": adapter.display_name,
+                                "availability_label": adapter.availability_label,
                                 "required": adapter.required,
                                 "default": adapter.launch_default,
                                 "connectable": adapter.connectable,
@@ -980,20 +1332,34 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         dependencies = self._authenticated_provider_dependencies()
         if dependencies is None:
             return
+        token = self._session_token()
+        if token is None or not self._csrf_matches(token):
+            self._send_provider_error(HTTPStatus.FORBIDDEN, "invalid_csrf")
+            return
         if self.command == "POST" and not self.headers.get("Idempotency-Key"):
             self._send_provider_error(HTTPStatus.BAD_REQUEST, "invalid_request")
             return
         data = self._provider_mutation_body(path)
         if data is None:
             return
+        provider_principal, runtime, broker = dependencies
         try:
+            for adoption, connection in runtime.pending_completion_adoptions(
+                provider_principal
+            ):
+                broker.adopt_completion(adoption, connection)
+                runtime.confirm_completion_adoption(
+                    provider_principal,
+                    connection.connection_id,
+                    adoption.staging_lease_id,
+                )
             self._dispatch_provider_mutation(path, *dependencies, data)
         except ConnectionNotFoundError:
             self._send_provider_error(HTTPStatus.NOT_FOUND, "not_found")
         except ProviderRuntimeError as error:
             self._send_provider_error(_provider_error_status(error.code), error.code)
         except (OSError, RuntimeError, TimeoutError, ValueError) as error:
-            self._send_unexpected_provider_error(path, dependencies[0], error)
+            self._send_unexpected_provider_error(path, provider_principal, error)
 
     def _authenticated_provider_dependencies(
         self,
@@ -1014,14 +1380,24 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         """Parse strict provider POST bodies, allowing only documented empty bodies."""
         if self.command != "POST":
             return {}
-        if self.headers.get("Content-Length", "0") == "0":
+        lengths = self.headers.get_all("Content-Length") or []
+        transfer_encodings = self.headers.get_all("Transfer-Encoding") or []
+        if len(lengths) != 1 or transfer_encodings:
+            self._send_provider_error(HTTPStatus.BAD_REQUEST, "invalid_request")
+            return None
+        if lengths == ["0"]:
             if path.endswith(("/health", "/reauth")):
                 return {}
             self._send_provider_error(HTTPStatus.BAD_REQUEST, "invalid_request")
             return None
-        data = self._json()
+        data, status = self._json()
         if data is None:
-            self._send_provider_error(HTTPStatus.BAD_REQUEST, "invalid_request")
+            code = (
+                "request_too_large"
+                if status == HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+                else "invalid_request"
+            )
+            self._send_provider_error(status, code)
         return data
 
     def _dispatch_provider_mutation(
@@ -1117,7 +1493,10 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
                 adapter_id, initiation.state, flow, redirect_uri
             )
             return HTTPStatus.ACCEPTED, _provider_initiation_json(
-                initiation, authorization
+                adapter_id,
+                initiation,
+                authorization,
+                self.product_server.provider_authorization_endpoints,
             )
 
         status, payload = self.product_server.execute_provider_idempotency(
@@ -1166,7 +1545,23 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             except Exception:
                 runtime.abort_oauth(principal, claim)
                 raise
-            connection = runtime.finalize_oauth(principal, claim, completion)
+            try:
+                connection = runtime.finalize_oauth(principal, claim, completion)
+            except Exception:
+                with suppress(Exception):
+                    broker.abandon_completion(completion)
+                raise
+            adoption = next(
+                adoption
+                for adoption, pending_connection in (
+                    runtime.pending_completion_adoptions(principal)
+                )
+                if pending_connection.connection_id == connection.connection_id
+            )
+            broker.adopt_completion(adoption, connection)
+            runtime.confirm_completion_adoption(
+                principal, connection.connection_id, adoption.staging_lease_id
+            )
             return HTTPStatus.OK, _provider_connection_json(connection)
 
         status, payload = self.product_server.execute_provider_idempotency(
@@ -1193,9 +1588,11 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         if action != "model":
             return not data, None
         model_id = data.get("model_id")
-        return isinstance(model_id, str) and set(data) == {"model_id"}, (
-            model_id if isinstance(model_id, str) else None
-        )
+        return (
+            isinstance(model_id, str)
+            and provider_model_id_is_valid(model_id)
+            and set(data) == {"model_id"}
+        ), (model_id if isinstance(model_id, str) else None)
 
     def _provider_connection_mutation(
         self,
@@ -1230,8 +1627,7 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         if not valid_action:
             status = (
                 HTTPStatus.NOT_FOUND
-                if self.command != "POST"
-                or action not in {"model", "health", "reauth"}
+                if self.command != "POST" or action not in {"model", "health", "reauth"}
                 else HTTPStatus.BAD_REQUEST
             )
             self._send_provider_error(
@@ -1270,17 +1666,21 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
                 return HTTPStatus.OK, _provider_connection_json(
                     runtime.set_health(principal, connection_id, health, revision)
                 )
+            connection = runtime.connection_detail(principal, connection_id)
             initiation = runtime.initiate_reauth(
                 principal, connection_id, "callback", "/settings/providers", revision
             )
             authorization = broker.authorize(
-                runtime.connection_detail(principal, connection_id).adapter_id,
+                connection.adapter_id,
                 initiation.state,
                 initiation.flow,
                 "/settings/providers",
             )
             return HTTPStatus.ACCEPTED, _provider_initiation_json(
-                initiation, authorization
+                connection.adapter_id,
+                initiation,
+                authorization,
+                self.product_server.provider_authorization_endpoints,
             )
 
         status, payload = self.product_server.execute_provider_idempotency(
@@ -1299,90 +1699,455 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
     def _provider_principal(principal: Principal) -> ProviderPrincipal:
         return ProviderPrincipal(principal.user_id, principal.organization_id)
 
-    def _dry_lab_state(self) -> None:
-        """Return the authenticated session's dry-lab projection."""
-        token = self._session_token()
-        if token is None:
-            self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
-            return
-        response = self.product_server.dry_lab.dispatch(
-            _digest(token), "state", {}
-        )
-        self._send_json(HTTPStatus(response.status), response.payload)
-
     def _api_artifacts(self) -> None:
         """Project the authenticated dry-lab outputs into the artifact library."""
+        if self.product_server.artifact_http is not None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        dry_lab = self._dry_lab_service()
+        if dry_lab is None:
+            return
         token = self._session_token()
         if token is None:
             self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
             return
-        response = self.product_server.dry_lab.dispatch(
-            _digest(token), "state", {}
-        )
-        artifacts = response.payload.get("artifacts")
-        items: list[JsonValue] = []
-        if isinstance(artifacts, list):
-            for index, artifact in enumerate(artifacts, start=1):
-                if not isinstance(artifact, dict):
-                    continue
-                name = artifact.get("name")
-                artifact_hash = artifact.get("sha256")
-                if not isinstance(name, str) or not isinstance(artifact_hash, str):
-                    continue
-                suffix = Path(name).suffix.lower()
-                media_type = {
-                    ".csv": "text/csv",
-                    ".md": "text/markdown",
-                    ".png": "image/png",
-                    ".json": "application/json",
-                }.get(suffix, "application/octet-stream")
-                items.append(
-                    {
-                        "artifact_id": f"dry-lab-{index}",
-                        "name": name,
-                        "version_no": 1,
-                        "media_type": media_type,
-                        "sha256": artifact_hash,
-                    }
-                )
         self._send_json(
-            HTTPStatus(response.status),
-            {"artifacts": items},
+            HTTPStatus.OK,
+            dry_lab.artifact_library(_digest(token)),
         )
+
+    def _dry_lab_resource(self, path: str) -> None:
+        """Resolve a generated dry-lab resource by its exact authenticated URL ID."""
+        dry_lab = self._dry_lab_service()
+        if dry_lab is None:
+            return
+        match = _DRY_LAB_RESOURCE_API.fullmatch(path)
+        token = self._session_token()
+        if match is None or token is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        kind = cast(
+            "DryLabResourceKind",
+            {
+                "runs": "run",
+                "reviews": "review",
+                "exports": "export",
+                "artifacts": "artifact",
+            }[match.group("kind")],
+        )
+        response = dry_lab.resource(_digest(token), kind, match.group("resource_id"))
+        if response is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        self._send_json(HTTPStatus(response.status), response.payload)
+
+    def _artifact_get(self, path: str) -> None:
+        """Serve one exact dry-lab Artifact Version or its immutable bytes."""
+        dry_lab = self._dry_lab_service()
+        if dry_lab is None:
+            return
+        match = _ARTIFACT_RESOURCE_API.fullmatch(path)
+        token = self._session_token()
+        if match is None or token is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        artifact_id = match.group("artifact_id")
+        version_id = match.group("version_id")
+        operation = match.group("operation")
+        if operation == "download" and version_id is not None:
+            download = dry_lab.download_artifact(
+                _digest(token), artifact_id, version_id
+            )
+            if download is None:
+                self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+                return
+            self._send(
+                HTTPStatus.OK,
+                download.content,
+                {
+                    "Content-Type": download.media_type,
+                    "Content-Disposition": (f'attachment; filename="{download.name}"'),
+                    "X-Content-SHA256": download.sha256,
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+            return
+        if operation is not None or path.endswith("/versions"):
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        detail = dry_lab.artifact_detail(_digest(token), artifact_id, version_id)
+        if detail is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        self._send_json(HTTPStatus.OK, detail)
+
+    def _durable_artifact_get(
+        self,
+        artifact_http: ArtifactHttpService,
+        path: str,
+        principal: Principal,
+    ) -> None:
+        """Serve durable metadata or bytes through the authenticated core."""
+        match = _ARTIFACT_RESOURCE_API.fullmatch(path)
+        if match is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        artifact_id = match.group("artifact_id")
+        version_id = match.group("version_id")
+        operation = match.group("operation")
+        if version_id is None and operation is None and not path.endswith("/versions"):
+            result = artifact_http.read_artifact(
+                principal.organization_id,
+                principal.user_id,
+                artifact_id,
+            )
+        elif version_id is not None and operation is None:
+            result = artifact_http.read_version(
+                principal.organization_id,
+                principal.user_id,
+                artifact_id,
+                version_id,
+            )
+        elif version_id is not None and operation == "download":
+            result = artifact_http.download_version(
+                principal.organization_id,
+                principal.user_id,
+                artifact_id,
+                version_id,
+            )
+        else:
+            result = ArtifactHttpResponse(
+                HTTPStatus.NOT_FOUND,
+                {"error": "not_found"},
+            )
+        self._send_artifact_response(result)
+
+    def _artifact_create(self) -> None:
+        """Create a durable Artifact only through external production auth."""
+        artifact_http = self.product_server.artifact_http
+        if artifact_http is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        session = self._artifact_mutation_session()
+        if session is None:
+            return
+        body, status = self._json()
+        if body is None:
+            self._send_body_error(status)
+            return
+        principal = session[0]
+        self._send_artifact_response(
+            artifact_http.create_artifact(
+                principal.organization_id,
+                principal.user_id,
+                body,
+            )
+        )
+
+    def _artifact_mutation(self, path: str, *, attach: bool) -> None:
+        """Apply a CSRF-bound Version append or owned-Session association."""
+        session = self._artifact_mutation_session()
+        if session is None:
+            return
+        token = session[1]
+        match = _ARTIFACT_RESOURCE_API.fullmatch(path)
+        if match is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        body, status = self._json()
+        if body is None:
+            self._send_body_error(status)
+            return
+        artifact_id = match.group("artifact_id")
+        version_id = match.group("version_id")
+        operation = match.group("operation")
+        artifact_http = self.product_server.artifact_http
+        if artifact_http is not None:
+            if version_id is None and path.endswith("/versions") and attach:
+                principal = session[0]
+                self._send_artifact_response(
+                    artifact_http.create_version(
+                        principal.organization_id,
+                        principal.user_id,
+                        artifact_id,
+                        body,
+                    )
+                )
+            else:
+                self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        if version_id is None and path.endswith("/versions") and attach:
+            self._append_artifact_version(token, artifact_id, body)
+            return
+        if version_id is None or operation != "attachments":
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        self._mutate_artifact_attachment(
+            session, artifact_id, version_id, body, attach=attach
+        )
+
+    def _artifact_mutation_session(self) -> tuple[Principal, str] | None:
+        """Authenticate one same-origin, CSRF-bound Artifact mutation."""
+        if not self._same_origin_mutation():
+            self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
+            return None
+        principal = self._principal()
+        token = self._session_token()
+        if principal is None or token is None:
+            self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
+            return None
+        if not self._csrf_matches(token):
+            self._send(HTTPStatus.FORBIDDEN, _INVALID_CSRF)
+            return None
+        return principal, token
+
+    def _send_artifact_response(self, response: ArtifactHttpResponse) -> None:
+        """Emit one normalized durable Artifact response without private fields."""
+        if response.content is not None:
+            headers = {
+                "Content-Type": "application/octet-stream",
+                "Content-Disposition": 'attachment; filename="artifact-version"',
+                "Content-Security-Policy": "default-src 'none'; sandbox",
+                "Referrer-Policy": "no-referrer",
+                "X-Content-Type-Options": "nosniff",
+            }
+            if response.content_sha256 is not None:
+                headers["X-Content-SHA256"] = response.content_sha256
+            self._send(response.status, response.content, headers)
+            return
+        payload = response.payload or {"error": "service_unavailable"}
+        self._send_json(response.status, cast("JsonObject", payload))
+
+    def _append_artifact_version(
+        self, token: str, artifact_id: str, body: JsonObject
+    ) -> None:
+        """Append one validated Version through the session-owned store."""
+        dry_lab = self._dry_lab_service()
+        if dry_lab is None:
+            return
+        response = dry_lab.create_artifact_version(_digest(token), artifact_id, body)
+        self._send_json(HTTPStatus(response.status), response.payload)
+
+    def _mutate_artifact_attachment(
+        self,
+        session: tuple[Principal, str],
+        artifact_id: str,
+        version_id: str,
+        body: JsonObject,
+        *,
+        attach: bool,
+    ) -> None:
+        """Mutate a Version association only for an owned active Session."""
+        principal, token = session
+        research_session_id = body.get("session_id")
+        if not isinstance(research_session_id, str):
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        tenant_principal = self._tenant_principal(principal)
+        research_session = self.product_server.repository.session(
+            tenant_principal, research_session_id
+        )
+        project = (
+            self.product_server.repository.project(
+                tenant_principal, research_session.project_id
+            )
+            if research_session is not None
+            else None
+        )
+        if research_session is None or project is None or project.archived:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        dry_lab = self._dry_lab_service()
+        if dry_lab is None:
+            return
+        payload = dry_lab.mutate_artifact_attachment(
+            _digest(token),
+            artifact_id,
+            version_id,
+            research_session_id,
+            attach=attach,
+        )
+        if payload is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        self._send_json(HTTPStatus.OK, payload)
 
     def _dry_lab_mutation(self, path: str) -> None:
         """Dispatch an authenticated same-origin dry-lab mutation."""
-        action = path.removeprefix("/api/v1/dry-lab/")
-        if action not in {
-            "upload",
-            "plan",
-            "approve",
-            "execute",
-            "review",
-            "export",
-            "cleanup",
-        }:
-            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+        dry_lab = self._dry_lab_service()
+        parsed = _parse_dry_lab_run_action(path)
+        if dry_lab is None or parsed is None:
+            if dry_lab is not None:
+                self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
             return
-        if not self._same_origin_mutation():
-            self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
+        run_id, action = parsed
+        if not self._authorize_same_origin_mutation():
             return
-        if self._principal() is None:
+        principal = self._principal()
+        token = self._session_token()
+        if principal is None:
             self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
             return
-        body = self._json()
-        token = self._session_token()
-        if body is None or token is None:
+        if token is None or not self._csrf_matches(token):
+            self._send(HTTPStatus.FORBIDDEN, _INVALID_CSRF)
+            return
+        self._execute_dry_lab_mutation(dry_lab, principal, token, run_id, action)
+
+    def _authorize_same_origin_mutation(self) -> bool:
+        if self._same_origin_mutation():
+            return True
+        self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
+        return False
+
+    def _execute_dry_lab_mutation(
+        self,
+        dry_lab: ProductDryLabService,
+        principal: Principal,
+        token: str,
+        run_id: str,
+        action: str,
+    ) -> None:
+        body, status = self._json()
+        request_run_id = body.get("run_id") if body is not None else None
+        if body is None:
+            self._send_body_error(status)
+            return
+        if request_run_id is not None and request_run_id != run_id:
             self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
             return
-        if action == "upload" and "csv" not in body:
-            content = body.get("content")
-            if isinstance(content, str):
-                body = {**body, "csv": content}
-        response = self.product_server.dry_lab.dispatch(_digest(token), action, body)
+        body["run_id"] = run_id
+        if action == "execute" and self._send_provider_execute(
+            dry_lab, principal, token, body
+        ):
+            return
+        response = dry_lab.dispatch(_digest(token), action, body)
         self._send_json(HTTPStatus(response.status), response.payload)
 
+    def _send_provider_execute(
+        self,
+        dry_lab: ProductDryLabService,
+        principal: Principal,
+        token: str,
+        body: JsonObject,
+    ) -> bool:
+        provider_response = dry_lab.dispatch_provider_run(
+            _digest(token),
+            body,
+            ProviderPrincipal(
+                principal.user_id,
+                principal.organization_id,
+            ),
+            self.product_server.provider_run_dispatcher,
+        )
+        if provider_response is None:
+            return False
+        if provider_response.status == HTTPStatus.SERVICE_UNAVAILABLE:
+            self._send(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                _PROVIDER_DISPATCH_UNAVAILABLE,
+            )
+        else:
+            self._send_json(
+                HTTPStatus(provider_response.status),
+                provider_response.payload,
+            )
+        return True
+
+    def _create_local_run(self) -> None:
+        identity = self._authenticated_run_request()
+        if identity is None:
+            return
+        principal, token = identity
+        body, status = self._json()
+        if body is None:
+            self._send_body_error(status)
+            return
+        dry_lab = self._dry_lab_service()
+        if dry_lab is None:
+            return
+        if body.get("execution_mode") == "provider_model":
+            self._create_provider_run(dry_lab, principal, token, body)
+            return
+        request = _local_run_create(body)
+        if request is None:
+            self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        if not self._run_session_is_active(principal, request.research_session_id):
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        response = dry_lab.create_local_run(
+            _digest(token),
+            request,
+        )
+        self._send_json(HTTPStatus(response.status), response.payload)
+
+    def _authenticated_run_request(self) -> tuple[Principal, str] | None:
+        if not self._same_origin_mutation():
+            self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
+            return None
+        principal = self._principal()
+        token = self._session_token()
+        if principal is None or token is None:
+            self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
+            return None
+        if not self._csrf_matches(token):
+            self._send(HTTPStatus.FORBIDDEN, _INVALID_CSRF)
+            return None
+        return principal, token
+
+    def _create_provider_run(
+        self,
+        dry_lab: ProductDryLabService,
+        principal: Principal,
+        token: str,
+        body: JsonObject,
+    ) -> None:
+        request = _provider_run_create(body)
+        if request is None:
+            self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        if not self._run_session_is_active(principal, request.research_session_id):
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        response = dry_lab.create_provider_run(
+            _digest(token),
+            request,
+        )
+        self._send_json(HTTPStatus(response.status), response.payload)
+
+    def _run_session_is_active(self, principal: Principal, session_id: str) -> bool:
+        tenant_principal = self._tenant_principal(principal)
+        research_session = self.product_server.repository.session(
+            tenant_principal,
+            session_id,
+        )
+        project = (
+            self.product_server.repository.project(
+                tenant_principal,
+                research_session.project_id,
+            )
+            if research_session is not None
+            else None
+        )
+        return (
+            research_session is not None
+            and project is not None
+            and not project.archived
+        )
+
     def _api_me(self, principal: Principal) -> None:
+        token = self._session_token()
+        csrf_token = self._cookie_value(self.product_server.csrf_cookie_name)
+        if (
+            token is None
+            or csrf_token is None
+            or not self.product_server.session_authority.csrf_matches(
+                token,
+                csrf_token,
+            )
+        ):
+            self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
+            return
         self._send_json(
             HTTPStatus.OK,
             {
@@ -1391,6 +2156,7 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
                     "id": principal.organization_id,
                     "name": principal.organization_name,
                 },
+                "csrf_token": csrf_token,
             },
         )
 
@@ -1398,13 +2164,34 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         workspace = self.product_server.repository.workspace(
             self._tenant_principal(principal)
         )
+        token = self._session_token()
+        if token is None:
+            self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
+            return
         projects: list[JsonValue] = [
             {"id": project.id, "name": project.name}
             for project in workspace.projects
+            if not project.archived
+        ]
+        sessions: list[JsonValue] = [
+            {
+                "id": session.id,
+                "project_id": session.project_id,
+                "name": session.name,
+            }
+            for session in workspace.sessions
         ]
         self._send_json(
             HTTPStatus.OK,
-            {"projects": projects, "recent_runs": []},
+            {
+                "projects": projects,
+                "sessions": sessions,
+                "recent_runs": (
+                    list(self.product_server.dry_lab.workspace_runs(_digest(token)))
+                    if self.product_server.dry_lab is not None
+                    else []
+                ),
+            },
         )
 
     def _api_project(self, path: str, principal: Principal) -> None:
@@ -1434,32 +2221,6 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
                 },
             )
 
-    def _start_run(self, path: str) -> None:
-        if not self._same_origin_mutation():
-            self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
-            return
-        principal = self._principal()
-        if principal is None:
-            self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
-            return
-        session_id = path.removeprefix("/api/v1/sessions/").removesuffix("/runs")
-        tenant_principal = self._tenant_principal(principal)
-        session = self.product_server.repository.session(tenant_principal, session_id)
-        project = (
-            self.product_server.repository.project(
-                tenant_principal, session.project_id
-            )
-            if session
-            else None
-        )
-        if session is None or project is None or project.archived:
-            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
-            return
-        self._send_json(
-            HTTPStatus.ACCEPTED,
-            {"status": "queued", "session_id": session.id},
-        )
-
     def _static(self, path: str) -> None:
         product_routes = {
             "/",
@@ -1487,16 +2248,36 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             content_type = "text/javascript; charset=utf-8"
         elif candidate.suffix == ".css":
             content_type = "text/css; charset=utf-8"
+        elif candidate.suffix == ".svg":
+            content_type = "image/svg+xml"
+        body = candidate.read_bytes()
+        if requested == "index.html":
+            policy = json.dumps(
+                self.product_server.provider_authorization_endpoints,
+                ensure_ascii=True,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            body = body.replace(
+                _PROVIDER_AUTHORIZATION_POLICY_MARKER.encode(),
+                escape(policy, quote=True).encode(),
+            )
         self._send(
             HTTPStatus.OK,
-            candidate.read_bytes(),
-            {"Content-Type": content_type},
+            body,
+            {
+                "Content-Type": content_type,
+                "Content-Security-Policy": _PRODUCT_CONTENT_SECURITY_POLICY,
+                "Referrer-Policy": "no-referrer",
+                "X-Content-Type-Options": "nosniff",
+            },
         )
 
     def _send_provider_error(self, status: HTTPStatus, code: str) -> None:
         """Send the canonical OpenAPI error envelope for provider endpoints."""
         error_status, payload = self.product_server.provider_error(status, code)
         self._send_json(error_status, payload)
+
     def _send_unexpected_provider_error(
         self, path: str, principal: ProviderPrincipal, error: Exception
     ) -> None:
@@ -1516,6 +2297,7 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             error.__traceback__,
         )
         self._send_json(status, payload)
+
     def _send_json(self, status: HTTPStatus, payload: JsonObject) -> None:
         """Serialize a JSON-compatible response body."""
         self._send(
@@ -1547,12 +2329,30 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         _ = self.wfile.write(body)
 
 
-def _cookie(name: str, value: str, *, max_age: int) -> str:
-    return f"{name}={value}; Max-Age={max_age}; Path=/; HttpOnly; SameSite=Strict"
+def _cookie(
+    name: str,
+    value: str,
+    *,
+    max_age: int,
+    secure: bool,
+    http_only: bool = True,
+) -> str:
+    secure_attribute = "; Secure" if secure else ""
+    http_only_attribute = "; HttpOnly" if http_only else ""
+    return (
+        f"{name}={value}; Max-Age={max_age}; Path=/{http_only_attribute}; "
+        "SameSite=Lax"
+        f"{secure_attribute}"
+    )
 
 
-def _expired_cookie(name: str) -> str:
-    return f"{name}=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict"
+def _expired_cookie(name: str, *, secure: bool, http_only: bool = True) -> str:
+    secure_attribute = "; Secure" if secure else ""
+    http_only_attribute = "; HttpOnly" if http_only else ""
+    return (
+        f"{name}=; Max-Age=0; Path=/{http_only_attribute}; SameSite=Lax"
+        f"{secure_attribute}"
+    )
 
 
 def _project_json(project: ProjectView) -> JsonObject:
@@ -1563,6 +2363,7 @@ def _project_json(project: ProjectView) -> JsonObject:
 def _provider_principal_hash(principal: ProviderPrincipal) -> str:
     """Return a one-way stable diagnostic scope for a provider principal."""
     return sha256(f"{principal.user_id}:{principal.org_id}".encode()).hexdigest()
+
 
 def _provider_connection_json(connection: ProviderConnection) -> JsonObject:
     """Map the redacted domain view to the fixed product UI contract."""
@@ -1584,16 +2385,48 @@ def _provider_connection_json(connection: ProviderConnection) -> JsonObject:
 
 
 def _provider_initiation_json(
-    initiation: OAuthInitiation, authorization: ProviderAuthorization
+    adapter_id: str,
+    initiation: OAuthInitiation,
+    authorization: ProviderAuthorization,
+    authorization_endpoints: dict[str, str],
 ) -> JsonObject:
     return {
         "state": initiation.state,
         "flow": initiation.flow,
         "expires_at": initiation.expires_at.isoformat().replace("+00:00", "Z"),
         "revision": "0",
-        "authorization_url": authorization.authorization_url,
+        "authorization_url": _canonical_provider_authorization_url(
+            adapter_id, authorization.authorization_url, authorization_endpoints
+        ),
         "device_instruction": authorization.device_instruction,
     }
+
+
+def _canonical_provider_authorization_url(
+    adapter_id: str,
+    authorization_url: str | None,
+    authorization_endpoints: dict[str, str],
+) -> str | None:
+    if authorization_url is None:
+        return None
+    endpoint = authorization_endpoints.get(adapter_id)
+    if endpoint is None or len(authorization_url) > _PROVIDER_AUTHORIZATION_MAX_LENGTH:
+        raise ValueError(_UNSAFE_PROVIDER_AUTHORIZATION_MESSAGE)
+    candidate = urlsplit(authorization_url)
+    expected = urlsplit(endpoint)
+    if (
+        candidate.scheme != "https"
+        or candidate.scheme != expected.scheme
+        or candidate.netloc != expected.netloc
+        or candidate.path != expected.path
+        or candidate.fragment
+        or candidate.username is not None
+        or candidate.password is not None
+        or candidate.port is not None
+        or candidate.geturl() != authorization_url
+    ):
+        raise ValueError(_UNSAFE_PROVIDER_AUTHORIZATION_MESSAGE)
+    return authorization_url
 
 
 def _cleanup_receipt_json(receipt: ProviderCleanupReceipt) -> JsonObject:
@@ -1618,15 +2451,181 @@ def _if_match_revision(value: str | None) -> int | None:
     return int(revision) if revision.isdecimal() else None
 
 
+def _local_run_create(body: JsonObject) -> LocalRunCreate | None:
+    input_value = body.get("input")
+    if (
+        set(body)
+        != {"execution_mode", "session_id", "prompt", "research_intent", "input"}
+        or body.get("execution_mode") != "local_dry_lab"
+        or not _is_uuid7_text(body.get("session_id"))
+        or not isinstance(body.get("prompt"), str)
+        or not body["prompt"]
+        or not isinstance(body.get("research_intent"), dict)
+        or not isinstance(input_value, dict)
+        or set(input_value) != {"filename", "media_type", "content"}
+        or not all(
+            isinstance(input_value.get(field), str)
+            for field in ("filename", "media_type", "content")
+        )
+    ):
+        return None
+    return LocalRunCreate(
+        research_session_id=cast("str", body["session_id"]),
+        prompt=cast("str", body["prompt"]),
+        research_intent=body["research_intent"],
+        filename=cast("str", input_value["filename"]),
+        media_type=cast("str", input_value["media_type"]),
+        content=cast("str", input_value["content"]),
+    )
+
+
+def _provider_run_create(body: JsonObject) -> ProviderRunCreate | None:
+    session_id = body.get("session_id")
+    connection_id = body.get("connection_id")
+    model_id = body.get("model_id")
+    input_value = body.get("input")
+    if (
+        set(body)
+        != {
+            "execution_mode",
+            "session_id",
+            "prompt",
+            "research_intent",
+            "input",
+            "connection_id",
+            "model_id",
+        }
+        or body.get("execution_mode") != "provider_model"
+        or not _is_uuid7_text(session_id)
+        or not _is_uuid7_text(connection_id)
+        or not isinstance(body.get("prompt"), str)
+        or not body["prompt"]
+        or not isinstance(body.get("research_intent"), dict)
+        or not isinstance(input_value, dict)
+        or set(input_value) != {"filename", "media_type", "content"}
+        or not all(
+            isinstance(input_value.get(field), str)
+            for field in ("filename", "media_type", "content")
+        )
+        or not isinstance(model_id, str)
+        or not provider_model_id_is_valid(model_id)
+    ):
+        return None
+    return ProviderRunCreate(
+        research_session_id=cast("str", session_id),
+        prompt=cast("str", body["prompt"]),
+        research_intent=body["research_intent"],
+        filename=cast("str", input_value["filename"]),
+        media_type=cast("str", input_value["media_type"]),
+        content=cast("str", input_value["content"]),
+        connection_id=cast("str", connection_id),
+        model_id=model_id,
+    )
+
+
+def _is_uuid7_text(value: JsonValue | None) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = UUID(value)
+    except ValueError:
+        return False
+    return str(parsed) == value and parsed.version == UUID7_VERSION
+
+
+def _loopback_fixture_options(
+    options: ProductServerOptions, clock: Clock
+) -> ProductServerOptions:
+    repository = options.repository or InMemoryTenantRepository(
+        (
+            (
+                "org-mineral",
+                ProjectView(_FIXTURE_PROJECT_ID, "스펙트럼 보정 실험", archived=False),
+            ),
+            (
+                "org-mineral",
+                ProjectView(
+                    _FIXTURE_ARCHIVED_PROJECT_ID,
+                    "보관된 기준선 비교",
+                    archived=True,
+                ),
+            ),
+            (
+                "org-foreign",
+                ProjectView(
+                    _FIXTURE_FOREIGN_PROJECT_ID, "Foreign project", archived=False
+                ),
+            ),
+        ),
+        (
+            (
+                "org-mineral",
+                SessionView(_FIXTURE_SESSION_ID, _FIXTURE_PROJECT_ID, "보정 세션"),
+            ),
+            (
+                "org-mineral",
+                SessionView(
+                    _FIXTURE_ARCHIVED_SESSION_ID,
+                    _FIXTURE_ARCHIVED_PROJECT_ID,
+                    "보관 세션",
+                ),
+            ),
+            (
+                "org-foreign",
+                SessionView(
+                    _FIXTURE_FOREIGN_SESSION_ID,
+                    _FIXTURE_FOREIGN_PROJECT_ID,
+                    "Foreign session",
+                ),
+            ),
+        ),
+    )
+    dry_lab = options.dry_lab or ProductDryLabService(
+        lambda: ProductArtifactService(clock), clock=clock
+    )
+    principal = options.principal or Principal(
+        "user-mineral",
+        "org-mineral",
+        "researcher@example.test",
+        "Nipo Labs",
+    )
+    return ProductServerOptions(
+        repository=repository,
+        dry_lab=dry_lab,
+        principal=principal,
+        provider_runtime=options.provider_runtime,
+        provider_oauth_broker=options.provider_oauth_broker,
+        provider_diagnostic_sink=options.provider_diagnostic_sink,
+        provider_authorization_endpoints=(
+            options.provider_authorization_endpoints
+            or _FIXTURE_PROVIDER_AUTHORIZATION_ENDPOINTS
+        ),
+        public_origin=options.public_origin,
+        provider_run_dispatcher=options.provider_run_dispatcher,
+        uuid7_factory=options.uuid7_factory,
+    )
+
+
 def run_product_server(
     address: tuple[str, int] = ("127.0.0.1", 0),
     authenticated_fixture: bool = False,
     clock: Clock = _utc_now,
     options: ProductServerOptions | None = None,
+    fixture_session_token: str | None = None,
 ) -> ProductServer:
     """Start a loopback server with bundled optional RLS and provider boundaries."""
+    if fixture_session_token is not None and not authenticated_fixture:
+        raise ValueError(_FIXTURE_SESSION_REQUIRES_AUTH_MESSAGE)
+    if (
+        options is not None
+        and options.dry_lab is not None
+        and not authenticated_fixture
+    ):
+        raise ValueError(_DRY_LAB_FIXTURE_REQUIRES_AUTH_MESSAGE)
+    if authenticated_fixture:
+        options = _loopback_fixture_options(options or ProductServerOptions(), clock)
     server = ProductServer(address, clock, options)
     if authenticated_fixture:
-        _ = server.fixture_session_cookie()
+        _ = server.fixture_session_cookie(fixture_session_token)
     Thread(target=server.serve_forever, daemon=True).start()
     return server
