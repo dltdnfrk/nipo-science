@@ -40,6 +40,21 @@ def run_scoped[RunResult](
     operation: Callable[[AsyncConnection], Awaitable[RunResult]],
 ) -> RunResult:
     """Run one transaction under the exact active requester RLS principal."""
+    return run_principal_scoped(
+        database_url,
+        scope.org_id,
+        scope.requester_id,
+        operation,
+    )
+
+
+def run_principal_scoped[RunResult](
+    database_url: str,
+    org_id: UUID,
+    requester_id: UUID,
+    operation: Callable[[AsyncConnection], Awaitable[RunResult]],
+) -> RunResult:
+    """Run one transaction under an authenticated organization membership."""
 
     async def execute() -> RunResult:
         engine = create_async_engine(database_url, poolclass=NullPool)
@@ -53,7 +68,7 @@ def run_scoped[RunResult](
                         "SELECT set_config('app.org_id', :org, true), "
                         "set_config('app.user_id', :user, true)"
                     ),
-                    {"org": str(scope.org_id), "user": str(scope.requester_id)},
+                    {"org": str(org_id), "user": str(requester_id)},
                 )
                 return await operation(connection)
         finally:

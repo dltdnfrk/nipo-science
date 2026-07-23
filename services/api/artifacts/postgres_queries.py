@@ -6,7 +6,7 @@ SELECT json_build_object(
   'name', a.name, 'created_at', a.created_at
 )::text
 FROM artifacts a
-WHERE a.org_id = $1 AND a.project_id = $2 AND a.id = $3
+WHERE a.org_id = :org AND a.project_id = :project AND a.id = :identity
 """
 
 VERSION_JSON = """

@@ -13,12 +13,15 @@ from types import MappingProxyType
 from typing import Final, Literal, cast, final
 from uuid import uuid4
 
+from science_workbench_contracts.runs import ResearchIntent, research_intent_sha256
+
 type ToolEffect = Literal["allow", "ask", "deny"]
 type PlanStatus = Literal["pending", "approved", "rejected", "expired", "consumed"]
 type JsonObject = dict[str, JsonValue]
 type JsonValue = None | bool | int | float | str | list[JsonValue] | JsonObject
 type ToolHandler = Callable[[JsonValue, ToolExecutionContext], object]
 type Clock = Callable[[], datetime]
+type ToolScopePair = tuple[frozenset[str], frozenset[str]]
 
 _EFFECTS: Final[frozenset[str]] = frozenset({"allow", "ask", "deny"})
 _PENDING: Final[PlanStatus] = "pending"
@@ -26,16 +29,17 @@ _APPROVED: Final[PlanStatus] = "approved"
 _REJECTED: Final[PlanStatus] = "rejected"
 _EXPIRED: Final[PlanStatus] = "expired"
 _CONSUMED: Final[PlanStatus] = "consumed"
-_DEFAULT_APPROVAL_TTL: Final[timedelta] = timedelta(minutes=5)
 _INVALID_EFFECT_MESSAGE: Final = "effect must be allow, ask, or deny"
 _PROVIDER_BUILT_IN_TOOLS_MESSAGE: Final = "provider built-in tools are prohibited"
 _EXPIRED_AT_FUTURE_MESSAGE: Final = "expires_at must be in the future"
+_EXPIRES_AT_TTL_MESSAGE: Final = "expires_at exceeds approval_ttl"
 _FINITE_JSON_NUMBERS_MESSAGE: Final = "arguments must contain finite JSON numbers"
 _REGISTRY_SEALED_MESSAGE: Final = "application tool registry is sealed"
 _JSON_VALUES_MESSAGE: Final = "arguments must be JSON values"
 _TIMEZONE_AWARE_TEMPLATE: Final = "{} must be timezone-aware"
 _NONEMPTY_IDENTIFIER_TEMPLATE: Final = "{} must not be empty"
 _NONEMPTY_SCOPE_TEMPLATE: Final = "{} contains an empty scope"
+_POSITIVE_APPROVAL_TTL_MESSAGE: Final = "approval_ttl must be positive"
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,34 +90,40 @@ class ToolRequest:
     tool: str
     network_scopes: frozenset[str]
     secret_scopes: frozenset[str]
+    research_intent_sha256: str
     _canonical_arguments: str = field(repr=False)
     _arguments_hash: str = field(repr=False)
+    _canonical_research_intent: str = field(repr=False)
 
     def __init__(
         self,
         run_id: str,
         tool: str,
         arguments: JsonValue,
-        network_scopes: frozenset[str] | None = None,
-        secret_scopes: frozenset[str] | None = None,
+        research_intent: ResearchIntent,
+        scopes: ToolScopePair | None = None,
     ) -> None:
         """Capture arguments as immutable canonical JSON at request construction."""
         _require_identifier(run_id, "run_id")
         _require_identifier(tool, "tool")
         canonical_arguments = _canonical_arguments(arguments)
-        canonical_network_scopes = (
-            frozenset[str]() if network_scopes is None else frozenset(network_scopes)
-        )
-        canonical_secret_scopes = (
-            frozenset[str]() if secret_scopes is None else frozenset(secret_scopes)
-        )
+        canonical_network_scopes = frozenset[str]() if scopes is None else scopes[0]
+        canonical_secret_scopes = frozenset[str]() if scopes is None else scopes[1]
         _validate_scopes(canonical_network_scopes, "network_scopes")
         _validate_scopes(canonical_secret_scopes, "secret_scopes")
         object.__setattr__(self, "run_id", run_id)
         object.__setattr__(self, "tool", tool)
         object.__setattr__(self, "network_scopes", canonical_network_scopes)
         object.__setattr__(self, "secret_scopes", canonical_secret_scopes)
+        object.__setattr__(
+            self, "research_intent_sha256", research_intent_sha256(research_intent)
+        )
         object.__setattr__(self, "_canonical_arguments", canonical_arguments)
+        object.__setattr__(
+            self,
+            "_canonical_research_intent",
+            research_intent.model_dump_json(),
+        )
         object.__setattr__(
             self,
             "_arguments_hash",
@@ -129,6 +139,11 @@ class ToolRequest:
     def arguments_hash(self) -> str:
         """Return the canonical, deterministic digest of the JSON arguments."""
         return self._arguments_hash
+
+    @property
+    def research_intent(self) -> ResearchIntent:
+        """Return a validated copy of the immutable human-owned intent."""
+        return ResearchIntent.model_validate_json(self._canonical_research_intent)
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,6 +169,8 @@ class PlanApproval:
     requester_id: str
     tool: str
     registry_identity: str
+    canonical_research_intent: str = field(repr=False)
+    research_intent_sha256: str
     canonical_arguments: str = field(repr=False)
     arguments_hash: str
     network_scopes: frozenset[str]
@@ -247,8 +264,16 @@ class ApplicationToolRegistry:
 class ToolGovernance:
     """Thread-safe in-memory policy boundary for application-owned tool execution."""
 
-    def __init__(self, *, clock: Clock | None = None) -> None:
-        """Initialize the policy store with an injectable UTC clock."""
+    def __init__(
+        self,
+        *,
+        approval_ttl: timedelta,
+        clock: Clock | None = None,
+    ) -> None:
+        """Initialize the store with explicit approval expiry policy and clock."""
+        if approval_ttl <= timedelta(0):
+            raise _value_error(_POSITIVE_APPROVAL_TTL_MESSAGE)
+        self._approval_ttl = approval_ttl
         self._clock = _utc_now if clock is None else clock
         self._lock = Lock()
         self._grants: dict[tuple[str, str, str], ToolGrant] = {}
@@ -283,7 +308,11 @@ class ToolGovernance:
                 return _result("TOOL_DENIED", "denied")
             registry_identity = self._registry.seal()
             if grant.effect == "ask":
-                expiry = _normalized_expiry(expires_at, self._clock())
+                expiry = _normalized_expiry(
+                    expires_at,
+                    self._clock(),
+                    self._approval_ttl,
+                )
                 plan = PlanApproval(
                     id=uuid4().hex,
                     organization_id=principal.organization_id,
@@ -292,6 +321,8 @@ class ToolGovernance:
                     requester_id=principal.requester_id,
                     tool=request.tool,
                     registry_identity=registry_identity,
+                    canonical_research_intent=request.research_intent.model_dump_json(),
+                    research_intent_sha256=request.research_intent_sha256,
                     canonical_arguments=_canonical_arguments(request.arguments),
                     arguments_hash=request.arguments_hash,
                     network_scopes=request.network_scopes,
@@ -462,6 +493,7 @@ def _matches_binding(
         and plan.run_id == request.run_id
         and plan.requester_id == principal.requester_id
         and plan.tool == request.tool
+        and plan.research_intent_sha256 == request.research_intent_sha256
         and plan.arguments_hash == request.arguments_hash
         and plan.network_scopes == request.network_scopes
         and plan.secret_scopes == request.secret_scopes
@@ -479,13 +511,19 @@ def _is_expired(plan: PlanApproval, now: datetime) -> bool:
     return plan.expires_at <= _require_aware(now, "clock result")
 
 
-def _normalized_expiry(expires_at: datetime | None, now: datetime) -> datetime:
+def _normalized_expiry(
+    expires_at: datetime | None,
+    now: datetime,
+    approval_ttl: timedelta,
+) -> datetime:
     current = _require_aware(now, "clock result")
     if expires_at is None:
-        return current + _DEFAULT_APPROVAL_TTL
+        return current + approval_ttl
     expiry = _require_aware(expires_at, "expires_at")
     if expiry <= current:
         raise _value_error(_EXPIRED_AT_FUTURE_MESSAGE)
+    if expiry > current + approval_ttl:
+        raise _value_error(_EXPIRES_AT_TTL_MESSAGE)
     return expiry
 
 

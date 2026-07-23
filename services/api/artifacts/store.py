@@ -107,6 +107,8 @@ class InMemoryArtifactStore:
     ) -> ArtifactRecord | None:
         """Read one Artifact only in its exact tenant and Project."""
         with self._lock:
+            if (scope.org_id, scope.project_id) in self._archived_projects:
+                return None
             artifact = self._artifacts.get((scope.org_id, artifact_id))
             if artifact is None or artifact.project_id != scope.project_id:
                 return None
@@ -119,6 +121,8 @@ class InMemoryArtifactStore:
     ) -> ArtifactVersion | None:
         """Read one Version only in its exact tenant and Project."""
         with self._lock:
+            if (scope.org_id, scope.project_id) in self._archived_projects:
+                return None
             version = self._versions.get((scope.org_id, version_id))
             if version is None or version.project_id != scope.project_id:
                 return None
@@ -131,6 +135,8 @@ class InMemoryArtifactStore:
     ) -> bytes | None:
         """Return checksum-verified immutable bytes for one authorized Version."""
         with self._lock:
+            if (scope.org_id, scope.project_id) in self._archived_projects:
+                return None
             version = self._versions.get((scope.org_id, version_id))
             if version is None or version.project_id != scope.project_id:
                 return None
@@ -146,21 +152,21 @@ class InMemoryArtifactStore:
         self,
         scope: ArtifactScope,
         version_id: UUID,
-    ) -> tuple[StoreOutcome, bytes | None]:
-        """Read content under the same lock as the active-Project check."""
+    ) -> tuple[StoreOutcome, ArtifactVersion | None, bytes | None]:
+        """Read Version and content under the active-Project lock."""
         with self._lock:
             if (scope.org_id, scope.project_id) in self._archived_projects:
-                return StoreOutcome.ARCHIVED, None
+                return StoreOutcome.ARCHIVED, None, None
             version = self._versions.get((scope.org_id, version_id))
             if version is None or version.project_id != scope.project_id:
-                return StoreOutcome.NOT_FOUND, None
+                return StoreOutcome.NOT_FOUND, None, None
             payload = self._blobs.get(version.object_key)
             if (
                 payload is None
                 or hashlib.sha256(payload).hexdigest() != version.content_sha256
             ):
                 raise BlobIntegrityError
-            return StoreOutcome.CREATED, payload
+            return StoreOutcome.CREATED, version, payload
 
     def lineage(
         self,

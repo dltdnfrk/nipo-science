@@ -9,6 +9,8 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 UUID7_VERSION: Final = 7
 UUID7_ERROR: Final = "uuid7"
+MAX_ARTIFACT_OUTPUT_BYTES: Final = 50 * 1024 * 1024
+MAX_ARTIFACT_PROVENANCE_ITEMS: Final = 1024
 
 
 def _require_uuid7(value: UUID) -> UUID:
@@ -52,9 +54,13 @@ class VersionDraft(BaseModel):
     code_sha256: Sha256
     runtime_adapter_id: str = Field(min_length=1, max_length=255)
     runtime_connection_id: Uuid7
-    skill_content_hashes: tuple[Sha256, ...]
-    source_hashes: tuple[Sha256, ...]
-    input_version_ids: tuple[Uuid7, ...]
+    skill_content_hashes: tuple[Sha256, ...] = Field(
+        max_length=MAX_ARTIFACT_PROVENANCE_ITEMS
+    )
+    source_hashes: tuple[Sha256, ...] = Field(max_length=MAX_ARTIFACT_PROVENANCE_ITEMS)
+    input_version_ids: tuple[Uuid7, ...] = Field(
+        max_length=MAX_ARTIFACT_PROVENANCE_ITEMS
+    )
 
 
 class ArtifactErrorCode(StrEnum):
@@ -143,9 +149,13 @@ class ArtifactVersion(BaseModel):
     code_sha256: Sha256
     runtime_adapter_id: str = Field(min_length=1, max_length=255)
     runtime_connection_id: Uuid7
-    skill_content_hashes: tuple[Sha256, ...]
-    source_hashes: tuple[Sha256, ...]
-    input_version_ids: tuple[Uuid7, ...]
+    skill_content_hashes: tuple[Sha256, ...] = Field(
+        max_length=MAX_ARTIFACT_PROVENANCE_ITEMS
+    )
+    source_hashes: tuple[Sha256, ...] = Field(max_length=MAX_ARTIFACT_PROVENANCE_ITEMS)
+    input_version_ids: tuple[Uuid7, ...] = Field(
+        max_length=MAX_ARTIFACT_PROVENANCE_ITEMS
+    )
     created_at: datetime
 
 
@@ -173,6 +183,8 @@ class WatcherOutput(BaseModel):
         frozen=True,
         extra="forbid",
         strict=True,
+        ser_json_bytes="base64",
+        val_json_bytes="base64",
     )
 
     reference: str = Field(min_length=1, max_length=255)

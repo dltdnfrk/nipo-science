@@ -42,6 +42,7 @@ class WorkspaceView:
     """Product-safe summary for the authenticated workspace."""
 
     projects: tuple[ProjectView, ...]
+    sessions: tuple[SessionView, ...]
 
 
 class TenantRepository(Protocol):
@@ -73,13 +74,21 @@ class InMemoryTenantRepository:
 
     def workspace(self, principal: TenantPrincipal) -> WorkspaceView:
         """Return only fixture projects belonging to the server-derived principal."""
-        return WorkspaceView(
-            tuple(
-                view
-                for org_id, view in self.projects
-                if org_id == principal.organization_id
-            )
+        projects = tuple(
+            view
+            for org_id, view in self.projects
+            if org_id == principal.organization_id
         )
+        active_project_ids = {
+            project.id for project in projects if not project.archived
+        }
+        sessions = tuple(
+            view
+            for org_id, view in self.sessions
+            if org_id == principal.organization_id
+            and view.project_id in active_project_ids
+        )
+        return WorkspaceView(projects, sessions)
 
     def project(
         self, principal: TenantPrincipal, project_id: str
@@ -138,8 +147,17 @@ class PostgresTenantRepository:
             "FROM projects ORDER BY id",
             {},
         )
+        session_rows = self._query(
+            principal,
+            "SELECT s.id::text AS id, s.project_id::text AS project_id, "
+            "s.title AS name FROM sessions s JOIN projects p "
+            "ON p.org_id = s.org_id AND p.id = s.project_id "
+            "WHERE p.archived_at IS NULL ORDER BY s.id",
+            {},
+        )
         return WorkspaceView(
-            tuple(_project_view(row) for row in rows)
+            tuple(_project_view(row) for row in rows),
+            tuple(_session_view(row) for row in session_rows),
         )
 
     def project(

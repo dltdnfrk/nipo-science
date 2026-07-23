@@ -4,23 +4,17 @@ from __future__ import annotations
 
 import json
 import re
-import sys
 from http import HTTPStatus
-from http.server import ThreadingHTTPServer
 from pathlib import Path
-from socket import socket
-from threading import BoundedSemaphore, Lock
-from typing import TYPE_CHECKING, Final, override
+from typing import TYPE_CHECKING, Final
 
 from pydantic import TypeAdapter, ValidationError
 
+from services.api.bounded_http import BoundedThreadingHttpServer
 from services.api.product_artifact_views import JsonObject
 
 if TYPE_CHECKING:
     from http.server import BaseHTTPRequestHandler
-    from socketserver import BaseRequestHandler
-
-    type RequestSocket = socket | tuple[bytes, socket]
 
 NOT_FOUND: Final = b'{"error":"not_found"}'
 UNAUTHORIZED: Final = b'{"error":"unauthorized"}'
@@ -28,78 +22,10 @@ FORBIDDEN: Final = b'{"error":"invalid_origin"}'
 BAD_REQUEST: Final = b'{"error":"invalid_request"}'
 CONFLICT: Final = b'{"error":"version_conflict"}'
 MAX_JSON_BYTES: Final = 65_536
-REQUEST_TIMEOUT_SECONDS: Final = 2.0
+REQUEST_TIMEOUT_SECONDS: Final = BoundedThreadingHttpServer.request_timeout_seconds
 
 _JSON_ADAPTER: Final[TypeAdapter[JsonObject]] = TypeAdapter(JsonObject)
 _ARTIFACT_PAGE: Final = re.compile(r"^/artifacts(?:/[A-Za-z0-9._-]+)?$")
-
-
-class BoundedThreadingHttpServer(ThreadingHTTPServer):
-    """Bound concurrent handlers so slow clients cannot grow threads without limit."""
-
-    request_queue_size: int = 16
-
-    def __init__(
-        self,
-        address: tuple[str, int],
-        handler: type[BaseRequestHandler],
-    ) -> None:
-        """Initialize a loopback server with a matching handler-slot bound."""
-        self._request_slots: BoundedSemaphore = BoundedSemaphore(
-            self.request_queue_size
-        )
-        self._request_lock: Lock = Lock()
-        self._active_requests: set[RequestSocket] = set()
-        super().__init__(address, handler)
-
-    @override
-    def process_request(
-        self, request: RequestSocket, client_address: tuple[str, int]
-    ) -> None:
-        """Reject excess sockets before allocating another request thread."""
-        if not self._request_slots.acquire(blocking=False):
-            self.shutdown_request(request)
-            return
-        if isinstance(request, socket):
-            request.settimeout(REQUEST_TIMEOUT_SECONDS)
-        with self._request_lock:
-            self._active_requests.add(request)
-        try:
-            super().process_request(request, client_address)
-        except RuntimeError:
-            with self._request_lock:
-                self._active_requests.discard(request)
-            self._request_slots.release()
-            raise
-
-    @override
-    def process_request_thread(
-        self, request: RequestSocket, client_address: tuple[str, int]
-    ) -> None:
-        """Release one handler slot after every request-thread outcome."""
-        try:
-            super().process_request_thread(request, client_address)
-        finally:
-            with self._request_lock:
-                self._active_requests.discard(request)
-            self._request_slots.release()
-
-    @override
-    def handle_error(
-        self, request: RequestSocket, client_address: tuple[str, int]
-    ) -> None:
-        error = sys.exception()
-        if isinstance(error, OSError):
-            return
-        super().handle_error(request, client_address)
-
-    @override
-    def server_close(self) -> None:
-        with self._request_lock:
-            active = tuple(self._active_requests)
-        for request in active:
-            self.shutdown_request(request)
-        super().server_close()
 
 
 def request_json(handler: BaseHTTPRequestHandler) -> JsonObject | None:
@@ -162,6 +88,7 @@ def serve_product_asset(handler: BaseHTTPRequestHandler, path: str) -> None:
         ".css": "text/css; charset=utf-8",
         ".html": "text/html; charset=utf-8",
         ".js": "text/javascript; charset=utf-8",
+        ".svg": "image/svg+xml",
     }.get(candidate.suffix, "application/octet-stream")
     send_bytes(
         handler,
@@ -169,15 +96,3 @@ def serve_product_asset(handler: BaseHTTPRequestHandler, path: str) -> None:
         candidate.read_bytes(),
         {"Content-Type": media_type, "X-Content-Type-Options": "nosniff"},
     )
-
-
-def cookies(header: str | None) -> dict[str, str]:
-    """Parse only simple cookie name/value pairs used by the fixture."""
-    if not header:
-        return {}
-    return {
-        name: value
-        for part in header.split(";")
-        for name, separator, value in (part.strip().partition("="),)
-        if name and separator
-    }

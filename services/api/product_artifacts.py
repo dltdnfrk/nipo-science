@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import secrets
+from collections.abc import Callable
+from datetime import UTC, datetime
 from threading import Lock
 from typing import Final, Self, final
 
@@ -17,23 +19,27 @@ from services.api.product_artifact_types import (
 )
 from services.api.product_artifact_validation import validate_artifact_draft
 
-_SUPPORTED_MEDIA: Final = frozenset({"application/pdf", "image/png", "text/csv"})
+_SUPPORTED_MEDIA: Final = frozenset(
+    {"application/json", "application/pdf", "image/png", "text/csv", "text/markdown"}
+)
+type Clock = Callable[[], datetime]
 
 
 @final
 class ProductArtifactService:
     """Store bounded test-principal Versions without mutable content."""
 
-    def __init__(self) -> None:
+    def __init__(self, clock: Clock | None = None) -> None:
         """Initialize an empty Artifact fixture store."""
         self._lock: Lock = Lock()
         self._versions: dict[tuple[str, str], list[ArtifactVersion]] = {}
         self._attachments: set[tuple[str, str, str]] = set()
+        self._clock = clock or _utc_now
 
     @classmethod
-    def with_fixture(cls) -> Self:
+    def with_fixture(cls, clock: Clock | None = None) -> Self:
         """Create the CSV, PNG, and PDF Artifact fixture set."""
-        service = cls()
+        service = cls(clock)
         seed_artifact_fixtures(
             lambda draft, base: service.create_version(draft, base_version_no=base)
         )
@@ -68,6 +74,8 @@ class ProductArtifactService:
                 environment_sha256=draft.environment_sha256,
                 lineage_version_ids=draft.lineage_version_ids,
                 preview_token=secrets.token_urlsafe(24),
+                created_at=self._clock().astimezone(UTC),
+                status="immutable",
             )
             versions.append(version)
             return version
@@ -182,3 +190,7 @@ class ProductArtifactService:
 def _changed_bytes(left: bytes, right: bytes) -> int:
     overlap = sum(a != b for a, b in zip(left, right, strict=False))
     return overlap + abs(len(left) - len(right))
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)

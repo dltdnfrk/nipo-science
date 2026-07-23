@@ -8,15 +8,17 @@ from threading import Thread
 from typing import TYPE_CHECKING, Final, cast, final, override
 from urllib.parse import urlsplit
 
-from services.api.artifact_ui_http import BoundedThreadingHttpServer
+from services.api.bounded_http import BoundedThreadingHttpServer
 
 if TYPE_CHECKING:
     from services.api.product_artifacts import ProductArtifactService
 
 _PREVIEW_MEDIA_TYPES: Final[dict[str, str]] = {
+    "application/json": "text/plain; charset=utf-8",
     "application/pdf": "application/pdf",
     "image/png": "image/png",
     "text/csv": "text/plain; charset=utf-8",
+    "text/markdown": "text/plain; charset=utf-8",
 }
 
 
