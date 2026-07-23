@@ -38,6 +38,7 @@ export const ApprovedActionPlanRefSchema = z
     action_plan_id: Uuid7Schema,
     version: z.int().min(1),
     digest_sha256: Sha256Schema,
+    research_intent_sha256: Sha256Schema,
     approval_id: Uuid7Schema,
     approved_at: UtcTimestampSchema,
     immutable: z.literal(true),

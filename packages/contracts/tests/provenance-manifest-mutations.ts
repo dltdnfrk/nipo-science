@@ -2,7 +2,7 @@ import type { ArtifactVersionRecord } from "../src/artifact-versions"
 import type { DryLabRunContractCore } from "../src/dry-lab-contract"
 
 export const EXPECTED_PROVENANCE_DIGEST =
-  "23574897dc448a252838e01001c18eea5c87414e073f476d2cdc4bc518d5c157"
+  "094797c44a042da806374f13056648e2571a7a1eb42b7f2eec06912ced09acc1"
 const TAMPER_HASH = "0".repeat(64)
 const INPUT_ID = "018f47a0-7b9c-7a10-8def-0123456789ab"
 const EXECUTION_ID = "018f47a0-7b9c-7a32-8def-0123456789ab"

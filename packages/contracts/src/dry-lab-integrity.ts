@@ -124,6 +124,8 @@ export function validateDryLabIntegrity(contract: DryLabRunContractCore): readon
   if (
     contract.provenance.source_run_id !== contract.source_run_id ||
     contract.provenance.action_plan_sha256 !== contract.action_plan.digest_sha256 ||
+    contract.provenance.research_intent_sha256 !== contract.action_plan.research_intent_sha256 ||
+    contract.export.research_intent_sha256 !== contract.action_plan.research_intent_sha256 ||
     contract.review.pinned_input_sha256 !== contract.provenance.manifest_sha256
   ) {
     errors.push("Run, ActionPlan, and Review digest pins do not match provenance")

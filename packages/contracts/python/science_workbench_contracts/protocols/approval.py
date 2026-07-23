@@ -6,7 +6,12 @@ from typing import Final, Literal, Protocol, override
 
 from pydantic import JsonValue
 
-from science_workbench_contracts.common import UtcTimestamp, Uuid7
+from science_workbench_contracts.common import (
+    FrozenJsonValue,
+    UtcTimestamp,
+    Uuid7,
+    json_projection,
+)
 
 from .models import (
     ActionPlan,
@@ -115,9 +120,9 @@ def ensure_approval_transition(current: ApprovalStatus, target: ApprovalStatus) 
         raise ApprovalProtocolError(code="INVALID_APPROVAL_TRANSITION")
 
 
-def canonical_arguments_hash(arguments: JsonValue) -> str:
+def canonical_arguments_hash(arguments: JsonValue | FrozenJsonValue) -> str:
     encoded = json.dumps(
-        arguments,
+        json_projection(arguments),
         allow_nan=False,
         ensure_ascii=False,
         separators=(",", ":"),
@@ -180,6 +185,7 @@ def binding_for_plan(plan: ActionPlan, expires_at: UtcTimestamp) -> ApprovalBind
         run_id=plan.run_id,
         requester_id=plan.requester_id,
         action_plan_id=plan.id,
+        research_intent_sha256=plan.research_intent_sha256,
         plan_digest=plan.plan_digest,
         tool=plan.tool,
         arguments_hash=plan.arguments_hash,

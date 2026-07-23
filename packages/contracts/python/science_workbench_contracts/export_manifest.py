@@ -520,6 +520,7 @@ class ExportManifest(Task6ContractModel):
     id: Uuid7
     source_run_id: Uuid7
     review_id: Uuid7
+    research_intent_sha256: Sha256
     selected_artifact_version_ids: Annotated[tuple[Uuid7, ...], Field(min_length=1)]
     artifact_entries: Annotated[tuple[ExportArtifactEntry, ...], Field(min_length=1)]
     manifest_path: Literal["manifest.json"]

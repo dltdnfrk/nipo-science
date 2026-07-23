@@ -33,8 +33,15 @@ def validate_export_openapi(document: OpenApiDocument) -> tuple[str, ...]:
         )
     manifest = schemas.get("ExportManifest")
     entries = None if manifest is None else manifest.properties.get("artifact_entries")
+    intent_digest = (
+        None if manifest is None else manifest.properties.get("research_intent_sha256")
+    )
     if (
         valid
+        and manifest is not None
+        and "research_intent_sha256" in manifest.required
+        and intent_digest is not None
+        and intent_digest.pattern == "^[0-9a-f]{64}$"
         and entries is not None
         and entries.schema_type == "array"
         and entries.min_items == 1

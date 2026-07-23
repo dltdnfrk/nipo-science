@@ -383,6 +383,7 @@ def test_rejects_normalized_collision_and_unselected_latest_race() -> None:
         _ = DryLabRunContract.model_validate(unselected.model_dump(mode="python"))
     with pytest.raises(ValidationError):
         _ = ExportManifest.model_validate_json(unicode_collision)
+    assert DryLabRunContract.model_validate(contract.model_dump()) == contract
 
 
 def test_rejects_unreviewed_extra_export_and_aliased_required_output() -> None:

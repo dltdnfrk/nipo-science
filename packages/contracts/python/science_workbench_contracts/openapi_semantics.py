@@ -16,13 +16,31 @@ class Reference(SemanticModel):
     ref: str | None = Field(default=None, alias="$ref")
 
 
+class Discriminator(SemanticModel):
+    property_name: str = Field(alias="propertyName")
+    mapping: dict[str, str]
+
+
 class SchemaProperty(Reference):
     schema_type: str | tuple[str, ...] | None = Field(default=None, alias="type")
     const_value: str | bool | None = Field(default=None, alias="const")
     enum: tuple[str, ...] = ()
     pattern: str | None = None
     min_length: int | None = Field(default=None, alias="minLength")
+    max_length: int | None = Field(default=None, alias="maxLength")
     min_items: int | None = Field(default=None, alias="minItems")
+    max_items: int | None = Field(default=None, alias="maxItems")
+    unique_items: bool | None = Field(default=None, alias="uniqueItems")
+    unicode_normalization: str | None = Field(
+        default=None, alias="x-unicode-normalization"
+    )
+    unique_after_normalization: str | None = Field(
+        default=None, alias="x-unique-after-normalization"
+    )
+    canonical_null_when_absent: bool | None = Field(
+        default=None, alias="x-canonical-null-when-absent"
+    )
+    distinct_fields: tuple[str, ...] = Field(default=(), alias="x-distinct-fields")
     read_only: bool | None = Field(default=None, alias="readOnly")
     utc_only: bool | None = Field(default=None, alias="x-utc-only")
     safe_export_path: bool | None = Field(
@@ -32,7 +50,9 @@ class SchemaProperty(Reference):
     properties: dict[str, SchemaProperty] = Field(default_factory=dict)
     items: SchemaProperty | None = None
     any_of: tuple[SchemaProperty, ...] = Field(default=(), alias="anyOf")
+    one_of: tuple[SchemaProperty, ...] = Field(default=(), alias="oneOf")
     all_of: tuple[SchemaProperty, ...] = Field(default=(), alias="allOf")
+    discriminator: Discriminator | None = None
     if_schema: SchemaProperty | None = Field(default=None, alias="if")
     then_schema: SchemaProperty | None = Field(default=None, alias="then")
 

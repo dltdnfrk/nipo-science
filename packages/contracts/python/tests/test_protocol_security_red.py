@@ -121,7 +121,9 @@ def test_security_review_allows_benign_scientific_event_key(key: str) -> None:
     parsed = RunEvent.model_validate(
         {**event.model_dump(), "data": {"analysis": [{key: "measured"}]}}
     )
-    assert parsed.data == {"analysis": [{key: "measured"}]}
+    assert parsed.model_dump(mode="json")["data"] == {
+        "analysis": [{key: "measured"}]
+    }
 
 
 @pytest.mark.parametrize(
@@ -170,7 +172,9 @@ def test_security_review_allows_benign_secret_like_value(value: str) -> None:
     parsed = RunEvent.model_validate(
         {**event.model_dump(), "data": {"analysis": [{"message": value}]}}
     )
-    assert parsed.data == {"analysis": [{"message": value}]}
+    assert parsed.model_dump(mode="json")["data"] == {
+        "analysis": [{"message": value}]
+    }
 
 
 def test_strict_wire_defaults_and_review_finding_event_are_aligned() -> None:

@@ -34,8 +34,28 @@ describe("DryLab integrity attacks", () => {
     expect(digest).toBe(EXPECTED_PROVENANCE_DIGEST)
     expect(contract.provenance.manifest_sha256).toBe(EXPECTED_PROVENANCE_DIGEST)
     expect(provenanceManifestSha256({ ...contract.provenance, runtime_adapter_id: "한글😀" })).toBe(
-      "ad225bd977785536450bffe5a25e67b37814074467f15835820787e0a76779be",
+      "fd60c52910ff439d32fe75069cf014742eccd08f8fe2989cb75af64870b666f5",
     )
+  })
+
+  it("pins the ResearchIntent digest through provenance and Export", () => {
+    // Given: the canonical dry-lab contract after approval and review.
+    const contract = DryLabRunContractSchema.parse(JSON.parse(readFileSync(fixturePath, "utf8")))
+
+    // Then: provenance and Export explicitly pin the same scientific purpose.
+    expect(contract.provenance.research_intent_sha256).toBe(contract.export.research_intent_sha256)
+    expect(contract.action_plan.research_intent_sha256).toBe(
+      contract.provenance.research_intent_sha256,
+    )
+
+    // When: only the Export pin is changed.
+    const mutated = {
+      ...contract,
+      export: { ...contract.export, research_intent_sha256: "d".repeat(64) },
+    }
+
+    // Then: the immutable provenance/export chain rejects it.
+    expect(DryLabRunContractSchema.safeParse(mutated).success).toBe(false)
   })
 
   it.each(

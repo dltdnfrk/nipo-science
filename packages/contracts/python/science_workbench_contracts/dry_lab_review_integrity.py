@@ -43,6 +43,10 @@ def _provenance_pins_mismatch(contract: DryLabIntegrityContract) -> bool:
     return (
         contract.provenance.source_run_id != contract.source_run_id
         or contract.provenance.action_plan_sha256 != contract.action_plan.digest_sha256
+        or contract.provenance.research_intent_sha256
+        != contract.action_plan.research_intent_sha256
+        or contract.export.research_intent_sha256
+        != contract.action_plan.research_intent_sha256
         or contract.review.pinned_input_sha256 != contract.provenance.manifest_sha256
     )
 

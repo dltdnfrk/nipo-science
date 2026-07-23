@@ -1,9 +1,11 @@
+import json
 from datetime import datetime
 from itertools import product
+from types import MappingProxyType
 from uuid import UUID
 
 import pytest
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 
 from science_workbench_contracts.protocols.approval import (
     APPROVAL_TRANSITIONS,
@@ -16,7 +18,9 @@ from science_workbench_contracts.protocols.approval import (
     ToolDenied,
     ToolEvaluationContext,
     ToolGrantEvaluationCommand,
+    action_plan_digest,
     approval_digest,
+    binding_for_plan,
     canonical_arguments_hash,
     consume_approval,
     decide_approval,
@@ -26,7 +30,11 @@ from science_workbench_contracts.protocols.approval import (
 from science_workbench_contracts.protocols.approval_store import (
     InMemoryApprovalConsumptionStore,
 )
-from science_workbench_contracts.protocols.models import ApprovalStatus, ToolGrantEffect
+from science_workbench_contracts.protocols.models import (
+    ActionPlan,
+    ApprovalStatus,
+    ToolGrantEffect,
+)
 
 from .protocol_fixtures import NOW, later, protocol_fixture
 
@@ -68,6 +76,31 @@ def test_canonical_arguments_hash_is_order_independent_for_json_objects() -> Non
 
     # Then: ordering never changes the canonical digest.
     assert all(left == right for left, right in hashes)
+
+
+def test_action_plan_digest_bound_arguments_are_recursively_immutable() -> None:
+    raw = protocol_fixture().action_plan.model_dump(mode="json")
+    arguments: JsonValue = {
+        "filter": {"terms": ["quantum dots", "photoluminescence"]}
+    }
+    raw["arguments"] = arguments
+    raw["arguments_hash"] = canonical_arguments_hash(arguments)
+    raw["plan_digest"] = "0" * 64
+    provisional = ActionPlan.model_validate_json(json.dumps(raw))
+    raw["plan_digest"] = action_plan_digest(provisional)
+
+    plan = ActionPlan.model_validate_json(json.dumps(raw))
+    root = plan.arguments
+    assert isinstance(root, MappingProxyType)
+    nested = root["filter"]
+    assert isinstance(nested, MappingProxyType)
+    terms = nested["terms"]
+    assert isinstance(terms, tuple)
+    assert isinstance(hash(terms), int)
+    assert canonical_arguments_hash(plan.arguments) == plan.arguments_hash
+    dumped = plan.model_dump(mode="json", warnings="error")
+    assert dumped["arguments"] == arguments
+    assert action_plan_digest(plan) == plan.plan_digest
 
 
 @pytest.mark.parametrize(
@@ -250,4 +283,33 @@ def test_action_plan_and_approval_are_frozen_and_digest_verified() -> None:
     assert (
         approval_digest(fixture.approval.binding, SIGNING_KEY)
         == fixture.approval.digest
+    )
+
+
+def test_action_plan_and_approval_bind_the_complete_research_intent() -> None:
+    # Given: a canonical ActionPlan created for one human-owned ResearchIntent.
+    fixture = protocol_fixture()
+    plan = fixture.action_plan
+
+    # Then: both the plan and one-use approval explicitly pin the same intent.
+    assert (
+        plan.research_intent_sha256
+        == fixture.approval.binding.research_intent_sha256
+    )
+    assert action_plan_digest(plan) == plan.plan_digest
+
+    # When: any intent field changes after approval, even with its digest recomputed.
+    mutated_intent = plan.research_intent.model_copy(
+        update={"question": "A different human-owned research question"}
+    )
+    mutated_plan = plan.model_copy(
+        update={
+            "research_intent": mutated_intent,
+            "research_intent_sha256": "d" * 64,
+        }
+    )
+
+    # Then: the approval binding no longer authorizes that ActionPlan.
+    assert binding_for_plan(mutated_plan, fixture.approval.binding.expires_at) != (
+        fixture.approval.binding
     )

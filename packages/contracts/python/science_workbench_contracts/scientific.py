@@ -36,6 +36,7 @@ class ApprovedActionPlanRef(Task6ContractModel):
     action_plan_id: Uuid7
     version: Revision
     digest_sha256: Sha256
+    research_intent_sha256: Sha256
     approval_id: Uuid7
     approved_at: UtcTimestamp
     immutable: Literal[True]

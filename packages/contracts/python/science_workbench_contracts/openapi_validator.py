@@ -8,6 +8,7 @@ from .openapi_semantics import (
     REQUIRED_PATHS,
     OpenApiDocument,
     Operation,
+    SchemaProperty,
     operations,
 )
 
@@ -16,10 +17,109 @@ IDEMPOTENCY_REF = "#/components/parameters/IdempotencyKey"
 IF_MATCH_REF = "#/components/parameters/IfMatch"
 CROSS_TENANT_NOT_FOUND = 404
 ERROR_STATUS_MINIMUM = 400
+RESEARCH_INTENT_CONDITION_COUNT = 2
 
 
 def _has_parameter(operation: Operation, expected: str) -> bool:
     return any(parameter.ref == expected for parameter in operation.parameters)
+
+
+def _is_nfc_text_property(property_value: SchemaProperty | None) -> bool:
+    return (
+        property_value is not None
+        and property_value.unicode_normalization == "NFC"
+    )
+
+
+def _is_nfc_unique_array(property_value: SchemaProperty | None) -> bool:
+    return (
+        property_value is not None
+        and property_value.unique_items is True
+        and property_value.unique_after_normalization == "NFC"
+        and property_value.items is not None
+        and property_value.items.unicode_normalization == "NFC"
+    )
+
+
+def _validate_research_intent_openapi(
+    document: OpenApiDocument,
+) -> tuple[str, ...]:
+    intent = document.components.schemas.get("ResearchIntent")
+    if intent is None:
+        return ("research-intent-canonicalization",)
+    text_fields = (
+        "question",
+        "rationale",
+        "intended_benefit",
+        "synthetic_generator_ref",
+        "synthetic_validator_ref",
+    )
+    item_fields = ("success_criteria", "constraints", "stop_conditions")
+    canonicalization_invalid = not all(
+        _is_nfc_text_property(intent.properties.get(field)) for field in text_fields
+    ) or not all(
+        _is_nfc_unique_array(intent.properties.get(field)) for field in item_fields
+    )
+    references = (
+        intent.properties.get("synthetic_generator_ref"),
+        intent.properties.get("synthetic_validator_ref"),
+    )
+    provenance_invalid = (
+        any(
+            reference is None
+            or reference.schema_type != ("string", "null")
+            or reference.canonical_null_when_absent is not True
+            for reference in references
+        )
+        or len(intent.all_of) != RESEARCH_INTENT_CONDITION_COUNT
+        or intent.all_of[1].then_schema is None
+        or intent.all_of[1].then_schema.distinct_fields
+        != ("synthetic_generator_ref", "synthetic_validator_ref")
+    )
+    return (
+        *(("research-intent-canonicalization",) if canonicalization_invalid else ()),
+        *(("research-intent-synthetic-provenance",) if provenance_invalid else ()),
+    )
+
+
+def _validate_run_create_openapi(document: OpenApiDocument) -> tuple[str, ...]:
+    schemas = document.components.schemas
+    run_create = schemas.get("RunCreate")
+    local = schemas.get("LocalDryLabRunCreate")
+    provider = schemas.get("ProviderModelRunCreate")
+    resource = schemas.get("RunResource")
+    expected_refs = (
+        "#/components/schemas/LocalDryLabRunCreate",
+        "#/components/schemas/ProviderModelRunCreate",
+    )
+    common_required = (
+        "execution_mode",
+        "session_id",
+        "prompt",
+        "research_intent",
+        "input",
+    )
+    if (
+        run_create is None
+        or tuple(item.ref for item in run_create.one_of) != expected_refs
+        or run_create.discriminator is None
+        or run_create.discriminator.property_name != "execution_mode"
+        or local is None
+        or local.required != common_required
+        or provider is None
+        or provider.required
+        != (*common_required, "connection_id", "model_id")
+        or provider.properties.get("research_intent") is None
+        or provider.properties["research_intent"].ref
+        != "#/components/schemas/ResearchIntent"
+        or resource is None
+        or "provider" not in resource.required
+        or resource.properties.get("execution_mode") is None
+        or resource.properties["execution_mode"].enum
+        != ("local_dry_lab", "provider_model")
+    ):
+        return ("run-create-intent-approval-boundary",)
+    return ()
 
 
 def validate_openapi(document: OpenApiDocument) -> tuple[str, ...]:
@@ -27,6 +127,8 @@ def validate_openapi(document: OpenApiDocument) -> tuple[str, ...]:
         *validate_review_openapi(document),
         *validate_review_endpoint_openapi(document),
         *validate_export_openapi(document),
+        *_validate_research_intent_openapi(document),
+        *_validate_run_create_openapi(document),
     ]
     tenancy = document.tenancy
     auth = document.auth_contract
