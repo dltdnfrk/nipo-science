@@ -562,7 +562,7 @@
           }),
           element("p", {
             class: "help",
-          }, text("브라우저가 형식을 표시하지 못하면 검증된 Version을 "), phrase("다운로드해 확인하세요.")),
+          }, text("브라우저가 형식을 표시하지 못하면 검증된 Version을 "), phrase("다운로드해"), text(" "), phrase("확인하세요.")),
           element("a", {
             class: "download-link",
             href: previewDownloadUrl,
@@ -588,7 +588,7 @@
     const cleanupAction = capabilityButton("cleanup", "danger", { "aria-describedby": "cleanup-impact cleanup-confirmation-label" });
     const cleanupReceipt = dryLabState.cleanup;
     const cleanupPanel = cleanupAction
-      ? element("section", { class: "panel destructive", "aria-label": "런타임 데이터 정리" }, element("h2", { text: "런타임 데이터 정리" }), element("p", { id: "cleanup-impact" }, text("정리하면 업로드 원본의 런타임 사본, ActionPlan과 "), phrase("승인 권한"), text(", "), phrase("임시 실행 데이터가"), text(" 제거됩니다.")), element("p", {}, text("불변 아티팩트, 체크섬, 검토 결과와 "), phrase("내보내기 매니페스트는"), text(" 보존됩니다.")), element("label", { id: "cleanup-confirmation-label", class: "cleanup-confirmation" }, element("input", { id: "cleanup-confirmation", type: "checkbox" }), text("제거 대상과 보존 대상을 확인했습니다.")), element("div", { class: "button-row" }, cleanupAction))
+      ? element("section", { class: "panel destructive", "aria-label": "런타임 데이터 정리" }, element("h2", { text: "런타임 데이터 정리" }), element("p", { id: "cleanup-impact" }, text("정리하면 업로드 원본의 런타임 사본, ActionPlan과 "), phrase("승인 권한"), text(", "), phrase("임시 실행 데이터가"), text(" 제거됩니다.")), element("p", {}, text("불변 아티팩트, 체크섬, 검토 결과와 "), phrase("내보내기"), text(" "), phrase("매니페스트는"), text(" 보존됩니다.")), element("label", { id: "cleanup-confirmation-label", class: "cleanup-confirmation" }, element("input", { id: "cleanup-confirmation", type: "checkbox" }), text("제거 대상과 보존 대상을 확인했습니다.")), element("div", { class: "button-row" }, cleanupAction))
       : cleanupReceipt
         ? panel("정리 영수증", [status("런타임 정리 완료", "positive"), keyValues([["런타임 데이터 제거", cleanupReceipt.removed_runtime_data ? "예" : "아니요"], ["보존된 아티팩트", `${cleanupReceipt.preserved_artifact_hashes.length}개`]])])
         : null;

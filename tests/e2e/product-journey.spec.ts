@@ -731,6 +731,11 @@ test("two exact Runs complete plan through export and remain session isolated", 
   await expect(page.getByText("verified", { exact: true })).toBeVisible();
   await page.goto(`${productOrigin}/exports/${first.exportId}`);
   await page.reload();
+  // Wait for the export view to finish rendering before harvesting hashes:
+  // allTextContents() does not auto-wait, and on a server carrying many runs
+  // the post-reload render can still show the loading shell for a moment
+  // (the sibling journey step waits on the same region before asserting).
+  await expect(page.getByRole("region", { name: "재현성 상태" }).getByText("내보내기 준비 완료", { exact: true })).toBeVisible();
   await expectVisibleHashes(page);
 });
 

@@ -598,3 +598,21 @@ ol.signal-trace::before {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Ultra-narrow reflow (WCAG 1.4.10): a 375px viewport at 200% zoom is a 188px
+   canvas. Type scale and the signal trace must shrink to their content there,
+   and copy blocks fall back to in-word wrapping rather than clipping when a
+   platform font renders wider than the design font. */
+.workspace-hero-copy, .workspace-hero-copy > *, .workspace-signal { min-width: 0; }
+.workspace-hero h1, .workspace-hero h2, .lede, .page-eyebrow { overflow-wrap: break-word; }
+.signal-trace > ol, ol.signal-trace { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.signal-trace li { min-width: 0; }
+
+@media (max-width: 320px) {
+  .workspace-hero h1, .workspace-hero h2 { font-size: 22px; }
+  .lede { font-size: 14px; }
+  .workspace-hero { padding: 18px 12px; }
+  .signal-trace li { font-size: 10px; }
+  .signal-trace > ol, ol.signal-trace { gap: 3px; }
+  .button, .version-button, .download-link, .resource-link { padding: 9px 10px; }
+}

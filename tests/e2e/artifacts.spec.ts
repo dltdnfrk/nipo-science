@@ -507,7 +507,10 @@ test("188px preserves connected CJK phrase units without overflow", async ({ pag
   }
 
   await page.goto("/artifacts/artifact-image");
-  const guidance = page.locator(".phrase", { hasText: "다운로드해 확인하세요." });
+  // The guidance sentence now splits into two phrase units so it reflows on
+  // canvases where a platform font renders the combined unit wider than the
+  // 188px line (the unit-integrity assertions below are unchanged).
+  const guidance = page.locator(".phrase", { hasText: "다운로드해" });
   await expect(guidance).toHaveCount(1);
   const guidanceMetrics = await guidance.evaluate((node) => ({
     clientWidth: document.documentElement.clientWidth,
