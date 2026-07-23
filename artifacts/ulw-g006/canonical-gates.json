@@ -1,10 +1,10 @@
 {
   "authoritativePublication": false,
-  "capturedAtUtc": "2026-07-14T08:51:57.748457Z",
-  "catalogRootSha256": "1eb099e179a62c5942f3565df69cc8a495051e876bf3c00b47120035699e38d0",
-  "catalogSourceRootSha256": "5e3386da9c34f0e07eeee72635abba2ee547e29e609ac96bedff38ad3e8d1f9c",
+  "capturedAtUtc": "2026-07-15T15:10:28.135178Z",
+  "catalogRootSha256": "0d75a95409340a1f5dacae5fc75cfd7e53b38d783f1f5a84a561971f9608ff67",
+  "catalogSourceRootSha256": "cb4700f741703b9a8b58f4f43f9b0e3efd367a45a22bb6e648bbfa077d6badb4",
   "goalId": "G006",
-  "nonAuthorityReason": "No production CI execution/finalization authority is installed; these are direct observed gate attempts only.",
+  "nonAuthorityReason": "No external CI execution/finalization authority is installed; these directly observed local gates are owner-scoped verification evidence only.",
   "results": [
     {
       "argv": [
@@ -59,15 +59,15 @@
         "tools/run_artifact_ui_fixture.py",
         "tests/artifact_ui"
       ],
-      "durationSeconds": 0.07,
+      "durationSeconds": 0.041,
       "errorType": null,
-      "executedCount": 213,
+      "executedCount": 246,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:49:39.442686Z",
+      "finishedAtUtc": "2026-07-15T15:05:04.630659Z",
       "job": "lint",
       "logSha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:49:39.372162Z"
+      "startedAtUtc": "2026-07-15T15:05:04.589057Z"
     },
     {
       "argv": [
@@ -121,15 +121,15 @@
         "tools/run_artifact_ui_fixture.py",
         "tests/artifact_ui"
       ],
-      "durationSeconds": 4.221,
+      "durationSeconds": 4.16,
       "errorType": null,
-      "executedCount": 213,
+      "executedCount": 246,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:49:43.663612Z",
+      "finishedAtUtc": "2026-07-15T15:05:08.791075Z",
       "job": "typecheck",
       "logSha256": "56882e01cb80173ef053c4096e4ee43e3123a15f5c0a06715f96988d48fbd91c",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:49:39.442720Z"
+      "startedAtUtc": "2026-07-15T15:05:04.630900Z"
     },
     {
       "argv": [
@@ -139,15 +139,15 @@
         "-q",
         "tests/platform"
       ],
-      "durationSeconds": 12.345,
+      "durationSeconds": 15.894,
       "errorType": null,
-      "executedCount": 426,
+      "executedCount": 520,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:49:56.008577Z",
+      "finishedAtUtc": "2026-07-15T15:05:24.685145Z",
       "job": "platform-tests",
-      "logSha256": "ad3bfd58a16e0cc5a390ff5c0cef6feed709b155178ff05f9eb7d679b3c04f84",
+      "logSha256": "802d275480192300cf41556c0d574eaedebc36bdbc28a3e5f27c0b70edf5bff3",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:49:43.663639Z"
+      "startedAtUtc": "2026-07-15T15:05:08.791534Z"
     },
     {
       "argv": [
@@ -157,15 +157,15 @@
         "<root>",
         "test-boundaries"
       ],
-      "durationSeconds": 51.815,
+      "durationSeconds": 68.097,
       "errorType": null,
-      "executedCount": 24,
+      "executedCount": 25,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:50:47.822733Z",
+      "finishedAtUtc": "2026-07-15T15:06:32.783693Z",
       "job": "boundaries",
-      "logSha256": "712ab43a5bc164215a5d29802ff9049f2388948376deb7ad383ce99885a6b3f4",
+      "logSha256": "58a4b2342bd0132aeca5738fecfce4a6894be7e4340fca4f152f8e0def11e9eb",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:49:56.008603Z"
+      "startedAtUtc": "2026-07-15T15:05:24.685854Z"
     },
     {
       "argv": [
@@ -175,15 +175,15 @@
         "<root>",
         "verify-spec"
       ],
-      "durationSeconds": 0.16,
+      "durationSeconds": 0.152,
       "errorType": null,
       "executedCount": 10,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:50:47.982663Z",
+      "finishedAtUtc": "2026-07-15T15:06:32.935787Z",
       "job": "spec",
-      "logSha256": "bc518877664482d92afff4158d0de12c06ad8a9f1cd059cd496814b9d1b44891",
+      "logSha256": "364758886a1b235006e01dd217fab6d0948d425c6757dd40d969883b6caf6b1a",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:50:47.822766Z"
+      "startedAtUtc": "2026-07-15T15:06:32.784005Z"
     },
     {
       "argv": [
@@ -193,15 +193,15 @@
         "<root>",
         "verify-architecture"
       ],
-      "durationSeconds": 0.984,
+      "durationSeconds": 0.669,
       "errorType": null,
       "executedCount": 8,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:50:48.967045Z",
+      "finishedAtUtc": "2026-07-15T15:06:33.604761Z",
       "job": "architecture",
-      "logSha256": "3ce7828cf0d5804bef55c156cb0718c97caa43d39e317dcfaf8315e1a2346758",
+      "logSha256": "92ca7c5fc50bffbb2614bf68f218716ce5085b3dfdc0b913c457a7083f22822e",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:50:47.982693Z"
+      "startedAtUtc": "2026-07-15T15:06:32.936108Z"
     },
     {
       "argv": [
@@ -211,15 +211,15 @@
         "<root>",
         "test-openapi"
       ],
-      "durationSeconds": 7.299,
+      "durationSeconds": 7.577,
       "errorType": null,
-      "executedCount": 347,
+      "executedCount": 371,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:50:56.266027Z",
+      "finishedAtUtc": "2026-07-15T15:06:41.181845Z",
       "job": "openapi",
-      "logSha256": "bbb2bd5a03033b64001238bfc2d171c23f8715f7f2796b3807e7dc901bfc44a4",
+      "logSha256": "8d4d6d85a3c94d5bd5ad63e20e3a67512f459b9bf7856857fc581533cf631d96",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:50:48.967076Z"
+      "startedAtUtc": "2026-07-15T15:06:33.605233Z"
     },
     {
       "argv": [
@@ -229,15 +229,15 @@
         "<root>",
         "test-protocol-contracts"
       ],
-      "durationSeconds": 3.175,
+      "durationSeconds": 3.08,
       "errorType": null,
-      "executedCount": 260,
+      "executedCount": 262,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:50:59.557077Z",
+      "finishedAtUtc": "2026-07-15T15:06:44.262508Z",
       "job": "protocol-contracts",
-      "logSha256": "09bfe9c79f6d944b7557647cd0c92c142097ac976a09bc4bf9eb15a39f15c7f6",
+      "logSha256": "dedbc7f0978e129302969c990a4a6a5420abca6605b808db480c898a5f4a0584",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:50:56.266072Z"
+      "startedAtUtc": "2026-07-15T15:06:41.182291Z"
     },
     {
       "argv": [
@@ -247,15 +247,15 @@
         "<root>",
         "test-artifact-contracts"
       ],
-      "durationSeconds": 3.477,
+      "durationSeconds": 3.457,
       "errorType": null,
-      "executedCount": 68,
+      "executedCount": 69,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:03.034335Z",
+      "finishedAtUtc": "2026-07-15T15:06:47.719652Z",
       "job": "artifact-contracts",
-      "logSha256": "ef822ee95b691273ab6ed02abb57d972d052668f7d620b44ba85210ea8142d9f",
+      "logSha256": "029ef0eeb05c88e05b56107c59083b0b14478f146733e670c84f8b1bdb85168e",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:50:59.557118Z"
+      "startedAtUtc": "2026-07-15T15:06:44.263133Z"
     },
     {
       "argv": [
@@ -265,15 +265,15 @@
         "<root>",
         "test-local-config"
       ],
-      "durationSeconds": 2.768,
+      "durationSeconds": 1.945,
       "errorType": null,
-      "executedCount": 23,
+      "executedCount": 24,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:05.802023Z",
+      "finishedAtUtc": "2026-07-15T15:06:49.664611Z",
       "job": "local-config",
-      "logSha256": "8ef6c9e90487cbf99e923d9bd09d17990f29c488a33b1ea8488c48058f6a7c49",
+      "logSha256": "09e482476086cd74237f95530b350a0a73459c7598d9b77386513b26a4e6dbdd",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:03.034366Z"
+      "startedAtUtc": "2026-07-15T15:06:47.720008Z"
     },
     {
       "argv": [
@@ -283,15 +283,15 @@
         "<root>",
         "test-migrations"
       ],
-      "durationSeconds": 0.589,
-      "errorType": "MissingExecutedCountError",
-      "executedCount": 0,
-      "exitCode": 2,
-      "finishedAtUtc": "2026-07-14T08:51:06.391301Z",
+      "durationSeconds": 23.28,
+      "errorType": null,
+      "executedCount": 34,
+      "exitCode": 0,
+      "finishedAtUtc": "2026-07-15T15:07:12.945152Z",
       "job": "migrations",
-      "logSha256": "835f53abba47f20a9abbd6c3b808e96f2bec6bc95b9cf4ff056150e070b003fc",
-      "outcome": "failure",
-      "startedAtUtc": "2026-07-14T08:51:05.802053Z"
+      "logSha256": "5142c3c70c1a64c07dc4dc60b3166e6cede173b495d27d058415b2a21257a251",
+      "outcome": "success",
+      "startedAtUtc": "2026-07-15T15:06:49.665213Z"
     },
     {
       "argv": [
@@ -301,15 +301,15 @@
         "<root>",
         "test-rls"
       ],
-      "durationSeconds": 0.211,
-      "errorType": "MissingExecutedCountError",
-      "executedCount": 0,
-      "exitCode": 2,
-      "finishedAtUtc": "2026-07-14T08:51:06.602561Z",
+      "durationSeconds": 21.073,
+      "errorType": null,
+      "executedCount": 36,
+      "exitCode": 0,
+      "finishedAtUtc": "2026-07-15T15:07:34.019048Z",
       "job": "rls",
-      "logSha256": "835f53abba47f20a9abbd6c3b808e96f2bec6bc95b9cf4ff056150e070b003fc",
-      "outcome": "failure",
-      "startedAtUtc": "2026-07-14T08:51:06.391327Z"
+      "logSha256": "cc3b664c4b77e2d09fca85258c2a5fdb0b36ca1e3e7ea3ea5dc817c8e8a4df84",
+      "outcome": "success",
+      "startedAtUtc": "2026-07-15T15:07:12.946404Z"
     },
     {
       "argv": [
@@ -319,15 +319,15 @@
         "<root>",
         "test-upload"
       ],
-      "durationSeconds": 5.108,
+      "durationSeconds": 4.876,
       "errorType": null,
       "executedCount": 85,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:11.710993Z",
+      "finishedAtUtc": "2026-07-15T15:07:38.895813Z",
       "job": "upload",
-      "logSha256": "8cf31d77c0d259c23e4338aec4f056785326e18ea18b0077d0e09f9d74d7be60",
+      "logSha256": "40576f4433215e23971142b693954781f05c39ec6192b7b1160d289daef08bdb",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:06.602586Z"
+      "startedAtUtc": "2026-07-15T15:07:34.019384Z"
     },
     {
       "argv": [
@@ -337,15 +337,15 @@
         "<root>",
         "test-artifacts"
       ],
-      "durationSeconds": 0.22,
-      "errorType": "MissingExecutedCountError",
-      "executedCount": 0,
-      "exitCode": 2,
-      "finishedAtUtc": "2026-07-14T08:51:11.931173Z",
+      "durationSeconds": 24.094,
+      "errorType": null,
+      "executedCount": 100,
+      "exitCode": 0,
+      "finishedAtUtc": "2026-07-15T15:08:02.991065Z",
       "job": "artifacts",
-      "logSha256": "835f53abba47f20a9abbd6c3b808e96f2bec6bc95b9cf4ff056150e070b003fc",
-      "outcome": "failure",
-      "startedAtUtc": "2026-07-14T08:51:11.711378Z"
+      "logSha256": "ff1968396c266d5d8f6781668c8b708f00ae04ea927a0714ae2337e9a6c2483e",
+      "outcome": "success",
+      "startedAtUtc": "2026-07-15T15:07:38.896898Z"
     },
     {
       "argv": [
@@ -355,15 +355,15 @@
         "<root>",
         "test-science"
       ],
-      "durationSeconds": 1.228,
+      "durationSeconds": 1.372,
       "errorType": null,
-      "executedCount": 24,
+      "executedCount": 26,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:13.158982Z",
+      "finishedAtUtc": "2026-07-15T15:08:04.363049Z",
       "job": "science",
-      "logSha256": "890b4cbd486f920ca62ba2c6e34ec10a41722ad9b8b443bf2191e87246374024",
+      "logSha256": "de7dbbe18fef089f8a1de9e6510bcd459f5cfa30c71b3da97242ca70b5d6b6a6",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:11.931199Z"
+      "startedAtUtc": "2026-07-15T15:08:02.991544Z"
     },
     {
       "argv": [
@@ -373,15 +373,15 @@
         "<root>",
         "test-e2e-artifacts"
       ],
-      "durationSeconds": 18.532,
+      "durationSeconds": 34.096,
       "errorType": null,
-      "executedCount": 26,
-      "exitCode": 2,
-      "finishedAtUtc": "2026-07-14T08:51:31.691423Z",
+      "executedCount": 99,
+      "exitCode": 0,
+      "finishedAtUtc": "2026-07-15T15:08:38.459692Z",
       "job": "artifact-ui",
-      "logSha256": "07689c25dca63766956a8214617c627bd8d75d609f7b90bbb6e145fba5f6cd7d",
-      "outcome": "failure",
-      "startedAtUtc": "2026-07-14T08:51:13.159009Z"
+      "logSha256": "91529305fc96b630f88820b77899c4cff2704d98ead66b8e4de8a8f1b13a694d",
+      "outcome": "success",
+      "startedAtUtc": "2026-07-15T15:08:04.363289Z"
     },
     {
       "argv": [
@@ -391,15 +391,15 @@
         "<root>",
         "test-retention"
       ],
-      "durationSeconds": 0.847,
+      "durationSeconds": 1.024,
       "errorType": null,
       "executedCount": 34,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:32.538544Z",
+      "finishedAtUtc": "2026-07-15T15:08:39.484321Z",
       "job": "retention",
-      "logSha256": "0b165d79c89b856c5a45a0a8e57623db01691ded583af81f6cac00976fc2ab5b",
+      "logSha256": "17a99c4347dfe7c59e948ae1efd6ef671aaa385c2f850b9447df53f6279dd20a",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:31.691523Z"
+      "startedAtUtc": "2026-07-15T15:08:38.460194Z"
     },
     {
       "argv": [
@@ -409,15 +409,15 @@
         "<root>",
         "check-generated-contracts"
       ],
-      "durationSeconds": 0.116,
+      "durationSeconds": 0.134,
       "errorType": null,
       "executedCount": 1,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:32.654574Z",
+      "finishedAtUtc": "2026-07-15T15:08:39.619098Z",
       "job": "generated-drift",
       "logSha256": "ac2f034b0a4c1a0911bf8e84543647c1704d8c2c732d1ddbd2769825d550f85f",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:32.538573Z"
+      "startedAtUtc": "2026-07-15T15:08:39.485010Z"
     },
     {
       "argv": [
@@ -427,15 +427,15 @@
         "sbom",
         "<root>"
       ],
-      "durationSeconds": 0.098,
+      "durationSeconds": 0.106,
       "errorType": null,
-      "executedCount": 200,
+      "executedCount": 199,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:32.753002Z",
+      "finishedAtUtc": "2026-07-15T15:08:39.725303Z",
       "job": "sbom",
-      "logSha256": "de8a69f07406e7e6398a9dc63f60bd05b25dc270235d6df3c65658e977c12b34",
+      "logSha256": "63a2b676b9de09c7cf5a08e39a7b3dde753dd17a41d2d0f6f6aa479734f28b8e",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:32.654601Z"
+      "startedAtUtc": "2026-07-15T15:08:39.619702Z"
     },
     {
       "argv": [
@@ -445,15 +445,15 @@
         "secret-scan",
         "<root>"
       ],
-      "durationSeconds": 2.007,
+      "durationSeconds": 1.986,
       "errorType": null,
-      "executedCount": 430,
+      "executedCount": 425,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:34.759707Z",
+      "finishedAtUtc": "2026-07-15T15:08:41.712172Z",
       "job": "secret-scan",
-      "logSha256": "0f9bbedd1976006987e223fa2ea12737efa61763070a3abda8fbcacdd93a0942",
+      "logSha256": "65a0c81540b408bb783e462160d0800a763b64732121a29a5ed17be87d4a8228",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:32.753025Z"
+      "startedAtUtc": "2026-07-15T15:08:39.725775Z"
     },
     {
       "argv": [
@@ -463,15 +463,15 @@
         "<root>",
         "test-dry-lab"
       ],
-      "durationSeconds": 2.567,
+      "durationSeconds": 3.052,
       "errorType": null,
-      "executedCount": 14,
+      "executedCount": 54,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:37.326883Z",
+      "finishedAtUtc": "2026-07-15T15:08:44.764416Z",
       "job": "dry-lab",
-      "logSha256": "56fec8c78d37972db5bb11969bf12f92e37478112ed36053cb75f40ddb8a1ec3",
+      "logSha256": "5a5464d7999886de1795d21e69098a82ca5dd7be259dd8a48b94d5df9d4f918d",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:34.759733Z"
+      "startedAtUtc": "2026-07-15T15:08:41.712523Z"
     },
     {
       "argv": [
@@ -481,15 +481,15 @@
         "<root>",
         "test-product-ui"
       ],
-      "durationSeconds": 4.247,
+      "durationSeconds": 48.85,
       "errorType": null,
-      "executedCount": 19,
-      "exitCode": 2,
-      "finishedAtUtc": "2026-07-14T08:51:41.573514Z",
+      "executedCount": 115,
+      "exitCode": 0,
+      "finishedAtUtc": "2026-07-15T15:09:33.614844Z",
       "job": "product-ui",
-      "logSha256": "eb676d3b516e57b5771e7946f0b17514d5b1d0ab3f9cc32d152ce7202ccc8423",
-      "outcome": "failure",
-      "startedAtUtc": "2026-07-14T08:51:37.326916Z"
+      "logSha256": "b80905b83a07cea77863333106c614917d207ce183cfc60ece075dcbcc9d7d8d",
+      "outcome": "success",
+      "startedAtUtc": "2026-07-15T15:08:44.764999Z"
     },
     {
       "argv": [
@@ -499,15 +499,15 @@
         "<root>",
         "test-provider-runtime"
       ],
-      "durationSeconds": 8.866,
+      "durationSeconds": 43.526,
       "errorType": null,
-      "executedCount": 101,
-      "exitCode": 2,
-      "finishedAtUtc": "2026-07-14T08:51:50.439372Z",
+      "executedCount": 187,
+      "exitCode": 0,
+      "finishedAtUtc": "2026-07-15T15:10:17.141288Z",
       "job": "provider-runtime",
-      "logSha256": "67b6979d602b7c11b5ba1efc400b84d3ad110aa01ff0d4d6096eb7063abc2466",
-      "outcome": "failure",
-      "startedAtUtc": "2026-07-14T08:51:41.573543Z"
+      "logSha256": "baf621b2a2a699dd152f942b4c776592588f71f3d22147af9d27842cb0fd7183",
+      "outcome": "success",
+      "startedAtUtc": "2026-07-15T15:09:33.615194Z"
     },
     {
       "argv": [
@@ -515,15 +515,15 @@
         "-m",
         "tools.platform_policy.security_gate"
       ],
-      "durationSeconds": 5.452,
+      "durationSeconds": 5.78,
       "errorType": null,
       "executedCount": 13,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:55.891753Z",
+      "finishedAtUtc": "2026-07-15T15:10:22.921690Z",
       "job": "security",
-      "logSha256": "8c90a8cb6e4e5dc7b401fb463cfc98bd68b8a09decb24ebd53e75a0c28d5c831",
+      "logSha256": "9db36269f0a8e11e92178f503b3a959de68aa2004a0c46b8bcf2c8e67ae61c5b",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:50.439409Z"
+      "startedAtUtc": "2026-07-15T15:10:17.141883Z"
     },
     {
       "argv": [
@@ -533,15 +533,15 @@
         "-q",
         "tests/platform/test_g005_recovery_contract.py"
       ],
-      "durationSeconds": 0.621,
+      "durationSeconds": 0.353,
       "errorType": null,
       "executedCount": 106,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:56.512954Z",
+      "finishedAtUtc": "2026-07-15T15:10:23.275160Z",
       "job": "recovery",
-      "logSha256": "d4e4f766aba741c57b8fc8aab69773a3f306a7605648a888d665eb85bfcb4dbe",
+      "logSha256": "34c1b75fc85c67614b140b3c4fae4200c68a8bafcb476e686bab0503bc27420e",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:55.891767Z"
+      "startedAtUtc": "2026-07-15T15:10:22.922003Z"
     },
     {
       "argv": [
@@ -551,15 +551,15 @@
         "-q",
         "tests/platform/test_deployment_contract.py"
       ],
-      "durationSeconds": 0.282,
+      "durationSeconds": 0.296,
       "errorType": null,
       "executedCount": 46,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:56.795404Z",
+      "finishedAtUtc": "2026-07-15T15:10:23.571758Z",
       "job": "performance",
       "logSha256": "f43c418c25a633885718b97f4523f16bfb9a0b269841ffc1c3eaa8533034f505",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:56.512978Z"
+      "startedAtUtc": "2026-07-15T15:10:23.275436Z"
     },
     {
       "argv": [
@@ -569,24 +569,25 @@
         "-q",
         "tests/platform/test_release_contract.py"
       ],
-      "durationSeconds": 0.953,
+      "durationSeconds": 4.502,
       "errorType": null,
-      "executedCount": 21,
+      "executedCount": 25,
       "exitCode": 0,
-      "finishedAtUtc": "2026-07-14T08:51:57.748209Z",
+      "finishedAtUtc": "2026-07-15T15:10:28.074384Z",
       "job": "release",
-      "logSha256": "fa60aaa44281bf241992372af7323164bb21ebb1dcdb10f860b2b4be1fa1bc65",
+      "logSha256": "9740f01a303144cb938c9fb0167107fb0caff628c7c5fe3ff921ef9819fa8e50",
       "outcome": "success",
-      "startedAtUtc": "2026-07-14T08:51:56.795430Z"
+      "startedAtUtc": "2026-07-15T15:10:23.572105Z"
     }
   ],
   "schemaVersion": 2,
-  "source": "canonical ci_commands(root) direct execution",
-  "sourceTreeSha256": "1a38bfbf94c4c8317a1a5d9e1e1a5dac6b8c80fa218e79b98675846ce60dc225",
+  "source": "Direct execution of tools.platform_policy.ci_runner.ci_commands(root)",
+  "sourceTreeSha256": "7a855379a546b3c8df4db455bbd375443517a51039c3b001e6bf03493a72f3d4",
+  "sourceTreeSha256After": "7a855379a546b3c8df4db455bbd375443517a51039c3b001e6bf03493a72f3d4",
   "summary": {
-    "executedCount": 2712,
-    "failure": 6,
+    "executedCount": 3366,
+    "failure": 0,
     "incomplete": 0,
-    "success": 21
+    "success": 27
   }
 }

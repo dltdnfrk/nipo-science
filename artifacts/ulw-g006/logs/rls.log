@@ -1,2 +1,52 @@
-error: Docker engine is unavailable
-make: *** [prepare-postgres-image] Error 1
+docker.io/library/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15: Pulling from library/postgres
+Digest: sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+Status: Image is up to date for postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+docker.io/library/postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 36 items
+
+services/api/tests/persistence/test_rls.py::test_cross_org_rows_are_hidden_when_app_principal_is_scoped PASSED [  2%]
+services/api/tests/persistence/test_rls.py::test_verified_test_principal_drives_the_database_tenant_scope PASSED [  5%]
+services/api/tests/persistence/test_rls.py::test_global_identity_tables_are_denied_to_the_tenant_app_role PASSED [  8%]
+services/api/tests/persistence/test_rls.py::test_cross_org_insert_is_denied_when_app_principal_is_scoped PASSED [ 11%]
+services/api/tests/persistence/test_rls.py::test_cross_org_parent_is_denied_when_composite_fk_is_checked PASSED [ 13%]
+services/api/tests/persistence/test_rls.py::test_audit_and_outbox_are_immutable_when_mutation_is_attempted PASSED [ 16%]
+services/api/tests/persistence/test_rls.py::test_last_owner_is_preserved_when_membership_is_removed PASSED [ 19%]
+services/api/tests/persistence/test_rls.py::test_concurrent_owner_revocations_leave_one_owner PASSED [ 22%]
+services/api/tests/persistence/test_rls.py::test_every_tenant_table_has_forced_rls_when_schema_is_current PASSED [ 25%]
+services/api/tests/persistence/test_rls.py::test_monetary_schema_is_absent_when_catalog_is_inspected PASSED [ 27%]
+services/api/tests/persistence/test_rls.py::test_non_uuid7_primary_id_is_denied_when_row_is_inserted PASSED [ 30%]
+services/api/tests/persistence/test_rls_contracts.py::test_action_plan_schema_requires_a_canonical_research_intent_pin PASSED [ 33%]
+services/api/tests/persistence/test_rls_contracts.py::test_action_plan_persistence_rejects_missing_or_invalid_research_intent PASSED [ 36%]
+services/api/tests/persistence/test_rls_contracts.py::test_database_canonical_digest_matches_all_language_boundaries PASSED [ 38%]
+services/api/tests/persistence/test_rls_contracts.py::test_approval_revision_and_completed_execution_result_are_enforced PASSED [ 41%]
+services/api/tests/persistence/test_rls_contracts.py::test_review_cas_submission_and_finding_evidence_are_representable PASSED [ 44%]
+services/api/tests/persistence/test_rls_principal_security.py::test_membership_mismatch_cannot_select_tenant_rows PASSED [ 47%]
+services/api/tests/persistence/test_rls_principal_security.py::test_member_cannot_promote_membership_to_owner PASSED [ 50%]
+services/api/tests/persistence/test_rls_principal_security.py::test_provider_connection_is_visible_only_to_requester PASSED [ 52%]
+services/api/tests/persistence/test_rls_principal_security.py::test_owner_soft_revokes_member_without_deleting_history PASSED [ 55%]
+services/api/tests/persistence/test_rls_review_security.py::test_completed_review_inputs_and_findings_are_immutable PASSED [ 58%]
+services/api/tests/persistence/test_rls_review_security.py::test_finding_disposition_audit_cannot_be_erased PASSED [ 61%]
+services/api/tests/persistence/test_rls_review_security.py::test_finding_evidence_must_be_one_of_the_review_pins PASSED [ 63%]
+services/api/tests/persistence/test_rls_review_security.py::test_export_selection_rejects_replacement_or_deletion PASSED [ 66%]
+services/api/tests/persistence/test_rls_review_security.py::test_export_requires_at_least_one_version_selection PASSED [ 69%]
+services/api/tests/persistence/test_rls_review_security.py::test_completed_review_requires_at_least_one_finding PASSED [ 72%]
+services/api/tests/persistence/test_rls_security.py::test_legal_hold_mutation_requires_compliance_role PASSED [ 75%]
+services/api/tests/persistence/test_rls_security.py::test_legal_hold_scope_cannot_reference_another_tenant PASSED [ 77%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_nested_plaintext_secrets PASSED [ 80%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"oauth_access_token":"[REDACTED]"}] PASSED [ 83%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"cookie":"session=abcdefghijklmnop"}] PASSED [ 86%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"note":"client_secret=[REDACTED]"}] PASSED [ 88%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"account_name":"AKIAABCDEFGHIJKLMNOP"}] PASSED [ 91%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"display_name":"-----BEGIN PRIVATE KEY-----"}] PASSED [ 94%]
+services/api/tests/persistence/test_rls_security.py::test_provider_secret_columns_are_absent_when_catalog_is_inspected PASSED [ 97%]
+services/api/tests/persistence/test_rls_security.py::test_provider_runtime_home_requires_opaque_vault_reference PASSED [100%]
+
+============================= 36 passed in 13.94s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes

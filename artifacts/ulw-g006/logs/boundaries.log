@@ -1,3 +1,4 @@
+test_absolute_attack_fixtures_are_machine_independent (test_boundaries.BoundaryCheckerTests.test_absolute_attack_fixtures_are_machine_independent) ... ok
 test_accepts_files_confined_to_target_when_project_is_clean (test_boundaries.BoundaryCheckerTests.test_accepts_files_confined_to_target_when_project_is_clean) ... ok
 test_accepts_known_in_root_write_destinations (test_boundaries.BoundaryCheckerTests.test_accepts_known_in_root_write_destinations) ... ok
 test_accepts_unlink_of_tempfile_mkstemp_snapshot (test_boundaries.BoundaryCheckerTests.test_accepts_unlink_of_tempfile_mkstemp_snapshot) ... ok
@@ -24,7 +25,7 @@ test_rejects_write_path_when_python_targets_ontologylab (test_boundaries.Boundar
 test_rejects_write_path_when_script_targets_drylab (test_boundaries.BoundaryCheckerTests.test_rejects_write_path_when_script_targets_drylab) ... ok
 
 ----------------------------------------------------------------------
-Ran 24 tests in 6.637s
+Ran 25 tests in 5.955s
 
 OK
-boundary-check: PASS (406 files checked)
+boundary-check: PASS (454 files checked)

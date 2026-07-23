@@ -1,0 +1,101 @@
+{
+  "architectReview": {
+    "architectureStatus": "PENDING_FINAL_REVIEW",
+    "blockers": [],
+    "codeStatus": "PENDING_FINAL_REVIEW",
+    "commands": [],
+    "evidence": "Fresh final review is pending on the frozen source; historical review identifiers are not reused.",
+    "productStatus": "PENDING_FINAL_REVIEW",
+    "recommendation": "PENDING"
+  },
+  "executorQa": {
+    "adversarialCases": [
+      {
+        "artifactRefs": [
+          "g004-qa-report",
+          "g004-live-attempt"
+        ],
+        "contractRef": "G004 provider trust boundary",
+        "expectedBehavior": "All local lifecycle and RLS checks pass, but a usage-limit failure publishes no profile and grants no current live authority.",
+        "id": "g004-fail-closed-live-authority",
+        "scenario": "Run the exact approved runtime policy through the live capture path while the subscription limit is active.",
+        "verdict": "passed"
+      }
+    ],
+    "artifactRefs": [
+      {
+        "description": "Current provider, RLS and canonical local verification counts",
+        "id": "g004-qa-report",
+        "kind": "provider-runtime-test-report",
+        "path": "science-workbench/artifacts/ulw-g004/qa-report.json"
+      },
+      {
+        "description": "Current fail-closed usage-limit receipt with no publication or live authority",
+        "id": "g004-live-attempt",
+        "kind": "blocked-live-qualification-receipt",
+        "path": "science-workbench/artifacts/ulw-g004/live-profile-attempt.json"
+      },
+      {
+        "description": "Current 27-of-27 local gate evidence with 3366 checks",
+        "id": "g006-canonical-gates",
+        "kind": "canonical-local-gate-report",
+        "path": "science-workbench/artifacts/ulw-g006/canonical-gates.json"
+      }
+    ],
+    "blockers": [
+      "Current OpenAI Codex live qualification is blocked by the subscription usage limit until 2026-07-20 22:57 Asia/Seoul."
+    ],
+    "contractCoverage": [
+      {
+        "adversarialCaseRefs": [
+          "g004-fail-closed-live-authority"
+        ],
+        "contractRef": "G004 local provider runtime",
+        "id": "g004-provider-contract",
+        "obligation": "Verify OAuth-only lifecycle, pinned runtime identity, PostgreSQL persistence/RLS, tool governance and fail-closed live qualification.",
+        "status": "covered-local-with-live-blocker",
+        "surfaceEvidenceRefs": [
+          "g004-provider-surface"
+        ]
+      }
+    ],
+    "e2eCommands": [
+      "make test-provider-runtime",
+      "make test-rls",
+      "canonical ci_commands(root) direct execution"
+    ],
+    "e2eStatus": "passed",
+    "evidence": "Provider gate passed 187 checks (151 provider contracts plus 36 forced-RLS checks); all 27 local gates passed with 3366 checks. Current live authority remains absent.",
+    "redTeamCommands": [
+      "security gate from ci_commands(root)",
+      "make test-rls"
+    ],
+    "redTeamStatus": "passed",
+    "status": "passed-local-with-live-blocker",
+    "surfaceEvidence": [
+      {
+        "artifactRefs": [
+          "g004-qa-report",
+          "g006-canonical-gates"
+        ],
+        "contractRef": "G004 HTTP-to-PostgreSQL lifecycle",
+        "id": "g004-provider-surface",
+        "invocation": "make test-provider-runtime",
+        "surface": "Provider runtime, PostgreSQL persistence and forced RLS",
+        "verdict": "passed"
+      }
+    ]
+  },
+  "iteration": {
+    "blockers": [
+      "Current OpenAI Codex live qualification is blocked by the subscription usage limit until 2026-07-20 22:57 Asia/Seoul."
+    ],
+    "evidence": "Local provider implementation and integration verification are complete; live qualification is explicitly not complete and is not owner-waived into authority.",
+    "fullRerun": true,
+    "rerunCommands": [
+      "make test-provider-runtime",
+      "canonical ci_commands(root) direct execution"
+    ],
+    "status": "passed-local-with-live-blocker"
+  }
+}

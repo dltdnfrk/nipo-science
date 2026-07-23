@@ -1,67 +1,63 @@
 {
-  "schemaVersion": 1,
-  "kind": "provider-runtime-test-report",
-  "goalId": "G004",
-  "generatedAt": "2026-07-13T19:52:21.963548Z",
-  "verdict": "blocked",
-  "commands": [
-    "pytest tests/g004 --ignore=tests/g004/test_provider_postgres.py",
-    "ruff check services/api/provider_runtime.py services/api/provider_postgres.py services/api/provider_qualification.py services/api/provider_live_capture.py services/api/tool_governance.py services/api/product_app.py tests/g004",
-    "basedpyright services/api/provider_runtime.py services/api/provider_postgres.py services/api/provider_qualification.py services/api/provider_live_capture.py services/api/tool_governance.py services/api/product_app.py tests/g004",
-    "node --check apps/web/product/app.js",
-    "pytest tests/test_openapi_contract.py",
-    ".venv/bin/python -m services.api.provider_live_capture --cases tests/g004/fixtures/golden_session_cases.json --output artifacts/ulw-g004/openai-codex-live-profile.json",
-    "docker info"
-  ],
-  "passingResults": {
-    "g004NonPostgresTests": 101,
-    "providerHttpTests": 13,
-    "openApiContractTests": 15,
-    "ruffErrors": 0,
-    "typeErrors": 0,
-    "typeWarnings": 0,
-    "nodeSyntaxExitCode": 0,
-    "captureHarnessTimeoutTests": 1,
-    "syntheticFixtureLiveQualified": false
-  },
-  "independentReviews": {
-    "architectureStatus": "CLEAR",
-    "architectureRecommendation": "APPROVE",
-    "executorQaStatus": "PASS",
-    "codeReady": true
-  },
-  "coveredBehavior": [
-    "official subscription OAuth callback/device initiation, single-use state, expiry, binding, cancel, reauth and revoke",
-    "authenticated same-origin HTTP lifecycle with pre-exchange state claims and bounded route/principal/method-scoped single-flight idempotency that durably records request-id-correlated redacted diagnostics before caching unexpected-failure 503 responses",
-    "direct concurrent, replay and conflict tests cover initiate, complete, cancel, model, health and reauth; invalid, expired, mismatched and cancelled states prove zero broker exchange",
-    "canonical ErrorEnvelope parity with OpenAPI, tenant-safe origin rejection, absent health/reauth bodies and exact 409/412/503 mutation statuses",
-    "exhaustive provider status mapping distinguishes capability-disabled 403, tenant-hidden 404, conflict 409, revision 412 and infrastructure 503 under a validator-enforced capability-only extension",
-    "canonical provider registry with openai_codex sole required default, optional adapters fail-closed and zai_glm unsupported_auth",
-    "requester and tenant isolation with foreign/missing non-disclosing responses",
-    "account/model/health selection with healthy status and dispatch fail-closed until a sealed evaluator-issued live result exists; no provider/model fallback",
-    "ProviderRuntimeService requires explicit persistence and rejects duck-typed qualification results through an exact module-owned seal verifier",
-    "ref-counted per-connection locks validate ownership before allocation, remove idle entries, serialize CAS and keep persistence/runtime-home destruction outside the short service-wide state lock",
-    "application-only allow/ask/deny tool grants with deep-frozen canonical arguments, a one-way sealed registry identity bound into approvals, exact approved context and zero-side-effect denials",
-    "scenario-specific GS01-GS10 x3 evaluation against exact scientific/artifact/evidence outputs, actual-output hashes, protocol invariants and explicit synthetic-not-live evidence",
-    "real Codex CLI capture harness with isolated argv, read-only sandbox, process-group timeout, atomic publication, exact canonical module proof identity and pinned golden-suite digest aea210e96f0d26df5050ab28eb6fc410c0b61e838d344eeaffe8b5007ed365c9",
-    "Korean provider lifecycle UI and strict token-free OpenAPI schemas",
-    "atomic expected-revision ProviderPersistence proposals and Postgres CAS are static-clean; verified cleanup schedules, destroys, tombstones and records SHA-256 evidence before publication",
-    "provider revocation persistence/destruction failures return documented canonical 503 without publishing revocation"
-  ],
+  "authoritativePublication": false,
   "blockedEvidence": {
     "liveOpenAiCodexProfile": {
-      "status": "blocked",
-      "reason": "Official ChatGPT subscription login and codex-cli 0.144.1 are present. The first pinned protocol attempt reached the fixed 90-second deadline (return code 124), emitted no sensitive pattern, and published no output; the full harness failed closed with exit 2.",
-      "receipt": "artifacts/ulw-g004/live-profile-attempt.json"
-    },
-    "postgresProviderIntegration": {
-      "status": "blocked",
-      "test": "tests/g004/test_provider_postgres.py",
-      "reason": "Docker Desktop daemon socket is absent. docker info cannot connect to unix:///Users/hyunjun/.docker/run/docker.sock; starting Docker Desktop did not complete. The test and sink remain enabled and were not skipped or weakened."
+      "currentAuthority": false,
+      "reason": "The approved executable reached Codex, which returned turn.failed because the ChatGPT subscription usage limit is active until 2026-07-20 22:57 Asia/Seoul. Capture stopped before the external authority could issue a receipt; no profile, receipt, database adoption, or current qualification was published.",
+      "receipt": "artifacts/ulw-g004/live-profile-attempt.json",
+      "status": "blocked"
     }
   },
   "blockers": [
-    "No captured_live_profile exists for the required openai_codex adapter because the official logged-in runtime did not complete the pinned protocol attempt before its fail-closed deadline.",
-    "The real HTTP-to-provider_connections forced-RLS integration test cannot execute until the Docker daemon is restored."
-  ]
+    "Current live OpenAI Codex qualification authority is absent until the subscription usage limit resets, the deployment external authority and dedicated adopter credential are provisioned, and the exact approved-policy claim receives and adopts a valid signed receipt."
+  ],
+  "commands": [
+    "make ci-validate",
+    "canonical ci_commands(root) direct execution",
+    "make test-provider-runtime",
+    "make test-rls",
+    "make check-generated-contracts",
+    "node --check apps/web/product/app.js",
+    "uv run python -m services.api.provider_live_capture --cases tests/g004/fixtures/golden_session_cases.json --output .cache/live-codex-final/profile-runtime-0.144.4.json --receipt-output .cache/live-codex-final/receipt-runtime-0.144.4.json --codex-executable /opt/homebrew/Caskroom/codex/0.144.4/codex-aarch64-apple-darwin --approved-runtime-policy openai-codex-0.144.4-darwin-arm64 --operator-account-ref acct_operator_verified_20260715 --authority-public-keys /etc/science-workbench/qualification-public-keys.json --authority-socket /run/science-workbench/qualification-authority.sock --org-id $ORG_ID --user-id $USER_ID --connection-id $CONNECTION_ID --connection-revision $NEXT_CONNECTION_REVISION"
+  ],
+  "coveredBehavior": [
+    "OAuth-only provider lifecycle with no API-key or model fallback",
+    "repository runtime policy binds platform, codex-cli 0.144.4 and the exact executable SHA-256; its checked-in status is established only by the eventual Git commit",
+    "external Unix-socket authority issuance with signing material absent from evaluator/runtime and public-only verification",
+    "append-only signed receipt history, dedicated adopter LOGIN-to-NOLOGIN role and exact revision CAS without arbitrary writer callbacks",
+    "PostgreSQL restart persistence, qualification refresh history, requester/tenant isolation and forced RLS",
+    "production Run dispatch atomically pins the exact current receipt, revision, profile, runtime and executable identity",
+    "single-use approval and application-side allow/ask/deny tool governance",
+    "staged private executable copy with replacement-race and cleanup coverage",
+    "Korean responsive provider UI and fail-closed malformed-response states",
+    "failed or legacy unsigned capture evidence is preserved as non-authoritative and cannot be promoted to current live qualification"
+  ],
+  "generatedAt": "2026-07-15T12:19:40.790053Z",
+  "goalId": "G004",
+  "kind": "provider-runtime-test-report",
+  "passingResults": {
+    "artifactGateExecutedCount": 100,
+    "artifactUiGateExecutedCount": 99,
+    "canonicalLocalExecutedCount": 3366,
+    "canonicalLocalGates": 27,
+    "canonicalSourceTreeSha256": "7a855379a546b3c8df4db455bbd375443517a51039c3b001e6bf03493a72f3d4",
+    "dryLabGateExecutedCount": 54,
+    "forcedRlsTests": 36,
+    "migrationTests": 34,
+    "openApiGateExecutedCount": 371,
+    "productUiGateExecutedCount": 115,
+    "providerContractTests": 151,
+    "providerRuntimeGateExecutedCount": 187,
+    "ruffErrors": 0,
+    "securityCases": 13,
+    "typeErrors": 0,
+    "typeWarnings": 0
+  },
+  "runtimePolicy": {
+    "executableSha256": "3302acbda5f53de1a71ebdb0c0f2aae0d47f9324aa9fb6b4e78a47014fd51c7d",
+    "policyId": "openai-codex-0.144.4-darwin-arm64",
+    "runtimeVersion": "codex-cli-0.144.4"
+  },
+  "schemaVersion": 2,
+  "verdict": "passed-local-with-external-blocker"
 }

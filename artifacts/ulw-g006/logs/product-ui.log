@@ -4,232 +4,140 @@ cachedir: .pytest_cache
 rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
 configfile: pyproject.toml
 plugins: anyio-4.14.1
-collecting ... collected 20 items
+collecting ... collected 79 items
 
-tests/g003/test_auth_tenancy.py::test_magic_link_exchange_rotation_replay_and_logout PASSED [  5%]
-tests/g003/test_auth_tenancy.py::test_unknown_magic_link_does_not_create_delivery PASSED [ 10%]
-tests/g003/test_auth_tenancy.py::test_magic_link_rejects_cross_origin_without_delivery PASSED [ 15%]
-tests/g003/test_auth_tenancy.py::test_auth_rejects_expired_wrong_intent_and_cross_origin_exchange PASSED [ 20%]
-tests/g003/test_auth_tenancy.py::test_tenant_resources_hide_foreign_and_archived_parents PASSED [ 25%]
-tests/g003/test_auth_tenancy.py::test_product_shell_serves_namespaced_static_assets PASSED [ 30%]
-tests/g003/test_product_dry_lab_http.py::test_authenticated_same_origin_dry_lab_journey_and_logout_cleanup PASSED [ 35%]
-tests/g003/test_product_dry_lab_service.py::test_full_sequence_replay_and_cleanup_preserve_projection PASSED [ 40%]
-tests/g003/test_product_dry_lab_service.py::test_sessions_are_isolated_and_fixture_failures_are_mapped PASSED [ 45%]
-tests/g003/test_product_dry_lab_service.py::test_denial_unknown_action_and_drop_session PASSED [ 50%]
-tests/g003/test_product_rls_integration.py::test_product_http_reads_use_forced_postgres_rls ERROR [ 55%]
-tests/g003/test_ui_contract.py::test_product_shell_has_semantic_landmarks_and_accessible_bootstrap PASSED [ 60%]
-tests/g003/test_ui_contract.py::test_mineral_notebook_tokens_and_typography_are_preserved PASSED [ 65%]
-tests/g003/test_ui_contract.py::test_all_routes_and_korean_product_journeys_are_declared PASSED [ 70%]
-tests/g003/test_ui_contract.py::test_same_origin_data_contract_and_safe_rendering_are_enforced PASSED [ 75%]
-tests/g003/test_ui_contract.py::test_dynamic_resource_routes_and_dry_lab_actions_are_declared PASSED [ 80%]
-tests/g003/test_ui_contract.py::test_artifact_mobile_alternative_and_900px_layout_collapse_are_declared PASSED [ 85%]
-tests/g003/test_ui_contract.py::test_muted_text_token_meets_aa_on_warm_and_accent_surfaces PASSED [ 90%]
-tests/g003/test_ui_contract.py::test_product_script_parses_with_the_repository_locked_node PASSED [ 95%]
+tests/g003/test_auth_tenancy.py::test_magic_link_exchange_rotation_replay_and_logout PASSED [  1%]
+tests/g003/test_auth_tenancy.py::test_unknown_magic_link_does_not_create_delivery PASSED [  2%]
+tests/g003/test_auth_tenancy.py::test_magic_link_rejects_cross_origin_without_delivery PASSED [  3%]
+tests/g003/test_auth_tenancy.py::test_mutation_authority_cannot_be_forged_from_host_header PASSED [  5%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_duplicate_default_authority_headers[origin] PASSED [  6%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_duplicate_default_authority_headers[host] PASSED [  7%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[missing-origin] PASSED [  8%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[duplicate-origin] PASSED [ 10%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[duplicate-host] PASSED [ 11%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[wrong-scheme] PASSED [ 12%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[userinfo] PASSED [ 13%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[wrong-port] PASSED [ 15%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[path] PASSED [ 16%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[malformed] PASSED [ 17%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[wrong-host] PASSED [ 18%]
+tests/g003/test_auth_tenancy.py::test_mutation_rejects_every_noncanonical_origin_and_authority[forged-pair] PASSED [ 20%]
+tests/g003/test_auth_tenancy.py::test_mutation_accepts_the_exact_configured_origin_and_authority PASSED [ 21%]
+tests/g003/test_auth_tenancy.py::test_production_session_cookie_and_csrf_are_bound_to_the_session PASSED [ 22%]
+tests/g003/test_auth_tenancy.py::test_json_mutations_reject_ambiguous_body_framing[duplicate-length] PASSED [ 24%]
+tests/g003/test_auth_tenancy.py::test_json_mutations_reject_ambiguous_body_framing[transfer-encoding] PASSED [ 25%]
+tests/g003/test_auth_tenancy.py::test_json_mutations_reject_oversized_bodies_before_side_effects PASSED [ 26%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[] PASSED [ 27%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[product.example.test] PASSED [ 29%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[ftp://product.example.test] PASSED [ 30%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[https://user@product.example.test] PASSED [ 31%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[https://product.example.test/path] PASSED [ 32%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[https://product.example.test?query=yes] PASSED [ 34%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[https://product.example.test#fragment] PASSED [ 35%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[https://product.example.test:443] PASSED [ 36%]
+tests/g003/test_auth_tenancy.py::test_public_origin_configuration_rejects_noncanonical_values[https://product.example.test:not-a-port] PASSED [ 37%]
+tests/g003/test_auth_tenancy.py::test_auth_rejects_expired_wrong_intent_and_cross_origin_exchange PASSED [ 39%]
+tests/g003/test_auth_tenancy.py::test_tenant_resources_hide_foreign_and_archived_parents PASSED [ 40%]
+tests/g003/test_auth_tenancy.py::test_product_shell_serves_namespaced_static_assets PASSED [ 41%]
+tests/g003/test_product_dry_lab_http.py::test_http_run_creation_rejects_missing_or_incomplete_research_intent PASSED [ 43%]
+tests/g003/test_product_dry_lab_http.py::test_all_legacy_dry_lab_routes_return_not_found PASSED [ 44%]
+tests/g003/test_product_dry_lab_http.py::test_canonical_local_run_route_persists_exact_intent_and_resource_links PASSED [ 45%]
+tests/g003/test_product_dry_lab_http.py::test_authenticated_same_origin_dry_lab_journey_and_logout_cleanup PASSED [ 46%]
+tests/g003/test_product_dry_lab_http.py::test_generated_resource_urls_require_exact_id_and_browser_session PASSED [ 48%]
+tests/g003/test_product_dry_lab_http.py::test_product_server_exposes_real_dry_lab_artifact_versions PASSED [ 49%]
+tests/g003/test_product_dry_lab_http.py::test_http_execute_rejects_malformed_tokens_without_consuming_approval[omitted] PASSED [ 50%]
+tests/g003/test_product_dry_lab_http.py::test_http_execute_rejects_malformed_tokens_without_consuming_approval[null] PASSED [ 51%]
+tests/g003/test_product_dry_lab_http.py::test_http_execute_rejects_malformed_tokens_without_consuming_approval[empty] PASSED [ 53%]
+tests/g003/test_product_dry_lab_http.py::test_http_execute_rejects_malformed_tokens_without_consuming_approval[non-string] PASSED [ 54%]
+tests/g003/test_product_dry_lab_http.py::test_http_execute_rejects_malformed_tokens_without_consuming_approval[wrong] PASSED [ 55%]
+tests/g003/test_product_dry_lab_http.py::test_http_execute_rejects_malformed_tokens_without_consuming_approval[unicode] PASSED [ 56%]
+tests/g003/test_product_dry_lab_http.py::test_http_approve_requires_the_exact_plan_digest[omitted] PASSED [ 58%]
+tests/g003/test_product_dry_lab_http.py::test_http_approve_requires_the_exact_plan_digest[null] PASSED [ 59%]
+tests/g003/test_product_dry_lab_http.py::test_http_approve_requires_the_exact_plan_digest[non-string] PASSED [ 60%]
+tests/g003/test_product_dry_lab_http.py::test_http_approve_requires_the_exact_plan_digest[empty] PASSED [ 62%]
+tests/g003/test_product_dry_lab_http.py::test_http_approve_requires_the_exact_plan_digest[wrong] PASSED [ 63%]
+tests/g003/test_product_dry_lab_http.py::test_http_approve_requires_the_exact_plan_digest[unicode] PASSED [ 64%]
+tests/g003/test_product_dry_lab_http.py::test_http_two_runs_reload_exact_resources_and_hide_other_session_ids PASSED [ 65%]
+tests/g003/test_product_dry_lab_http.py::test_product_server_does_not_create_demo_resources_without_dependencies PASSED [ 67%]
+tests/g003/test_product_dry_lab_http.py::test_product_server_rejects_fixture_dry_lab_without_explicit_fixture_mode PASSED [ 68%]
+tests/g003/test_product_dry_lab_http.py::test_artifact_attachment_uses_only_the_injected_session_repository PASSED [ 69%]
+tests/g003/test_product_dry_lab_service.py::test_full_sequence_replay_and_cleanup_preserve_projection PASSED [ 70%]
+tests/g003/test_product_dry_lab_service.py::test_local_run_creation_atomically_binds_intent_and_server_capabilities PASSED [ 72%]
+tests/g003/test_product_dry_lab_service.py::test_sessions_are_isolated_and_fixture_failures_are_mapped PASSED [ 73%]
+tests/g003/test_product_dry_lab_service.py::test_denial_unknown_action_and_drop_session PASSED [ 74%]
+tests/g003/test_product_dry_lab_service.py::test_concurrent_local_runs_bind_distinct_authoritative_research_intents PASSED [ 75%]
+tests/g003/test_product_dry_lab_service.py::test_two_runs_in_one_session_retain_exact_independent_resources PASSED [ 77%]
+tests/g003/test_product_dry_lab_service.py::test_workspace_runs_retain_distinct_server_creation_times PASSED [ 78%]
+tests/g003/test_product_dry_lab_service.py::test_concurrent_approvals_target_two_distinct_runs_without_state_bleed PASSED [ 79%]
+tests/g003/test_product_dry_lab_service.py::test_artifact_materialization_failure_is_atomic_and_retryable PASSED [ 81%]
+tests/g003/test_product_rls_integration.py::test_product_http_reads_use_forced_postgres_rls PASSED [ 82%]
+tests/g003/test_ui_contract.py::test_product_shell_has_semantic_landmarks_and_accessible_bootstrap PASSED [ 83%]
+tests/g003/test_ui_contract.py::test_mineral_notebook_tokens_and_typography_are_preserved PASSED [ 84%]
+tests/g003/test_ui_contract.py::test_all_routes_and_korean_product_journeys_are_declared PASSED [ 86%]
+tests/g003/test_ui_contract.py::test_same_origin_data_contract_and_safe_rendering_are_enforced PASSED [ 87%]
+tests/g003/test_ui_contract.py::test_dynamic_resource_routes_and_dry_lab_actions_are_declared PASSED [ 88%]
+tests/g003/test_ui_contract.py::test_research_intent_is_user_authored_and_sent_with_plan_creation PASSED [ 89%]
+tests/g003/test_ui_contract.py::test_review_copy_preserves_rejected_server_verdicts PASSED [ 91%]
+tests/g003/test_ui_contract.py::test_research_intent_ui_preserves_boundary_whitespace_for_server_rejection PASSED [ 92%]
+tests/g003/test_ui_contract.py::test_provider_ui_uses_only_server_registry_state_and_completes_callback PASSED [ 93%]
+tests/g003/test_ui_contract.py::test_dry_lab_mutations_target_the_server_issued_run PASSED [ 94%]
+tests/g003/test_ui_contract.py::test_artifact_mobile_alternative_and_900px_layout_collapse_are_declared PASSED [ 96%]
+tests/g003/test_ui_contract.py::test_muted_text_token_meets_aa_on_warm_and_accent_surfaces PASSED [ 97%]
+tests/g003/test_ui_contract.py::test_product_script_parses_with_the_repository_locked_node PASSED [ 98%]
 tests/g003/test_ui_contract.py::test_design_contract_precedes_product_routes PASSED [100%]
 
-==================================== ERRORS ====================================
-______ ERROR at setup of test_product_http_reads_use_forced_postgres_rls _______
+============================= 79 passed in 27.81s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes
+docker.io/library/postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15: Pulling from library/postgres
+Digest: sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+Status: Image is up to date for postgres@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+docker.io/library/postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/Documents/MUNI/science-workbench/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/Documents/MUNI/science-workbench
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 36 items
 
-    @pytest.fixture(scope="session")
-    def postgres_database() -> Iterator[None]:
-        try:
->           _ = compose(
-                (
-                    "up",
-                    "-d",
-                    "postgres",
-                    "--pull",
-                    "never",
-                    "--wait",
-                    "--wait-timeout",
-                    "120",
-                )
-            )
+services/api/tests/persistence/test_rls.py::test_cross_org_rows_are_hidden_when_app_principal_is_scoped PASSED [  2%]
+services/api/tests/persistence/test_rls.py::test_verified_test_principal_drives_the_database_tenant_scope PASSED [  5%]
+services/api/tests/persistence/test_rls.py::test_global_identity_tables_are_denied_to_the_tenant_app_role PASSED [  8%]
+services/api/tests/persistence/test_rls.py::test_cross_org_insert_is_denied_when_app_principal_is_scoped PASSED [ 11%]
+services/api/tests/persistence/test_rls.py::test_cross_org_parent_is_denied_when_composite_fk_is_checked PASSED [ 13%]
+services/api/tests/persistence/test_rls.py::test_audit_and_outbox_are_immutable_when_mutation_is_attempted PASSED [ 16%]
+services/api/tests/persistence/test_rls.py::test_last_owner_is_preserved_when_membership_is_removed PASSED [ 19%]
+services/api/tests/persistence/test_rls.py::test_concurrent_owner_revocations_leave_one_owner PASSED [ 22%]
+services/api/tests/persistence/test_rls.py::test_every_tenant_table_has_forced_rls_when_schema_is_current PASSED [ 25%]
+services/api/tests/persistence/test_rls.py::test_monetary_schema_is_absent_when_catalog_is_inspected PASSED [ 27%]
+services/api/tests/persistence/test_rls.py::test_non_uuid7_primary_id_is_denied_when_row_is_inserted PASSED [ 30%]
+services/api/tests/persistence/test_rls_contracts.py::test_action_plan_schema_requires_a_canonical_research_intent_pin PASSED [ 33%]
+services/api/tests/persistence/test_rls_contracts.py::test_action_plan_persistence_rejects_missing_or_invalid_research_intent PASSED [ 36%]
+services/api/tests/persistence/test_rls_contracts.py::test_database_canonical_digest_matches_all_language_boundaries PASSED [ 38%]
+services/api/tests/persistence/test_rls_contracts.py::test_approval_revision_and_completed_execution_result_are_enforced PASSED [ 41%]
+services/api/tests/persistence/test_rls_contracts.py::test_review_cas_submission_and_finding_evidence_are_representable PASSED [ 44%]
+services/api/tests/persistence/test_rls_principal_security.py::test_membership_mismatch_cannot_select_tenant_rows PASSED [ 47%]
+services/api/tests/persistence/test_rls_principal_security.py::test_member_cannot_promote_membership_to_owner PASSED [ 50%]
+services/api/tests/persistence/test_rls_principal_security.py::test_provider_connection_is_visible_only_to_requester PASSED [ 52%]
+services/api/tests/persistence/test_rls_principal_security.py::test_owner_soft_revokes_member_without_deleting_history PASSED [ 55%]
+services/api/tests/persistence/test_rls_review_security.py::test_completed_review_inputs_and_findings_are_immutable PASSED [ 58%]
+services/api/tests/persistence/test_rls_review_security.py::test_finding_disposition_audit_cannot_be_erased PASSED [ 61%]
+services/api/tests/persistence/test_rls_review_security.py::test_finding_evidence_must_be_one_of_the_review_pins PASSED [ 63%]
+services/api/tests/persistence/test_rls_review_security.py::test_export_selection_rejects_replacement_or_deletion PASSED [ 66%]
+services/api/tests/persistence/test_rls_review_security.py::test_export_requires_at_least_one_version_selection PASSED [ 69%]
+services/api/tests/persistence/test_rls_review_security.py::test_completed_review_requires_at_least_one_finding PASSED [ 72%]
+services/api/tests/persistence/test_rls_security.py::test_legal_hold_mutation_requires_compliance_role PASSED [ 75%]
+services/api/tests/persistence/test_rls_security.py::test_legal_hold_scope_cannot_reference_another_tenant PASSED [ 77%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_nested_plaintext_secrets PASSED [ 80%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"oauth_access_token":"[REDACTED]"}] PASSED [ 83%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"cookie":"session=abcdefghijklmnop"}] PASSED [ 86%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"note":"client_secret=[REDACTED]"}] PASSED [ 88%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"account_name":"AKIAABCDEFGHIJKLMNOP"}] PASSED [ 91%]
+services/api/tests/persistence/test_rls_security.py::test_provider_account_metadata_rejects_secret_bypass_shapes[{"display_name":"-----BEGIN PRIVATE KEY-----"}] PASSED [ 94%]
+services/api/tests/persistence/test_rls_security.py::test_provider_secret_columns_are_absent_when_catalog_is_inspected PASSED [ 97%]
+services/api/tests/persistence/test_rls_security.py::test_provider_runtime_home_requires_opaque_vault_reference PASSED [100%]
 
-services/api/tests/persistence/conftest.py:11: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-services/api/tests/persistence/postgres_harness.py:19: in compose
-    return subprocess.run(
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-input = None, capture_output = True, timeout = None, check = True
-popenargs = (('docker', 'compose', '--project-name', 'science-workbench-task8-97945', '-f', 'compose.yaml', ...),)
-kwargs = {'cwd': PosixPath('/Users/hyunjun/Documents/MUNI/science-workbench'), 'env': {'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONP.../XcodeDefault.xctoolchain/usr/share/man:', 'MAKEFLAGS': ' --no-print-directory', ...}, 'text': True, 'stdout': -1, ...}
-
-    def run(*popenargs,
-            input=None, capture_output=False, timeout=None, check=False, **kwargs):
-        """Run command with arguments and return a CompletedProcess instance.
-    
-        The returned instance will have attributes args, returncode, stdout and
-        stderr. By default, stdout and stderr are not captured, and those attributes
-        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
-        or pass capture_output=True to capture both.
-    
-        If check is True and the exit code was non-zero, it raises a
-        CalledProcessError. The CalledProcessError object will have the return code
-        in the returncode attribute, and output & stderr attributes if those streams
-        were captured.
-    
-        If timeout (seconds) is given and the process takes too long,
-         a TimeoutExpired exception will be raised.
-    
-        There is an optional argument "input", allowing you to
-        pass bytes or a string to the subprocess's stdin.  If you use this argument
-        you may not also use the Popen constructor's "stdin" argument, as
-        it will be used internally.
-    
-        By default, all communication is in bytes, and therefore any "input" should
-        be bytes, and the stdout and stderr will be bytes. If in text mode, any
-        "input" should be a string, and stdout and stderr will be strings decoded
-        according to locale encoding, or by "encoding" if set. Text mode is
-        triggered by setting any of text, encoding, errors or universal_newlines.
-    
-        The other arguments are the same as for the Popen constructor.
-        """
-        if input is not None:
-            if kwargs.get('stdin') is not None:
-                raise ValueError('stdin and input arguments may not both be used.')
-            kwargs['stdin'] = PIPE
-    
-        if capture_output:
-            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
-                raise ValueError('stdout and stderr arguments may not be used '
-                                 'with capture_output.')
-            kwargs['stdout'] = PIPE
-            kwargs['stderr'] = PIPE
-    
-        with Popen(*popenargs, **kwargs) as process:
-            try:
-                stdout, stderr = process.communicate(input, timeout=timeout)
-            except TimeoutExpired as exc:
-                process.kill()
-                if _mswindows:
-                    # Windows accumulates the output in a single blocking
-                    # read() call run on child threads, with the timeout
-                    # being done in a join() on those threads.  communicate()
-                    # _after_ kill() is required to collect that and add it
-                    # to the exception.
-                    exc.stdout, exc.stderr = process.communicate()
-                else:
-                    # POSIX _communicate already populated the output so
-                    # far into the TimeoutExpired exception.
-                    process.wait()
-                raise
-            except:  # Including KeyboardInterrupt, communicate handled that.
-                process.kill()
-                # We don't call process.wait() as .__exit__ does that for us.
-                raise
-            retcode = process.poll()
-            if check and retcode:
->               raise CalledProcessError(retcode, process.args,
-                                         output=stdout, stderr=stderr)
-E               subprocess.CalledProcessError: Command '('docker', 'compose', '--project-name', 'science-workbench-task8-97945', '-f', 'compose.yaml', 'up', '-d', 'postgres', '--pull', 'never', '--wait', '--wait-timeout', '120')' returned non-zero exit status 1.
-
-.tools/mise/installs/python/3.12.13/lib/python3.12/subprocess.py:571: CalledProcessError
-
-During handling of the above exception, another exception occurred:
-
-    @pytest.fixture(scope="session")
-    def postgres_database() -> Iterator[None]:
-        try:
-            _ = compose(
-                (
-                    "up",
-                    "-d",
-                    "postgres",
-                    "--pull",
-                    "never",
-                    "--wait",
-                    "--wait-timeout",
-                    "120",
-                )
-            )
-            yield
-        finally:
->           _ = compose(("down", "--volumes", "--remove-orphans"))
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-services/api/tests/persistence/conftest.py:25: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-services/api/tests/persistence/postgres_harness.py:19: in compose
-    return subprocess.run(
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-input = None, capture_output = True, timeout = None, check = True
-popenargs = (('docker', 'compose', '--project-name', 'science-workbench-task8-97945', '-f', 'compose.yaml', ...),)
-kwargs = {'cwd': PosixPath('/Users/hyunjun/Documents/MUNI/science-workbench'), 'env': {'PYTHONDONTWRITEBYTECODE': '1', 'PYTHONP.../XcodeDefault.xctoolchain/usr/share/man:', 'MAKEFLAGS': ' --no-print-directory', ...}, 'text': True, 'stdout': -1, ...}
-
-    def run(*popenargs,
-            input=None, capture_output=False, timeout=None, check=False, **kwargs):
-        """Run command with arguments and return a CompletedProcess instance.
-    
-        The returned instance will have attributes args, returncode, stdout and
-        stderr. By default, stdout and stderr are not captured, and those attributes
-        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
-        or pass capture_output=True to capture both.
-    
-        If check is True and the exit code was non-zero, it raises a
-        CalledProcessError. The CalledProcessError object will have the return code
-        in the returncode attribute, and output & stderr attributes if those streams
-        were captured.
-    
-        If timeout (seconds) is given and the process takes too long,
-         a TimeoutExpired exception will be raised.
-    
-        There is an optional argument "input", allowing you to
-        pass bytes or a string to the subprocess's stdin.  If you use this argument
-        you may not also use the Popen constructor's "stdin" argument, as
-        it will be used internally.
-    
-        By default, all communication is in bytes, and therefore any "input" should
-        be bytes, and the stdout and stderr will be bytes. If in text mode, any
-        "input" should be a string, and stdout and stderr will be strings decoded
-        according to locale encoding, or by "encoding" if set. Text mode is
-        triggered by setting any of text, encoding, errors or universal_newlines.
-    
-        The other arguments are the same as for the Popen constructor.
-        """
-        if input is not None:
-            if kwargs.get('stdin') is not None:
-                raise ValueError('stdin and input arguments may not both be used.')
-            kwargs['stdin'] = PIPE
-    
-        if capture_output:
-            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
-                raise ValueError('stdout and stderr arguments may not be used '
-                                 'with capture_output.')
-            kwargs['stdout'] = PIPE
-            kwargs['stderr'] = PIPE
-    
-        with Popen(*popenargs, **kwargs) as process:
-            try:
-                stdout, stderr = process.communicate(input, timeout=timeout)
-            except TimeoutExpired as exc:
-                process.kill()
-                if _mswindows:
-                    # Windows accumulates the output in a single blocking
-                    # read() call run on child threads, with the timeout
-                    # being done in a join() on those threads.  communicate()
-                    # _after_ kill() is required to collect that and add it
-                    # to the exception.
-                    exc.stdout, exc.stderr = process.communicate()
-                else:
-                    # POSIX _communicate already populated the output so
-                    # far into the TimeoutExpired exception.
-                    process.wait()
-                raise
-            except:  # Including KeyboardInterrupt, communicate handled that.
-                process.kill()
-                # We don't call process.wait() as .__exit__ does that for us.
-                raise
-            retcode = process.poll()
-            if check and retcode:
->               raise CalledProcessError(retcode, process.args,
-                                         output=stdout, stderr=stderr)
-E               subprocess.CalledProcessError: Command '('docker', 'compose', '--project-name', 'science-workbench-task8-97945', '-f', 'compose.yaml', 'down', '--volumes', '--remove-orphans')' returned non-zero exit status 1.
-
-.tools/mise/installs/python/3.12.13/lib/python3.12/subprocess.py:571: CalledProcessError
-=========================== short test summary info ============================
-ERROR tests/g003/test_product_rls_integration.py::test_product_http_reads_use_forced_postgres_rls
-========================= 19 passed, 1 error in 3.98s ==========================
-make: *** [test-product-ui] Error 1
+============================= 36 passed in 14.20s ==============================
+All checks passed!
+0 errors, 0 warnings, 0 notes

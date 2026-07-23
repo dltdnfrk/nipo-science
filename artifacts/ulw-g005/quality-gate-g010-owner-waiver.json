@@ -1,0 +1,93 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "Release reviews 241 and 243 approved the fail-closed production-authority and deployment-evidence contracts. The owner now removes actual deployment from scope rather than weakening those contracts.",
+    "commands": [
+      "agent://241-G006ReleaseClosureReview3",
+      "agent://243-G006ReleaseClosureReview4"
+    ],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "The revised G010 obligation is satisfied by the explicit owner nondeployment decision, 27-of-27 passing local canonical gates, and a checksummed failed capture showing no kubectl context, unsupported collector execution, and no fabricated or synthetic deployment receipt. Docker 29.3.0 is healthy but is not misrepresented as GKE.",
+    "e2eCommands": [
+      "canonical ci_commands(root) direct execution",
+      ".venv/bin/python -c 'from tools.platform_policy.deployment_capture import capture_live_gke; capture_live_gke()'",
+      "kubectl config current-context"
+    ],
+    "redTeamCommands": [
+      "canonical security and release gates",
+      "deployment capture fail-closed attempt"
+    ],
+    "artifactRefs": [
+      {
+        "id": "g010-waiver-receipt",
+        "kind": "owner-waived-deployment-attempt-receipt",
+        "path": "science-workbench/artifacts/ulw-g005/deployment-live-attempt.json",
+        "description": "Checksummed evidence that no live or synthetic GKE result was promoted"
+      },
+      {
+        "id": "g010-canonical-gates",
+        "kind": "canonical-gate-attempt-report",
+        "path": "science-workbench/artifacts/ulw-g006/canonical-gates.json",
+        "description": "Current all-green local canonical inventory"
+      }
+    ],
+    "contractCoverage": [
+      {
+        "id": "g010-owner-nondeployment-contract",
+        "contractRef": "Ultragoal G010 revised nondeployment objective",
+        "obligation": "Record the owner decision not to deploy, retain fail-closed GKE authority contracts, and prove no synthetic deployment evidence was promoted",
+        "status": "covered",
+        "surfaceEvidenceRefs": [
+          "g010-nondeployment-surface"
+        ],
+        "adversarialCaseRefs": [
+          "g010-no-fabricated-deployment"
+        ]
+      }
+    ],
+    "surfaceEvidence": [
+      {
+        "id": "g010-nondeployment-surface",
+        "contractRef": "G010 owner-waived GKE scope",
+        "surface": "Durable ledger and fail-closed capture receipt",
+        "invocation": "deployment capture plus canonical local gates",
+        "verdict": "passed",
+        "artifactRefs": [
+          "g010-waiver-receipt",
+          "g010-canonical-gates"
+        ]
+      }
+    ],
+    "adversarialCases": [
+      {
+        "id": "g010-no-fabricated-deployment",
+        "contractRef": "G010 synthetic-evidence prohibition",
+        "scenario": "Attempt capture without an authorized GKE context or Linux collector",
+        "expectedBehavior": "Capture fails closed, local Docker is not conflated with GKE, and no synthetic or unsigned receipt is accepted",
+        "verdict": "passed",
+        "artifactRefs": [
+          "g010-waiver-receipt"
+        ]
+      }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "G010 is complete under the explicit owner nondeployment scope. The retained capture is evidence of non-promotion, not fabricated deployment success.",
+    "fullRerun": true,
+    "rerunCommands": [
+      "canonical ci_commands(root) direct execution",
+      "deployment capture fail-closed attempt"
+    ],
+    "blockers": []
+  }
+}
