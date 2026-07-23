@@ -1579,6 +1579,27 @@ def _open_published_generation(evidence_fd: int, generation_name: str) -> int:
         os.close(generations_fd)
 
 
+def _tamper_fstat_signature(
+    result: os.stat_result,
+) -> tuple[int, int, int, int, int, int]:
+    """Tamper signature for read-back checks, excluding access time.
+
+    Reading the descriptor legitimately updates atime on relatime mounts
+    (freshly written evidence files have atime == mtime, so the very next read
+    bumps atime), and a full stat_result comparison intermittently misreported
+    that as concurrent modification. Identity (dev/ino), link count, mode,
+    size, and mtime still pin replace/append/chmod races.
+    """
+    return (
+        result.st_dev,
+        result.st_ino,
+        result.st_mode,
+        result.st_nlink,
+        result.st_size,
+        result.st_mtime_ns,
+    )
+
+
 def _bounded_descriptor_read(file_descriptor: int, issue: str) -> bytes:
     """Read a pinned regular file with a cap and concurrent-growth detection."""
     before = os.fstat(file_descriptor)
@@ -1590,7 +1611,10 @@ def _bounded_descriptor_read(file_descriptor: int, issue: str) -> bytes:
     ):
         raise _evidence_error(issue)
     content = os.read(file_descriptor, before.st_size + 1)
-    if len(content) > before.st_size or os.fstat(file_descriptor) != before:
+    after = os.fstat(file_descriptor)
+    if len(content) > before.st_size or _tamper_fstat_signature(
+        after
+    ) != _tamper_fstat_signature(before):
         raise _evidence_error(issue)
     return content
 
