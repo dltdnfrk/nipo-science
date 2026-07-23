@@ -55,7 +55,7 @@ def _workflow(authority_script: str) -> str:
         "jobs:\n"
         "  validate:\n"
         "    runs-on: ubuntu-24.04\n"
-        "    timeout-minutes: 20\n"
+        "    timeout-minutes: 30\n"
         "    steps:\n"
         f"      - uses: actions/checkout@{CHECKOUT_SHA}\n"
         "        with:\n"

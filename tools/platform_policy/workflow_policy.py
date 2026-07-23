@@ -40,7 +40,7 @@ AUTHORITY_TRIGGER: Final = WorkflowTrigger(
     push_branches=("main",),
 )
 AUTHORITY_RUNNER: Final = "ubuntu-24.04"
-VALIDATE_TIMEOUT_MINUTES: Final = 20
+VALIDATE_TIMEOUT_MINUTES: Final = 30
 ATTEST_TIMEOUT_MINUTES: Final = 5
 VALIDATE_JOB_FIELDS: Final = frozenset({"runs-on", "steps", "timeout-minutes"})
 ATTEST_JOB_FIELDS: Final = frozenset(
