@@ -56,7 +56,7 @@ bootstrap:
 	mise exec -- node node_modules/@playwright/test/cli.js install chromium; \
 	if [ "$$(uname -s)" = "Linux" ] && command -v fc-list >/dev/null 2>&1 && ! fc-list :lang=ko | grep -q .; then \
 		echo "bootstrap: installing Korean fonts (WCAG target-size and CJK reflow gates measure real glyph metrics)"; \
-		sudo apt-get install -y --no-install-recommends fonts-noto-cjk; \
+		sudo apt-get install -y fonts-noto-cjk fonts-noto-cjk-extra; \
 	fi; \
 	echo "toolchain: node 24.17.0, pnpm 11.12.0, python 3.12.13, uv 0.11.28"; \
 	echo "bootstrap: ready (locked Python and pnpm dependencies installed locally)"
