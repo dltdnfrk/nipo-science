@@ -168,5 +168,11 @@ def _uuid7(value: str) -> bool:
     )
 
 
+_SHA256_HEX_LENGTH = 64
+
+
 def _sha256(value: str) -> bool:
-    return len(value) == 64 and all(character in "0123456789abcdef" for character in value)
+    hex_digits = "0123456789abcdef"
+    return len(value) == _SHA256_HEX_LENGTH and all(
+        character in hex_digits for character in value
+    )

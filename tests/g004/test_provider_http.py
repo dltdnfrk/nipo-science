@@ -8,8 +8,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from http.client import HTTPConnection
 from threading import Barrier, Event, Lock
-from typing import TYPE_CHECKING, Literal, cast, final, override
-from uuid import UUID
+from typing import TYPE_CHECKING, Literal, cast, override
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -233,13 +232,6 @@ class _RunDispatcher(ProviderRunDispatcher):
         )
 
 
-@final
-class _FixedUuid7Factory:
-    def __init__(self, value: str) -> None:
-        self.value: UUID = UUID(value)
-
-    def new_uuid7(self) -> UUID:
-        return self.value
 
 
 class _UnexpectedFailureBroker(_Broker):

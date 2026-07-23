@@ -41,7 +41,6 @@ from services.api.product_tenancy import (
     TenantRepository,
 )
 from services.api.provider_model_id import provider_model_id_is_valid
-from services.api.provider_run_dispatch import ProviderRunDispatcher
 from services.api.provider_runtime import (
     ERROR_ACCOUNT_UNAVAILABLE,
     ERROR_ADAPTER_DISABLED,
@@ -76,6 +75,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from services.api.artifacts.models import IdFactory
+    from services.api.provider_run_dispatch import ProviderRunDispatcher
 
 Clock = Callable[[], datetime]
 type JsonScalar = None | bool | int | float | str
@@ -927,6 +927,25 @@ class _ProviderDiagnosticWriteGuard:
             return False
         self.failed = True
         return True
+
+
+
+def _parse_dry_lab_run_action(path: str) -> tuple[str, str] | None:
+    parts = path.split("/")
+    if len(parts) != _RUN_ACTION_PATH_PARTS or parts[1:4] != ["api", "v1", "runs"]:
+        return None
+    run_id, action = parts[4:]
+    if not run_id or action not in {
+        "approve",
+        "reject",
+        "cancel",
+        "execute",
+        "review",
+        "export",
+        "cleanup",
+    }:
+        return None
+    return run_id, action
 
 
 class ProductRequestHandler(BaseHTTPRequestHandler):
@@ -1956,70 +1975,83 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
     def _dry_lab_mutation(self, path: str) -> None:
         """Dispatch an authenticated same-origin dry-lab mutation."""
         dry_lab = self._dry_lab_service()
-        if dry_lab is None:
+        parsed = _parse_dry_lab_run_action(path)
+        if dry_lab is None or parsed is None:
+            if dry_lab is not None:
+                self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
             return
-        parts = path.split("/")
-        if (
-            len(parts) != _RUN_ACTION_PATH_PARTS
-            or parts[1:4] != ["api", "v1", "runs"]
-        ):
-            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
-            return
-        run_id, action = parts[4:]
-        if not run_id or action not in {
-            "approve",
-            "reject",
-            "cancel",
-            "execute",
-            "review",
-            "export",
-            "cleanup",
-        }:
-            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
-            return
-        if not self._same_origin_mutation():
-            self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
+        run_id, action = parsed
+        if not self._authorize_same_origin_mutation():
             return
         principal = self._principal()
+        token = self._session_token()
         if principal is None:
             self._send(HTTPStatus.UNAUTHORIZED, _UNAUTHORIZED)
             return
-        token = self._session_token()
         if token is None or not self._csrf_matches(token):
             self._send(HTTPStatus.FORBIDDEN, _INVALID_CSRF)
             return
+        self._execute_dry_lab_mutation(dry_lab, principal, token, run_id, action)
+
+    def _authorize_same_origin_mutation(self) -> bool:
+        if self._same_origin_mutation():
+            return True
+        self._send(HTTPStatus.FORBIDDEN, _FORBIDDEN)
+        return False
+
+    def _execute_dry_lab_mutation(
+        self,
+        dry_lab: ProductDryLabService,
+        principal: Principal,
+        token: str,
+        run_id: str,
+        action: str,
+    ) -> None:
         body, status = self._json()
         request_run_id = body.get("run_id") if body is not None else None
         if body is None:
             self._send_body_error(status)
-        elif request_run_id is not None and request_run_id != run_id:
+            return
+        if request_run_id is not None and request_run_id != run_id:
             self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        body["run_id"] = run_id
+        if action == "execute" and self._send_provider_execute(
+            dry_lab, principal, token, body
+        ):
+            return
+        response = dry_lab.dispatch(_digest(token), action, body)
+        self._send_json(HTTPStatus(response.status), response.payload)
+
+    def _send_provider_execute(
+        self,
+        dry_lab: ProductDryLabService,
+        principal: Principal,
+        token: str,
+        body: JsonObject,
+    ) -> bool:
+        provider_response = dry_lab.dispatch_provider_run(
+            _digest(token),
+            body,
+            ProviderPrincipal(
+                principal.user_id,
+                principal.organization_id,
+            ),
+            self.product_server.provider_run_dispatcher,
+        )
+        if provider_response is None:
+            return False
+        if provider_response.status == HTTPStatus.SERVICE_UNAVAILABLE:
+            self._send(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                _PROVIDER_DISPATCH_UNAVAILABLE,
+            )
         else:
-            body["run_id"] = run_id
-            if action == "execute":
-                provider_response = dry_lab.dispatch_provider_run(
-                    _digest(token),
-                    body,
-                    ProviderPrincipal(
-                        principal.user_id,
-                        principal.organization_id,
-                    ),
-                    self.product_server.provider_run_dispatcher,
-                )
-                if provider_response is not None:
-                    if provider_response.status == HTTPStatus.SERVICE_UNAVAILABLE:
-                        self._send(
-                            HTTPStatus.SERVICE_UNAVAILABLE,
-                            _PROVIDER_DISPATCH_UNAVAILABLE,
-                        )
-                    else:
-                        self._send_json(
-                            HTTPStatus(provider_response.status),
-                            provider_response.payload,
-                        )
-                    return
-            response = dry_lab.dispatch(_digest(token), action, body)
-            self._send_json(HTTPStatus(response.status), response.payload)
+            self._send_json(
+                HTTPStatus(provider_response.status),
+                provider_response.payload,
+            )
+        return True
 
     def _create_local_run(self) -> None:
         identity = self._authenticated_run_request()
@@ -2097,7 +2129,11 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             if research_session is not None
             else None
         )
-        return research_session is not None and project is not None and not project.archived
+        return (
+            research_session is not None
+            and project is not None
+            and not project.archived
+        )
 
     def _api_me(self, principal: Principal) -> None:
         token = self._session_token()

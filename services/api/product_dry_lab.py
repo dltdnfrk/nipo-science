@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from threading import Lock, RLock
-from typing import TYPE_CHECKING, Final, Literal, Protocol, final
+from typing import TYPE_CHECKING, Final, Literal, NoReturn, Protocol, final
 from uuid import UUID
 
 from science_workbench_science.research_intent import (
@@ -30,17 +30,18 @@ from services.api.product_artifact_types import (
 )
 from services.api.product_artifact_views import artifact_detail_json, artifact_list_json
 from services.api.provider_run_dispatch_contracts import (
+    DispatchedProviderRun,
     ProviderRunDispatcher,
     ProviderRunDispatchError,
     ProviderRunDispatchRequest,
 )
-from services.api.provider_runtime_contracts import (
-    DispatchAuthorization,
-    ProviderPrincipal,
-)
 
 if TYPE_CHECKING:
     from services.api.product_artifacts import ProductArtifactService
+    from services.api.provider_runtime_contracts import (
+        DispatchAuthorization,
+        ProviderPrincipal,
+    )
 
 type JsonScalar = None | bool | int | float | str
 type JsonList = list[JsonValue]
@@ -170,12 +171,23 @@ class ProviderRunCreate:
 
 
 class _RunCreateFields(Protocol):
-    research_session_id: str
-    prompt: str
-    research_intent: JsonValue
-    filename: str
-    media_type: str
-    content: str
+    @property
+    def research_session_id(self) -> str: ...
+
+    @property
+    def prompt(self) -> str: ...
+
+    @property
+    def research_intent(self) -> JsonValue: ...
+
+    @property
+    def filename(self) -> str: ...
+
+    @property
+    def media_type(self) -> str: ...
+
+    @property
+    def content(self) -> str: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -347,37 +359,17 @@ class ProductDryLabService:
             record = self._selected_run(session_key, body)
             if record is None or record.provider_target is None:
                 return None
-            if dispatcher is None:
-                return DryLabResponse(
-                    _SERVICE_UNAVAILABLE_STATUS,
-                    {"code": _PROVIDER_DISPATCH_UNAVAILABLE},
-                )
-            if set(body) != {"run_id", "token"}:
-                return DryLabResponse(_BAD_REQUEST_STATUS, {"code": "invalid-request"})
+            rejected = _provider_dispatch_request_error(body, dispatcher)
+            if rejected is not None or dispatcher is None:
+                return rejected
             candidate = record.vertical.fork_for_execution()
             try:
-                candidate.consume_approval(_optional_string(body.get("token")))
-                projection = candidate.read_projection()
-                plan_digest = projection["plan_digest"]
-                research_intent_sha256 = projection["research_intent_sha256"]
-                run_id = record.resources.run_id
-                target = record.provider_target
-                if (
-                    run_id is None
-                    or plan_digest is None
-                    or research_intent_sha256 is None
-                ):
-                    raise FixtureFailure("invalid-order", _CONFLICT_STATUS)
-                dispatched = dispatcher.dispatch(
+                dispatched = _dispatch_provider_execution(
+                    candidate,
+                    record,
+                    body,
                     principal,
-                    ProviderRunDispatchRequest(
-                        run_id,
-                        target.session_id,
-                        target.connection_id,
-                        target.model_id,
-                        plan_digest,
-                        research_intent_sha256,
-                    ),
+                    dispatcher,
                 )
             except FixtureFailure as error:
                 return DryLabResponse(error.status, {"code": error.code})
@@ -801,10 +793,65 @@ class ProductDryLabService:
                     del self._session_locks[session_key]
 
 
+def _provider_dispatch_request_error(
+    body: JsonObject,
+    dispatcher: ProviderRunDispatcher | None,
+) -> DryLabResponse | None:
+    if dispatcher is None:
+        return DryLabResponse(
+            _SERVICE_UNAVAILABLE_STATUS,
+            {"code": _PROVIDER_DISPATCH_UNAVAILABLE},
+        )
+    if set(body) != {"run_id", "token"}:
+        return DryLabResponse(_BAD_REQUEST_STATUS, {"code": "invalid-request"})
+    return None
+
+
+def _dispatch_provider_execution(
+    candidate: DryLabVertical,
+    record: _RunRecord,
+    body: JsonObject,
+    principal: ProviderPrincipal,
+    dispatcher: ProviderRunDispatcher,
+) -> DispatchedProviderRun:
+    def _invalid_order() -> NoReturn:
+        failure_code = "invalid-order"
+        raise FixtureFailure(failure_code, _CONFLICT_STATUS)
+
+    candidate.consume_approval(_optional_string(body.get("token")))
+    projection = candidate.read_projection()
+    plan_digest = projection["plan_digest"]
+    research_intent_sha256 = projection["research_intent_sha256"]
+    run_id = record.resources.run_id
+    target = record.provider_target
+    if (
+        run_id is not None
+        and target is not None
+        and plan_digest is not None
+        and research_intent_sha256 is not None
+    ):
+        return dispatcher.dispatch(
+            principal,
+            ProviderRunDispatchRequest(
+                run_id,
+                target.session_id,
+                target.connection_id,
+                target.model_id,
+                plan_digest,
+                research_intent_sha256,
+            ),
+        )
+    return _invalid_order()
+
+
 def _workspace_run_json(record: _RunRecord, run_id: str) -> JsonObject:
     resources = record.resources
     projection = record.vertical.read_projection()
-    stage = "execute" if record.provider_authorization is not None else projection["stage"]
+    stage = (
+        "execute"
+        if record.provider_authorization is not None
+        else projection["stage"]
+    )
     stage_label = (
         "제공자 실행 대기열 등록"
         if record.provider_authorization is not None

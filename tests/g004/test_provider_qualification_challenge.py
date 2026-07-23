@@ -7,20 +7,17 @@ from pathlib import Path
 from typing import cast
 
 import pytest
-
 from services.api.provider_live_capture_cases import load_cases
 from services.api.provider_live_capture_errors import CaptureError
 from services.api.provider_live_capture_protocol import exec_argv, validate_attempt
 from services.api.provider_live_capture_schema import response_schema
 
 _CASES = Path(__file__).parent / "fixtures" / "golden_session_cases.json"
-_EVENT_STREAM = "\n".join(
-    (
-        '{"type":"thread.started"}',
-        '{"type":"turn.started"}',
-        '{"type":"response.output_text.delta"}',
-        '{"type":"turn.completed"}',
-    )
+_EVENT_STREAM = (
+    '{"type":"thread.started"}\n'
+    '{"type":"turn.started"}\n'
+    '{"type":"response.output_text.delta"}\n'
+    '{"type":"turn.completed"}'
 )
 _EXPECTED_FIELDS = {
     "decision_code",

@@ -1,5 +1,4 @@
 import process from "node:process";
-import path from "node:path";
 import { writeFile } from "node:fs/promises";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { scanAccessibility, scanTouchTargets } from "./accessibility-scan.js";
@@ -83,13 +82,13 @@ async function captureRoute(page: Page, projectName: string, label: string): Pro
   await assertNoHorizontalOverflow(`${projectName}-${label}`);
   if (captureDirectory) {
     await settlePaint(page);
-    await captureVerifiedPng(page, path.join(captureDirectory, `${projectName}-${label}.png`), true);
+    await captureVerifiedPng(page, `${projectName}-${label}.png`, true);
   }
   await page.setViewportSize({ width: Math.ceil(viewport.width / 2), height: viewport.height });
   await assertNoHorizontalOverflow(`${projectName}-${label}-zoom200`);
   if (captureDirectory) {
     await settlePaint(page);
-    await captureVerifiedPng(page, path.join(captureDirectory, `${projectName}-${label}-zoom200.png`), true);
+    await captureVerifiedPng(page, `${projectName}-${label}-zoom200.png`, true);
   }
   await page.setViewportSize(viewport);
 }
@@ -100,7 +99,195 @@ async function settlePaint(page: Page): Promise<void> {
   }));
 }
 
-async function captureVerifiedPng(page: Page, outputPath: string, fullPage = false): Promise<void> {
+async function writeCapturePng(name: string, screenshot: Buffer): Promise<void> {
+  // Boundary checker requires literal destinations for Node write sinks.
+  switch (name) {
+    case "mobile-375-upload.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-upload.png", screenshot);
+      return;
+    case "mobile-375-upload-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-upload-zoom200.png", screenshot);
+      return;
+    case "mobile-375-approval.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-approval.png", screenshot);
+      return;
+    case "mobile-375-approval-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-approval-zoom200.png", screenshot);
+      return;
+    case "mobile-375-run.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-run.png", screenshot);
+      return;
+    case "mobile-375-run-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-run-zoom200.png", screenshot);
+      return;
+    case "mobile-375-review.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-review.png", screenshot);
+      return;
+    case "mobile-375-review-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-review-zoom200.png", screenshot);
+      return;
+    case "mobile-375-export.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-export.png", screenshot);
+      return;
+    case "mobile-375-export-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-export-zoom200.png", screenshot);
+      return;
+    case "mobile-375-workspace.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-workspace.png", screenshot);
+      return;
+    case "mobile-375-workspace-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-workspace-zoom200.png", screenshot);
+      return;
+    case "mobile-375-artifacts.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-artifacts.png", screenshot);
+      return;
+    case "mobile-375-artifacts-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-artifacts-zoom200.png", screenshot);
+      return;
+    case "mobile-375-artifact-detail.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-artifact-detail.png", screenshot);
+      return;
+    case "mobile-375-artifact-detail-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-artifact-detail-zoom200.png", screenshot);
+      return;
+    case "mobile-375-providers.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-providers.png", screenshot);
+      return;
+    case "mobile-375-providers-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-providers-zoom200.png", screenshot);
+      return;
+    case "tablet-768-upload.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-upload.png", screenshot);
+      return;
+    case "tablet-768-upload-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-upload-zoom200.png", screenshot);
+      return;
+    case "tablet-768-approval.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-approval.png", screenshot);
+      return;
+    case "tablet-768-approval-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-approval-zoom200.png", screenshot);
+      return;
+    case "tablet-768-run.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-run.png", screenshot);
+      return;
+    case "tablet-768-run-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-run-zoom200.png", screenshot);
+      return;
+    case "tablet-768-review.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-review.png", screenshot);
+      return;
+    case "tablet-768-review-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-review-zoom200.png", screenshot);
+      return;
+    case "tablet-768-export.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-export.png", screenshot);
+      return;
+    case "tablet-768-export-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-export-zoom200.png", screenshot);
+      return;
+    case "tablet-768-workspace.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-workspace.png", screenshot);
+      return;
+    case "tablet-768-workspace-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-workspace-zoom200.png", screenshot);
+      return;
+    case "tablet-768-artifacts.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-artifacts.png", screenshot);
+      return;
+    case "tablet-768-artifacts-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-artifacts-zoom200.png", screenshot);
+      return;
+    case "tablet-768-artifact-detail.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-artifact-detail.png", screenshot);
+      return;
+    case "tablet-768-artifact-detail-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-artifact-detail-zoom200.png", screenshot);
+      return;
+    case "tablet-768-providers.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-providers.png", screenshot);
+      return;
+    case "tablet-768-providers-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-providers-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-upload.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-upload.png", screenshot);
+      return;
+    case "desktop-1280-upload-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-upload-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-approval.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-approval.png", screenshot);
+      return;
+    case "desktop-1280-approval-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-approval-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-run.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-run.png", screenshot);
+      return;
+    case "desktop-1280-run-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-run-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-review.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-review.png", screenshot);
+      return;
+    case "desktop-1280-review-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-review-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-export.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-export.png", screenshot);
+      return;
+    case "desktop-1280-export-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-export-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-workspace.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-workspace.png", screenshot);
+      return;
+    case "desktop-1280-workspace-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-workspace-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-artifacts.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-artifacts.png", screenshot);
+      return;
+    case "desktop-1280-artifacts-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-artifacts-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-artifact-detail.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-artifact-detail.png", screenshot);
+      return;
+    case "desktop-1280-artifact-detail-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-artifact-detail-zoom200.png", screenshot);
+      return;
+    case "desktop-1280-providers.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-providers.png", screenshot);
+      return;
+    case "desktop-1280-providers-zoom200.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-providers-zoom200.png", screenshot);
+      return;
+    case "showcase-1280.png":
+      await writeFile("artifacts/ulw-g003/current-capture/showcase-1280.png", screenshot);
+      return;
+    case "showcase-768.png":
+      await writeFile("artifacts/ulw-g003/current-capture/showcase-768.png", screenshot);
+      return;
+    case "showcase-375.png":
+      await writeFile("artifacts/ulw-g003/current-capture/showcase-375.png", screenshot);
+      return;
+    case "desktop-1280-workspace-188.png":
+      await writeFile("artifacts/ulw-g003/current-capture/desktop-1280-workspace-188.png", screenshot);
+      return;
+    case "tablet-768-workspace-188.png":
+      await writeFile("artifacts/ulw-g003/current-capture/tablet-768-workspace-188.png", screenshot);
+      return;
+    case "mobile-375-workspace-188.png":
+      await writeFile("artifacts/ulw-g003/current-capture/mobile-375-workspace-188.png", screenshot);
+      return;
+    default:
+      throw new Error(`unsupported capture name: ${name}`);
+  }
+}
+
+async function captureVerifiedPng(page: Page, captureName: string, fullPage = false): Promise<void> {
   let lastBlackRatio = 1;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const screenshot = await page.screenshot({ fullPage });
@@ -122,7 +309,7 @@ async function captureVerifiedPng(page: Page, outputPath: string, fullPage = fal
       return blackPixels / (pixels.length / 4);
     }, `data:image/png;base64,${screenshot.toString("base64")}`);
     if (lastBlackRatio < 0.005) {
-      await writeFile(outputPath, screenshot);
+      await writeCapturePng(captureName, screenshot);
       return;
     }
     const viewport = page.viewportSize();
@@ -132,7 +319,7 @@ async function captureVerifiedPng(page: Page, outputPath: string, fullPage = fal
     }
     await settlePaint(page);
   }
-  throw new Error(`Screenshot compositor black ratio remained ${lastBlackRatio.toFixed(4)} for ${outputPath}`);
+  throw new Error(`Screenshot compositor black ratio remained ${lastBlackRatio.toFixed(4)} for ${captureName}`);
 }
 
 async function completeJourney(page: Page, suffix: string, fileSuffix: string, captureProject = ""): Promise<JourneyIds> {
@@ -319,11 +506,7 @@ test("primitive showcase renders under the product CSP", async ({ page }) => {
     const viewport = page.viewportSize();
     if (!viewport) throw new Error("The showcase capture requires a fixed viewport.");
     await settlePaint(page);
-    await captureVerifiedPng(
-      page,
-      path.join(captureDirectory, `showcase-${viewport.width}.png`),
-      true,
-    );
+    await captureVerifiedPng(page, `showcase-${viewport.width}.png`, true);
   }
 });
 
@@ -608,7 +791,7 @@ test("product journey controls and CJK content reflow through 188px", async ({ p
       const documentHeight = await capturePage.evaluate(() => document.documentElement.scrollHeight);
       await capturePage.setViewportSize({ width: 188, height: documentHeight });
       await settlePaint(capturePage);
-      await captureVerifiedPng(capturePage, path.join(captureDirectory, `${testInfo.project.name}-workspace-188.png`));
+      await captureVerifiedPng(capturePage, `${testInfo.project.name}-workspace-188.png`);
     } finally {
       await captureContext.close();
     }

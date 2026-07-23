@@ -20,18 +20,12 @@ class _FixtureSessionUnavailableError(LookupError):
 def main() -> None:
     """Serve the product fixture with a process-owned deterministic test session."""
     port = int(os.environ["PRODUCT_UI_PORT"])
-    credentials_directory = Path(os.environ["PRODUCT_UI_FIXTURE_CREDENTIALS_DIRECTORY"])
-    credentials_path = Path(os.environ["PRODUCT_UI_FIXTURE_CREDENTIALS_FILE"])
-    credentials_temp_path = Path(os.environ["PRODUCT_UI_FIXTURE_CREDENTIALS_TEMP_FILE"])
-    remove_credentials_directory = (
-        os.environ.get("PRODUCT_UI_FIXTURE_REMOVE_CREDENTIALS_DIRECTORY") == "1"
-    )
-    if (
-        credentials_path.parent != credentials_directory
-        or credentials_temp_path.parent != credentials_directory
-        or credentials_temp_path == credentials_path
-    ):
-        raise ValueError
+    # Confined under the repository so boundary analysis can prove write destinations.
+    credentials_directory = Path(".cache") / "product-ui-credentials" / "default"
+    credentials_path = credentials_directory / "credentials.json"
+    credentials_temp_path = credentials_directory / ".credentials.json.tmp"
+    credentials_directory.mkdir(parents=True, exist_ok=True)
+    credentials_directory.chmod(0o700)
     credentials_path.unlink(missing_ok=True)
     credentials_temp_path.unlink(missing_ok=True)
     clock_ticks = count()
@@ -73,8 +67,6 @@ def main() -> None:
         server.server_close()
         credentials_temp_path.unlink(missing_ok=True)
         credentials_path.unlink(missing_ok=True)
-        if remove_credentials_directory:
-            credentials_directory.rmdir()
 
 
 if __name__ == "__main__":

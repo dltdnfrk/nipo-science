@@ -255,7 +255,8 @@ def test_external_authority_client_uses_public_only_exact_protocol(
     receipt = authority.issue(claim)
     socket_root = Path(".cache").resolve()
     socket_root.mkdir(exist_ok=True)
-    socket_path = socket_root / f"q-{os.getpid()}-{id(authority):x}.sock"
+    socket_path = socket_root / "q-live-authority.sock"
+    socket_path.unlink(missing_ok=True)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         listener.bind(os.fspath(socket_path))
@@ -442,7 +443,8 @@ def test_external_authority_rejects_untrusted_responses(failure: str) -> None:
         response = b'{"schema_version":1,"receipt":\n'
     socket_root = Path(".cache").resolve()
     socket_root.mkdir(exist_ok=True)
-    socket_path = socket_root / f"q-neg-{os.getpid()}-{failure}.sock"
+    socket_path = socket_root / "q-neg-authority.sock"
+    socket_path.unlink(missing_ok=True)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         listener.bind(os.fspath(socket_path))
@@ -474,7 +476,8 @@ def test_external_authority_rejects_socket_path_replacement() -> None:
     response = _authority_response(authority.issue(claim))
     socket_root = Path(".cache").resolve()
     socket_root.mkdir(exist_ok=True)
-    socket_path = socket_root / f"q-replace-{os.getpid()}.sock"
+    socket_path = socket_root / "q-replace-authority.sock"
+    socket_path.unlink(missing_ok=True)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     replacement = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:

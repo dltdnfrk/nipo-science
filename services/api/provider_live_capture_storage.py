@@ -7,7 +7,7 @@ import stat
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final, assert_never
+from typing import Final
 
 from services.api.provider_live_capture_errors import (
     ERROR_CAPTURE_ROOTS,
@@ -77,8 +77,6 @@ def resolve_capture_target(target: CaptureTargetInput) -> CaptureTarget:
             validated_roots = roots.validate()
         case Path() as output:
             validated_roots = configured_capture_roots()
-        case _ as unreachable:
-            assert_never(unreachable)
     return CaptureTarget(validated_roots.resolve_output(output), validated_roots)
 
 

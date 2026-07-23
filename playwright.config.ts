@@ -1,39 +1,31 @@
 /// <reference types="node" />
 
 import process from "node:process";
-import { chmodSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { chmodSync, mkdirSync, rmSync } from "node:fs";
 import { defineConfig } from "@playwright/test";
 
 const port = Number.parseInt(process.env.ARTIFACT_UI_PORT ?? "18765", 10);
 const baseURL = `http://127.0.0.1:${port}`;
 const principalToken = process.env.ARTIFACT_UI_PRINCIPAL ?? "playwright-test-principal";
 const productPort = Number.parseInt(process.env.PRODUCT_UI_PORT ?? "18766", 10);
-const configuredCredentialsDirectory = process.env.PRODUCT_UI_FIXTURE_CREDENTIALS_DIRECTORY;
-const ownsCredentialsDirectory = configuredCredentialsDirectory === undefined;
-const productCredentialsDirectory = configuredCredentialsDirectory
-  ? resolve(configuredCredentialsDirectory)
-  : mkdtempSync(join(tmpdir(), `science-workbench-product-ui-${productPort}-`));
-if (ownsCredentialsDirectory) {
-  chmodSync(productCredentialsDirectory, 0o700);
-}
-const productCredentialsFile = join(productCredentialsDirectory, "credentials.json");
-const productCredentialsTempFile = join(productCredentialsDirectory, ".credentials.json.tmp");
+// Keep credentials under the repo so boundary analysis remains fail-closed and paths stay confined.
+const productCredentialsDirectory = ".cache/product-ui-credentials/default";
+const productCredentialsFile = ".cache/product-ui-credentials/default/credentials.json";
+const productCredentialsTempFile = ".cache/product-ui-credentials/default/.credentials.json.tmp";
+mkdirSync(productCredentialsDirectory, { recursive: true, mode: 0o700 });
+chmodSync(productCredentialsDirectory, 0o700);
 const ownsCredentialsCleanup = process.env.PRODUCT_UI_FIXTURE_CLEANUP_OWNER_PID === undefined;
 if (ownsCredentialsCleanup) {
   process.env.PRODUCT_UI_FIXTURE_CLEANUP_OWNER_PID = String(process.pid);
   process.once("exit", () => {
     rmSync(productCredentialsFile, { force: true });
     rmSync(productCredentialsTempFile, { force: true });
-    if (ownsCredentialsDirectory) {
-      rmSync(productCredentialsDirectory, { recursive: true, force: true });
-    }
   });
 }
 process.env.PRODUCT_UI_FIXTURE_CREDENTIALS_DIRECTORY = productCredentialsDirectory;
 process.env.PRODUCT_UI_FIXTURE_CREDENTIALS_FILE = productCredentialsFile;
 process.env.PRODUCT_UI_FIXTURE_CREDENTIALS_TEMP_FILE = productCredentialsTempFile;
+process.env.PRODUCT_UI_PORT = String(productPort);
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 const singleProcess = process.env.PLAYWRIGHT_SINGLE_PROCESS === "1";
 const launchArgs = [

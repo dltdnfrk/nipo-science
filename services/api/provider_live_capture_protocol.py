@@ -198,7 +198,7 @@ def validate_attempt(
     }
 
 
-def _validate_response(
+def _validate_response(  # noqa: PLR0913
     case: CaptureCase,
     response: Mapping[str, object],
     decision: str,

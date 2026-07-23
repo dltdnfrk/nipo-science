@@ -14,6 +14,7 @@ def response_schema(case: CaptureCase) -> str:
     properties: dict[str, object] = {
         "scenario_id": {"type": "string", "enum": [case.scenario_id]},
         "decision_code": {"type": "string"},
+        # Opaque strings keep nested answer material server-side only.
         "scientific_result": {"type": "string"},
         "artifact_manifest": {"type": "string"},
         "evidence_identifiers": {
