@@ -1,6 +1,10 @@
 import hashlib
 
+import pytest
+from pydantic import ValidationError
+
 from science_workbench_science import (
+    ImageInput,
     MeasurementUnit,
     OutcomeStatus,
     ProbeInput,
@@ -37,6 +41,28 @@ def test_image_color_and_connected_region_extraction_are_fixed() -> None:
     assert normalized.regions[0].bounds == (1, 1, 2, 1)
     assert normalized.regions[0].pixel_count == 2
     assert normalized.regions[0].mean_rgb == (200.0, 20.0, 20.0)
+
+
+def test_image_region_threshold_is_required_at_the_input_boundary() -> None:
+    payload = image_input().model_dump()
+    del payload["region_threshold"]
+
+    with pytest.raises(ValidationError, match="region_threshold"):
+        _ = ImageInput.model_validate(payload)
+
+
+def test_explicit_image_threshold_controls_region_segmentation() -> None:
+    source = image_input()
+
+    segmented = normalize_image(
+        source.model_copy(update={"region_threshold": 48.0})
+    )
+    suppressed = normalize_image(
+        source.model_copy(update={"region_threshold": 200.0})
+    )
+
+    assert len(segmented.regions) == 1
+    assert suppressed.regions == ()
 
 
 def test_spectrum_plot_is_byte_deterministic_across_two_runs() -> None:

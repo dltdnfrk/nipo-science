@@ -82,6 +82,7 @@ def test_host_alias_body_bounds_and_cross_org_download_are_denied() -> None:
                 "Host": f"{host}:{port}",
                 "Origin": f"http://{host}:{port}",
                 "Sec-Fetch-Site": "same-origin",
+                "X-CSRF-Token": server.fixture_csrf_token(),
                 "Content-Length": "-1",
             },
         )
@@ -119,6 +120,7 @@ def test_same_origin_can_create_a_bounded_csv_version() -> None:
         "Cookie": cookie,
         "Origin": f"http://{host}:{port}",
         "Sec-Fetch-Site": "same-origin",
+        "X-CSRF-Token": server.fixture_csrf_token(),
     }
     try:
         created = _request(
@@ -204,9 +206,7 @@ def test_partial_request_headers_are_closed_during_server_shutdown() -> None:
         ):
             connection = create_connection(address)
             connection.settimeout(0.5)
-            connection.sendall(
-                f"GET /artifacts HTTP/1.1\r\nHost: {authority}".encode()
-            )
+            connection.sendall(f"GET /artifacts HTTP/1.1\r\nHost: {authority}".encode())
             connections.append(connection)
         _ = Event().wait(0.05)
 

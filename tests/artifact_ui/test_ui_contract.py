@@ -65,6 +65,9 @@ def test_artifact_library_version_controls_and_exact_download_allowlist_exist() 
     ):
         assert contract in APP
     assert "/artifacts/demo" not in APP
+    assert '{ session_id: "session-demo" }' not in APP
+    assert "selectedAttachmentSessionId()" in APP
+    assert "workspaceSessions" in APP
 
 
 def test_playwright_acceptance_is_pinned_and_runs_from_the_make_target() -> None:

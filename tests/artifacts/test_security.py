@@ -2,7 +2,12 @@ from datetime import timedelta
 from uuid import UUID
 
 import pytest
-from services.api.artifacts import ArtifactError, ArtifactErrorCode, VersionDraft
+from services.api.artifacts import (
+    MAX_ARTIFACT_OUTPUT_BYTES,
+    ArtifactError,
+    ArtifactErrorCode,
+    VersionDraft,
+)
 
 from .support import (
     EXECUTION_A,
@@ -71,9 +76,17 @@ def test_output_watcher_references_cannot_be_forged_or_rebound() -> None:
         f"org/{SCOPE_A.org_id}/project/{SCOPE_A.project_id}/sha256/"
     )
     assert reference not in version.object_key
-    with pytest.raises(ArtifactError) as replayed:
-        _ = service.create_version(SCOPE_A, _draft(artifact.id, reference))
-    assert replayed.value.code is ArtifactErrorCode.WATCHER_REFERENCE_INVALID
+    retried = service.create_version(SCOPE_A, _draft(artifact.id, reference))
+    assert retried == version
+    conflicting = _draft(artifact.id, reference).model_copy(
+        update={"environment_sha256": "c" * 64}
+    )
+    with pytest.raises(ArtifactError) as rebound:
+        _ = service.create_version(SCOPE_A, conflicting)
+    with pytest.raises(ArtifactError) as replayed_claim:
+        _ = watcher.claim(SCOPE_A, EXECUTION_A, reference)
+    assert rebound.value.code is ArtifactErrorCode.WATCHER_REFERENCE_INVALID
+    assert replayed_claim.value.code is ArtifactErrorCode.WATCHER_REFERENCE_INVALID
 
 
 def test_output_watcher_rejects_another_requester_in_the_same_project() -> None:
@@ -89,6 +102,40 @@ def test_output_watcher_rejects_another_requester_in_the_same_project() -> None:
     assert registration.value.code is ArtifactErrorCode.WATCHER_REFERENCE_INVALID
     assert consumption.value.code is ArtifactErrorCode.WATCHER_REFERENCE_INVALID
     assert store.version_count(SCOPE_A, artifact.id) == 0
+
+
+def test_output_watcher_rejects_payload_above_shared_durable_limit() -> None:
+    _, _, watcher, _ = build_service()
+
+    with pytest.raises(ArtifactError) as rejected:
+        _ = watcher.register(
+            SCOPE_A,
+            EXECUTION_A,
+            b"x" * (MAX_ARTIFACT_OUTPUT_BYTES + 1),
+            "application/octet-stream",
+        )
+
+    assert rejected.value.code is ArtifactErrorCode.WATCHER_REFERENCE_INVALID
+
+
+@pytest.mark.parametrize(
+    "media_type",
+    [
+        "text/html",
+        "image/svg+xml",
+        "text/plain; charset=utf-8",
+        "text/plain\r\nX-Injected: yes",
+    ],
+)
+def test_output_watcher_rejects_active_or_noncanonical_media_types(
+    media_type: str,
+) -> None:
+    _, _, watcher, _ = build_service()
+
+    with pytest.raises(ArtifactError) as rejected:
+        _ = watcher.register(SCOPE_A, EXECUTION_A, b"untrusted", media_type)
+
+    assert rejected.value.code is ArtifactErrorCode.WATCHER_REFERENCE_INVALID
 
 
 def test_output_watcher_claim_release_requires_the_exact_fencing_token() -> None:

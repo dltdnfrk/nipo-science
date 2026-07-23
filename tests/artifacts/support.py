@@ -5,6 +5,7 @@ from uuid import UUID
 from services.api.artifacts import (
     ArtifactScope,
     ArtifactService,
+    InMemoryArtifactRecovery,
     InMemoryArtifactStore,
     OutputWatcher,
 )
@@ -21,6 +22,7 @@ SESSION_B = UUID("018f47a0-7b9c-7b30-8def-0123456789ab")
 EXECUTION_A = UUID("018f47a0-7b9c-7a40-8def-0123456789ab")
 EXECUTION_B = UUID("018f47a0-7b9c-7b40-8def-0123456789ab")
 RUNTIME_CONNECTION = UUID("018f47a0-7b9c-7a41-8def-0123456789ab")
+RECOVERY_INTEGRITY_KEY = bytes(range(31, -1, -1))
 SCOPE_A = ArtifactScope(org_id=ORG_A, project_id=PROJECT_A, requester_id=USER_A)
 SCOPE_B = ArtifactScope(org_id=ORG_B, project_id=PROJECT_B, requester_id=USER_B)
 SCOPE_C = ArtifactScope(org_id=ORG_A, project_id=PROJECT_A, requester_id=USER_C)
@@ -94,6 +96,7 @@ def build_service() -> tuple[
                 ),
             }
         ),
+        recovery=InMemoryArtifactRecovery(),
     )
     service = ArtifactService(
         store=store,

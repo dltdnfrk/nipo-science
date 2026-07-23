@@ -17,6 +17,21 @@ type JsonObject = dict[str, JsonValue]
 JSON_OBJECT_ADAPTER: Final[TypeAdapter[JsonObject]] = TypeAdapter(JsonObject)
 
 
+def _research_intent() -> JsonObject:
+    return {
+        "question": "보정된 관측값을 재현 가능하게 정규화할 수 있는가?",
+        "rationale": "반복 분석에서 입력 순서가 결과를 바꾸지 않도록 확인한다.",
+        "intended_benefit": "검증 가능한 정규화 기준선을 만든다.",
+        "success_criteria": ["동일 입력은 동일 체크섬을 만든다."],
+        "constraints": ["비임상 연구 데이터만 사용한다."],
+        "stop_conditions": ["보정 메타데이터가 없으면 중단한다."],
+        "research_mode": "bounded_agentic",
+        "data_origin": "observed",
+        "synthetic_generator_ref": None,
+        "synthetic_validator_ref": None,
+    }
+
+
 def _json_object(payload: bytes) -> JsonObject:
     return JSON_OBJECT_ADAPTER.validate_json(payload)
 
@@ -77,8 +92,13 @@ def test_loopback_fixture_http_flow_and_ordering() -> None:
         )
         assert status == 201
         assert _string_value(uploaded["stage"]) == "upload"
-        status, plan = _request(port, "/api/fixture/plan", {"lease_id": "fresh"})
+        status, plan = _request(
+            port,
+            "/api/fixture/plan",
+            {"lease_id": "fresh", "research_intent": _research_intent()},
+        )
         assert status == 201
+        assert _object_value(plan["research_intent"]) == _research_intent()
         status, approval = _request(
             port,
             "/api/fixture/approve",

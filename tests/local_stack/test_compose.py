@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -28,8 +29,10 @@ class ComposePort(TypedDict):
 
 
 class ComposeService(TypedDict):
+    build: NotRequired[object]
     environment: NotRequired[dict[str, str]]
-    healthcheck: dict[str, str | int | list[str]]
+    healthcheck: NotRequired[dict[str, str | int | list[str]]]
+    image: NotRequired[str]
     ports: NotRequired[list[ComposePort]]
 
 
@@ -41,7 +44,17 @@ def _compose_config(environment: dict[str, str] | None = None) -> ComposeConfig:
     docker = shutil.which("docker")
     assert docker is not None
     completed = subprocess.run(
-        [docker, "compose", "-f", "compose.yaml", "config", "--format", "json"],
+        [
+            docker,
+            "compose",
+            "-f",
+            "compose.yaml",
+            "--profile",
+            "tools",
+            "config",
+            "--format",
+            "json",
+        ],
         cwd=ROOT,
         env=os.environ | (environment or {}),
         check=True,
@@ -75,6 +88,38 @@ def test_compose_contains_no_provider_or_cloud_credentials() -> None:
     assert "ANTHROPIC_API_KEY" not in serialized
     assert "GOOGLE_APPLICATION_CREDENTIALS" not in serialized
     assert "RESEND_API_KEY" not in serialized
+
+
+def test_compose_and_build_images_are_digest_locked() -> None:
+    config = _compose_config()
+    digest_reference = re.compile(r"^[^\s@]+@sha256:[0-9a-f]{64}$")
+    external_images = [
+        service["image"]
+        for service in config["services"].values()
+        if "build" not in service and "image" in service
+    ]
+    dockerfile = (ROOT / "infra/local/Dockerfile.stub").read_text(encoding="utf-8")
+    base_images = [
+        line.split()[1]
+        for line in dockerfile.splitlines()
+        if line.startswith("FROM ")
+    ]
+
+    assert external_images
+    assert base_images
+    assert all(digest_reference.fullmatch(image) for image in external_images)
+    assert all(digest_reference.fullmatch(image) for image in base_images)
+
+    make = shutil.which("make")
+    assert make is not None
+    manifest = subprocess.run(
+        [make, "--no-print-directory", "print-local-images"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    assert set(manifest) == set(external_images + base_images)
 
 
 def test_compose_uses_resolvable_separate_loopback_origins() -> None:

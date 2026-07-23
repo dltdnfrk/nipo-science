@@ -14,7 +14,7 @@ class OrganizationFixture:
     name: str
 
 
-PRIMARY_ORGANIZATION = OrganizationFixture("org-mineral", "한국 광물 연구실")
+PRIMARY_ORGANIZATION = OrganizationFixture("org-mineral", "Nipo Labs")
 FOREIGN_ORGANIZATION = OrganizationFixture("org-foreign", "Foreign organization")
 
 @dataclass(slots=True)
@@ -31,9 +31,9 @@ class MutableClock:
 FIXTURE_NOW = datetime(2026, 7, 13, tzinfo=UTC)
 PRIMARY_ORGANIZATION_ID = "org-mineral"
 FOREIGN_ORGANIZATION_ID = "org-foreign"
-PRIMARY_PROJECT_ID = "project-demo"
-ARCHIVED_PROJECT_ID = "project-archived"
-FOREIGN_PROJECT_ID = "project-foreign"
-PRIMARY_SESSION_ID = "session-demo"
-ARCHIVED_SESSION_ID = "session-archived"
-FOREIGN_SESSION_ID = "session-foreign"
+PRIMARY_PROJECT_ID = "018f0d7d-6b17-7a91-8b31-2f7331677b01"
+ARCHIVED_PROJECT_ID = "018f0d7d-6b17-7a91-8b31-2f7331677b02"
+FOREIGN_PROJECT_ID = "018f0d7d-6b17-7a91-8b31-2f7331677b03"
+PRIMARY_SESSION_ID = "018f0d7d-6b17-7a91-8b31-2f7331677c01"
+ARCHIVED_SESSION_ID = "018f0d7d-6b17-7a91-8b31-2f7331677c02"
+FOREIGN_SESSION_ID = "018f0d7d-6b17-7a91-8b31-2f7331677c03"

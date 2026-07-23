@@ -15,6 +15,7 @@ from tools.platform_policy.ci_contract import (
     EvidenceIntegrityError,
     GateResult,
     RequiredSecurityCatalog,
+    SecurityCaseEvidence,
     SecurityEvidenceMapping,
     parse_security_evidence_output,
     rederive_gate_count,
@@ -25,6 +26,7 @@ from tools.platform_policy.security_gate import (
     bounded_run,
     child_environment,
     run_security_gate,
+    security_case_bindings,
 )
 
 if TYPE_CHECKING:
@@ -70,6 +72,7 @@ def _fixed_runner(completed: ChildResult) -> CallableRunner:
 def _catalog() -> RequiredSecurityCatalog:
     return RequiredSecurityCatalog(
         high_threat_ids=tuple(case.threat_id for case in SECURITY_CASES),
+        case_bindings=security_case_bindings(),
         source_root_sha256="0" * 64,
     )
 
@@ -78,6 +81,33 @@ def _output() -> bytes:
     stream = io.BytesIO()
     assert run_security_gate(runner=_runner, stream=stream) == 0
     return stream.getvalue()
+
+
+def _cases(output: bytes) -> list[SecurityCaseEvidence]:
+    marker = b"SECURITY_CASE="
+    return [
+        SecurityCaseEvidence.model_validate_json(line[len(marker) :])
+        for line in output.splitlines()
+        if line.startswith(marker)
+    ]
+
+
+def _render_cases(cases: list[SecurityCaseEvidence]) -> bytes:
+    case_lines = tuple(
+        b"SECURITY_CASE=" + case.model_dump_json().encode() + b"\n"
+        for case in cases
+    )
+    mappings = tuple(
+        SecurityEvidenceMapping(
+            threat_id=case.threat_id,
+            positive_case_count=1,
+            evidence_root_sha256=hashlib.sha256(line).hexdigest(),
+        )
+        for case, line in zip(cases, case_lines, strict=True)
+    )
+    return b"".join(case_lines) + b"SECURITY_EVIDENCE=[" + b",".join(
+        mapping.model_dump_json().encode() for mapping in mappings
+    ) + b"]\n"
 
 
 def test_gate_emits_one_observed_case_per_catalog_threat() -> None:
@@ -135,6 +165,42 @@ def test_gate_fails_closed_for_failed_vacuous_or_reserved_child_output() -> None
     )
 
 
+def test_gate_rejects_source_change_observed_during_child_execution(
+    tmp_path: Path,
+) -> None:
+    case = next(case for case in SECURITY_CASES if case.threat_id == "T13")
+    relative_source = case.node.partition("::")[0]
+    source = Path(__file__).parents[2] / relative_source
+    copied = tmp_path / relative_source
+    copied.parent.mkdir(parents=True)
+    _ = copied.write_bytes(source.read_bytes())
+
+    def mutating_runner(
+        argv: tuple[str, ...],
+        cwd: Path,
+        environment: Mapping[str, str],
+        timeout_seconds: float,
+        output_limit_bytes: int,
+    ) -> ChildResult:
+        del argv, cwd, environment, timeout_seconds, output_limit_bytes
+        with copied.open("ab") as stream:
+            _ = stream.write(b"\n")
+        return ChildResult(0, b"1 passed in 0.01s\n")
+
+    stream = io.BytesIO()
+    assert (
+        run_security_gate(
+            "T13",
+            runner=mutating_runner,
+            stream=stream,
+            checkout=tmp_path,
+        )
+        == 1
+    )
+    assert b"source changed" in stream.getvalue()
+    assert b"SECURITY_CASE=" not in stream.getvalue()
+
+
 def test_gate_accepts_exact_case_names_and_rejects_unknown_case() -> None:
     assert (
         run_security_gate("provider-tool-bypass", runner=_runner, stream=io.BytesIO())
@@ -176,6 +242,58 @@ def test_parser_rejects_forged_root_count_duplicate_id_and_wrong_order() -> None
             _ = parse_security_evidence_output(_catalog(), candidate)
     with pytest.raises(EvidenceIntegrityError):
         _ = parse_security_evidence_output(_catalog(), duplicate)
+
+
+def test_parser_rejects_relabel_swap_omit_and_stale_binding_replay() -> None:
+    output = _output()
+    cases = _cases(output)
+
+    changed_source = cases.copy()
+    changed_source[0] = changed_source[0].model_copy(
+        update={"source_sha256": "0" * 64}
+    )
+    swapped = cases.copy()
+    first = swapped[0]
+    second = swapped[1]
+    swapped[0] = first.model_copy(
+        update={
+            "case_id": second.case_id,
+            "source_sha256": second.source_sha256,
+            "test_sha256": second.test_sha256,
+            "denial_observation_sha256": second.denial_observation_sha256,
+            "postcondition_observation_sha256": (
+                second.postcondition_observation_sha256
+            ),
+        }
+    )
+    relabeled = cases.copy()
+    relabeled[0] = relabeled[0].model_copy(update={"threat_id": "T02"})
+    relabeled[1] = relabeled[1].model_copy(update={"threat_id": "T01"})
+
+    for candidate in (changed_source, swapped, relabeled):
+        with pytest.raises(EvidenceIntegrityError):
+            _ = parse_security_evidence_output(_catalog(), _render_cases(candidate))
+
+    omitted = output.replace(
+        b'"postcondition_observation_sha256":',
+        b'"omitted_postcondition":',
+        1,
+    )
+    with pytest.raises(EvidenceIntegrityError):
+        _ = parse_security_evidence_output(_catalog(), omitted)
+
+    stale = _catalog().model_copy(
+        update={
+            "case_bindings": (
+                _catalog().case_bindings[0].model_copy(
+                    update={"source_sha256": "0" * 64}
+                ),
+                *_catalog().case_bindings[1:],
+            )
+        }
+    )
+    with pytest.raises(EvidenceIntegrityError):
+        _ = parse_security_evidence_output(stale, output)
 
 
 def test_security_count_ignores_generic_markers_and_requires_structured_cases() -> None:

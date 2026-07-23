@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from inspect import signature
 from threading import Barrier
 from typing import Literal
 
@@ -17,7 +18,115 @@ from services.api.tool_governance import (
     canonical_arguments_hash,
 )
 
+from science_workbench_contracts.runs import ResearchIntent
+
 NOW = datetime(2026, 7, 13, tzinfo=UTC)
+
+
+def test_tool_request_requires_research_intent() -> None:
+    assert "research_intent" in signature(ToolRequest).parameters
+
+
+def test_approval_ttl_is_explicit_application_policy() -> None:
+    time = NOW
+    governance = ToolGovernance(
+        approval_ttl=timedelta(seconds=2),
+        clock=lambda: time,
+    )
+    governance.set_grant(
+        ToolGrant(
+            "org-a",
+            "project-a",
+            "literature.search",
+            "ask",
+            frozenset({"public-search"}),
+        )
+    )
+    register_tool(governance, [])
+
+    pending = governance.execute(principal(), request())
+    assert pending.receipt.plan_id is not None
+    time = NOW + timedelta(seconds=3)
+
+    assert (
+        governance.approve(principal(), pending.receipt.plan_id).code
+        == "PLAN_UNAVAILABLE"
+    )
+
+
+@pytest.mark.parametrize("approval_ttl", [timedelta(0), timedelta(seconds=-1)])
+def test_approval_policy_rejects_nonpositive_ttl(
+    approval_ttl: timedelta,
+) -> None:
+    with pytest.raises(ValueError, match="approval_ttl must be positive"):
+        _ = ToolGovernance(approval_ttl=approval_ttl)
+
+
+@pytest.mark.parametrize(
+    ("expires_at", "message"),
+    [
+        (NOW - timedelta(microseconds=1), "expires_at must be in the future"),
+        (NOW, "expires_at must be in the future"),
+        (
+            NOW + timedelta(minutes=5, microseconds=1),
+            "expires_at exceeds approval_ttl",
+        ),
+        (NOW + timedelta(days=3650), "expires_at exceeds approval_ttl"),
+    ],
+)
+def test_caller_expiry_obeys_future_and_approval_ttl_boundaries(
+    expires_at: datetime,
+    message: str,
+) -> None:
+    governance = service()
+    governance.set_grant(
+        ToolGrant(
+            "org-a",
+            "project-a",
+            "literature.search",
+            "ask",
+            frozenset({"public-search"}),
+        )
+    )
+    register_tool(governance, [])
+
+    with pytest.raises(ValueError, match=message):
+        _ = governance.execute(principal(), request(), expires_at=expires_at)
+
+
+def test_exact_approval_ttl_boundary_preserves_bound_scopes() -> None:
+    governance = service()
+    network_scopes = frozenset({"public-search"})
+    secret_scopes = frozenset({"literature-key"})
+    governance.set_grant(
+        ToolGrant(
+            "org-a",
+            "project-a",
+            "literature.search",
+            "ask",
+            network_scopes,
+            secret_scopes,
+        )
+    )
+    calls: list[tuple[JsonValue, ToolExecutionContext]] = []
+    register_tool(governance, calls)
+    tool_request = request(network=network_scopes, secrets=secret_scopes)
+
+    pending = governance.execute(
+        principal(), tool_request, expires_at=NOW + timedelta(minutes=5)
+    )
+
+    assert pending.receipt.plan_id is not None
+    plan = governance.plan(principal(), pending.receipt.plan_id)
+    assert plan is not None
+    assert plan.expires_at == NOW + timedelta(minutes=5)
+    assert plan.network_scopes == network_scopes
+    assert plan.secret_scopes == secret_scopes
+    assert governance.approve(principal(), plan.id).code == "PLAN_APPROVED"
+    assert governance.consume(principal(), tool_request, plan.id).receipt.code == (
+        "PLAN_CONSUMED"
+    )
+    assert len(calls) == 1
 
 
 def principal(*, requester: str = "user-a", owner: bool = False) -> ToolPrincipal:
@@ -38,17 +147,33 @@ def request(
     )
     default_network: frozenset[str] = frozenset({"public-search"})
     default_secrets: frozenset[str] = frozenset()
+    intent = ResearchIntent(
+        question="Which mineral evidence should be reviewed?",
+        rationale="The researcher needs bounded primary evidence.",
+        intended_benefit="A reproducible evidence review.",
+        success_criteria=("At least one relevant primary source is found.",),
+        constraints=("Use only the approved public literature scope.",),
+        stop_conditions=("Stop at the bounded result limit.",),
+        research_mode="copilot",
+        data_origin="observed",
+    )
     return ToolRequest(
         run,
         tool,
         request_arguments,
-        default_network if network is None else network,
-        default_secrets if secrets is None else secrets,
+        intent,
+        (
+            default_network if network is None else network,
+            default_secrets if secrets is None else secrets,
+        ),
     )
 
 
 def service() -> ToolGovernance:
-    return ToolGovernance(clock=lambda: NOW)
+    return ToolGovernance(
+        approval_ttl=timedelta(minutes=5),
+        clock=lambda: NOW,
+    )
 
 
 def register_tool(
@@ -171,9 +296,46 @@ def test_mutated_binding_cannot_consume(attacker_request: ToolRequest) -> None:
     assert calls == []
 
 
+def test_mutated_research_intent_cannot_consume_an_approved_plan() -> None:
+    governance = service()
+    governance.set_grant(
+        ToolGrant(
+            "org-a",
+            "project-a",
+            "literature.search",
+            "ask",
+            frozenset({"public-search"}),
+        )
+    )
+    original = request()
+    calls: list[tuple[JsonValue, ToolExecutionContext]] = []
+    register_tool(governance, calls)
+    pending = governance.execute(principal(), original)
+    assert pending.receipt.plan_id is not None
+    assert governance.approve(principal(), pending.receipt.plan_id).code == "PLAN_APPROVED"
+
+    altered_intent = original.research_intent.model_copy(
+        update={"question": "A different human-owned question"}
+    )
+    altered = ToolRequest(
+        original.run_id,
+        original.tool,
+        original.arguments,
+        altered_intent,
+        (original.network_scopes, original.secret_scopes),
+    )
+    result = governance.consume(principal(), altered, pending.receipt.plan_id)
+
+    assert result.receipt.code == "PLAN_UNAVAILABLE"
+    assert calls == []
+
+
 def test_expired_and_foreign_plan_ids_are_indistinguishable_and_safe() -> None:
     time = NOW
-    governance = ToolGovernance(clock=lambda: time)
+    governance = ToolGovernance(
+        approval_ttl=timedelta(minutes=5),
+        clock=lambda: time,
+    )
     governance.set_grant(ToolGrant("org-a", "project-a", "literature.search", "ask", frozenset({"public-search"})))
     register_tool(governance, [])
     pending = governance.execute(

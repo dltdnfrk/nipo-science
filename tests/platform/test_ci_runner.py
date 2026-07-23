@@ -17,14 +17,19 @@ from tools.platform_policy.ci_contract import (
     CiExecutionAttestation,
     CiExecutionLease,
     CiJob,
+    CiRequirementCaseBinding,
     CiRunState,
     CountKindValue,
     EvidenceIntegrityError,
     GateResult,
+    RequiredSecurityCaseBinding,
     RequiredSecurityCatalog,
+    SecurityCaseEvidence,
     ci_catalog_root,
     ci_catalog_source_root,
+    ci_requirement_case_evidence_bytes,
     security_catalog_source_bytes,
+    verify_ci_requirement_case_output,
 )
 from tools.platform_policy.ci_paths import (
     G002_ARTIFACT_PYTHON_PATHS,
@@ -38,6 +43,7 @@ from tools.platform_policy.ci_runner import (
     CiExecutionBinding,
     CountKind,
     MissingExecutedCountError,
+    archive_legacy_ci_latest,
     ci_commands,
     execute_job,
     portable_ci_argv,
@@ -47,8 +53,17 @@ from tools.platform_policy.ci_runner import (
 
 
 def _security_catalog() -> RequiredSecurityCatalog:
+    binding = RequiredSecurityCaseBinding(
+        threat_id="HIGH-1",
+        case_id="case-1",
+        source_sha256="a" * 64,
+        test_sha256="b" * 64,
+        denial_observation_sha256="c" * 64,
+        postcondition_observation_sha256="d" * 64,
+    )
     provisional = RequiredSecurityCatalog(
         high_threat_ids=("HIGH-1",),
+        case_bindings=(binding,),
         source_root_sha256="0" * 64,
     )
     source_root = hashlib.sha256(security_catalog_source_bytes(provisional)).hexdigest()
@@ -58,12 +73,30 @@ def _security_catalog() -> RequiredSecurityCatalog:
 TEST_SECURITY_CATALOG = _security_catalog()
 
 
+def _case_evidence(
+    binding: RequiredSecurityCaseBinding,
+) -> SecurityCaseEvidence:
+    return SecurityCaseEvidence(
+        threat_id=binding.threat_id,
+        case_id=binding.case_id,
+        source_sha256=binding.source_sha256,
+        test_sha256=binding.test_sha256,
+        denial_observation_sha256=binding.denial_observation_sha256,
+        postcondition_observation_sha256=binding.postcondition_observation_sha256,
+        outcome="passed",
+    )
+
+
 def _control_catalog(
     source_identity: str,
     root: Path,
     commands: tuple[CiCommand, ...],
+    requirement_case_bindings: tuple[CiRequirementCaseBinding, ...] = (),
 ) -> CiControlCatalog:
     requirements = tuple(sorted(TRUSTED_REQUIREMENT_IDS))
+    mapped_requirements = frozenset(
+        binding.requirement_id for binding in requirement_case_bindings
+    )
     jobs = tuple(
         CiCatalogJob(
             job=command.job,
@@ -82,17 +115,28 @@ def _control_catalog(
             category="test",
             environment_profile="test-ci",
             control_ids=(f"CONTROL-{command.job}",),
-            requirement_ids=requirements[index * 3 : (index + 1) * 3],
+            requirement_ids=tuple(
+                binding.requirement_id
+                for binding in requirement_case_bindings
+                if binding.job is command.job
+            ),
         )
-        for index, command in enumerate(commands)
+        for command in commands
     )
     provisional = CiControlCatalog.model_construct(
         version=1,
         source_identity=source_identity,
+        requirements_sha256="e" * 64,
         source_root_sha256="0" * 64,
         catalog_root_sha256="0" * 64,
         security_catalog_id="test-high-threat",
         jobs=jobs,
+        requirement_case_bindings=requirement_case_bindings,
+        unverified_requirement_ids=tuple(
+            requirement
+            for requirement in requirements
+            if requirement not in mapped_requirements
+        ),
     )
     with_source = provisional.model_copy(
         update={"source_root_sha256": ci_catalog_source_root(provisional)}
@@ -109,6 +153,7 @@ class MemoryCiAuthority:
     anchors: dict[tuple[str, str], str]
     root: Path
     commands: tuple[CiCommand, ...]
+    requirement_case_bindings: tuple[CiRequirementCaseBinding, ...]
 
     def __init__(
         self,
@@ -117,9 +162,11 @@ class MemoryCiAuthority:
         *,
         reject_bind: bool = False,
         commit_then_raise: bool = False,
+        requirement_case_bindings: tuple[CiRequirementCaseBinding, ...] = (),
     ) -> None:
         self.root = root
         self.commands = commands
+        self.requirement_case_bindings = requirement_case_bindings
         self.reject_bind = reject_bind
         self.commit_then_raise = commit_then_raise
         self.anchors = {}
@@ -232,6 +279,10 @@ class MemoryCiAuthority:
             toolchain=toolchain,
             executed_count=record.executed_count,
             output_sha256=record.output_sha256,
+            attachment_sha256=record.attachment_sha256,
+            security_catalog_root_sha256=record.security_catalog_root_sha256,
+            security_threat_ids=record.security_threat_ids,
+            security_evidence_roots=record.security_evidence_roots,
             outcome=record.outcome,
             started_at=record.started_at,
             finished_at=record.finished_at,
@@ -296,7 +347,12 @@ class MemoryCiAuthority:
         run_id: str,
     ) -> CiControlCatalog:
         _ = authority_context, run_id
-        return _control_catalog(source_identity, self.root, self.commands)
+        return _control_catalog(
+            source_identity,
+            self.root,
+            self.commands,
+            self.requirement_case_bindings,
+        )
 
     def resolve_security_catalog(self, catalog_id: str) -> RequiredSecurityCatalog:
         if catalog_id != "test-high-threat":
@@ -304,7 +360,11 @@ class MemoryCiAuthority:
         return TEST_SECURITY_CATALOG
 
 
-def _execution_binding(root: Path, command: CiCommand) -> CiExecutionBinding:
+def _execution_binding(
+    root: Path,
+    command: CiCommand,
+    requirement_case_bindings: tuple[CiRequirementCaseBinding, ...] = (),
+) -> CiExecutionBinding:
     commands = tuple(
         command
         if job is command.job
@@ -315,7 +375,11 @@ def _execution_binding(root: Path, command: CiCommand) -> CiExecutionBinding:
         )
         for job in CiJob
     )
-    authority = MemoryCiAuthority(root, commands)
+    authority = MemoryCiAuthority(
+        root,
+        commands,
+        requirement_case_bindings=requirement_case_bindings,
+    )
     source_identity = source_tree_identity(root)
     current_run = CiCurrentRun(
         run_id="direct-execution-run",
@@ -651,6 +715,133 @@ def test_successful_job_without_work_markers_is_rejected(tmp_path: Path) -> None
         _ = execute_job(command, tmp_path, _execution_binding(tmp_path, command))
 
 
+def test_child_cannot_emit_parent_owned_requirement_case_marker(
+    tmp_path: Path,
+) -> None:
+    command = CiCommand(
+        CiJob.PLATFORM_TESTS,
+        (
+            sys.executable,
+            "-c",
+            'print("1 passed\\nCI_REQUIREMENT_CASE={}")',
+        ),
+        CountKind.PYTEST,
+    )
+
+    with pytest.raises(EvidenceIntegrityError, match="parent-owned"):
+        _ = execute_job(command, tmp_path, _execution_binding(tmp_path, command))
+
+
+def test_parent_executes_exact_bound_requirement_case(tmp_path: Path) -> None:
+    source_path = tmp_path / "requirement_subject.py"
+    test_path = tmp_path / "test_requirement_subject.py"
+    _ = source_path.write_text(
+        "def requirement_is_bound() -> bool:\n    return True\n",
+        encoding="utf-8",
+    )
+    _ = test_path.write_text(
+        "from requirement_subject import requirement_is_bound\n\n"
+        "def test_bound_requirement() -> None:\n"
+        "    assert requirement_is_bound()\n",
+        encoding="utf-8",
+    )
+    provisional = CiRequirementCaseBinding.model_construct(
+        requirement_id="F01",
+        job=CiJob.PLATFORM_TESTS,
+        case_id="case-F01",
+        source_path=source_path.name,
+        source_sha256=hashlib.sha256(source_path.read_bytes()).hexdigest(),
+        test_path=test_path.name,
+        test_sha256=hashlib.sha256(test_path.read_bytes()).hexdigest(),
+        test_node_id=f"{test_path.name}::test_bound_requirement",
+        observation_sha256="0" * 64,
+    )
+    binding = CiRequirementCaseBinding.model_validate(
+        provisional.model_copy(
+            update={
+                "observation_sha256": hashlib.sha256(
+                    ci_requirement_case_evidence_bytes(provisional)
+                ).hexdigest()
+            }
+        ).model_dump()
+    )
+    command = CiCommand(
+        CiJob.PLATFORM_TESTS,
+        (sys.executable, "-c", 'print("1 passed")'),
+        CountKind.PYTEST,
+    )
+
+    result, raw_output = execute_job(
+        command,
+        tmp_path,
+        _execution_binding(tmp_path, command, (binding,)),
+    )
+
+    verify_ci_requirement_case_output(raw_output, (binding,))
+    assert result.requirement_ids == ("F01",)
+    assert result.attachment_sha256 == (binding.observation_sha256,)
+    assert result.execution_attestation is not None
+    assert result.execution_attestation.attachment_sha256 == (
+        binding.observation_sha256,
+    )
+    assert raw_output.count(b"CI_REQUIREMENT_CASE=") == 1
+
+
+@pytest.mark.parametrize("changed_path", ["source", "test"])
+def test_parent_rejects_changed_requirement_case_files(
+    tmp_path: Path,
+    changed_path: str,
+) -> None:
+    # Given: a catalog binding issued for exact source and test bytes.
+    source_path = tmp_path / "requirement_subject.py"
+    test_path = tmp_path / "test_requirement_subject.py"
+    _ = source_path.write_text(
+        "def requirement_is_bound() -> bool:\n    return True\n",
+        encoding="utf-8",
+    )
+    _ = test_path.write_text(
+        "from requirement_subject import requirement_is_bound\n\n"
+        "def test_bound_requirement() -> None:\n"
+        "    assert requirement_is_bound()\n",
+        encoding="utf-8",
+    )
+    provisional = CiRequirementCaseBinding.model_construct(
+        requirement_id="F01",
+        job=CiJob.PLATFORM_TESTS,
+        case_id="case-F01",
+        source_path=source_path.name,
+        source_sha256=hashlib.sha256(source_path.read_bytes()).hexdigest(),
+        test_path=test_path.name,
+        test_sha256=hashlib.sha256(test_path.read_bytes()).hexdigest(),
+        test_node_id=f"{test_path.name}::test_bound_requirement",
+        observation_sha256="0" * 64,
+    )
+    binding = CiRequirementCaseBinding.model_validate(
+        provisional.model_copy(
+            update={
+                "observation_sha256": hashlib.sha256(
+                    ci_requirement_case_evidence_bytes(provisional)
+                ).hexdigest()
+            }
+        ).model_dump()
+    )
+    changed_file = source_path if changed_path == "source" else test_path
+    _ = changed_file.write_text("# changed after authority binding\n", encoding="utf-8")
+    command = CiCommand(
+        CiJob.PLATFORM_TESTS,
+        (sys.executable, "-c", 'print("1 passed")'),
+        CountKind.PYTEST,
+    )
+
+    # When / Then: the parent rejects the stale authority binding before evidence.
+    with pytest.raises(EvidenceIntegrityError, match="source does not match"):
+        _ = execute_job(
+            command,
+            tmp_path,
+            _execution_binding(tmp_path, command, (binding,)),
+        )
+
+
 def test_security_job_rejects_generic_pytest_success_without_sealed_evidence(
     tmp_path: Path,
 ) -> None:
@@ -665,10 +856,9 @@ def test_security_job_rejects_generic_pytest_success_without_sealed_evidence(
 
 
 def test_security_job_accepts_exact_authority_mapped_evidence(tmp_path: Path) -> None:
-    case_payload = json.dumps(
-        {"case_id": "case-1", "outcome": "passed", "threat_id": "HIGH-1"},
-        separators=(",", ":"),
-    )
+    case_payload = _case_evidence(
+        TEST_SECURITY_CATALOG.case_bindings[0]
+    ).model_dump_json()
     case_line = f"SECURITY_CASE={case_payload}\n".encode()
     evidence_root = hashlib.sha256(case_line).hexdigest()
     payload = json.dumps(
@@ -707,6 +897,14 @@ def test_security_job_accepts_exact_authority_mapped_evidence(tmp_path: Path) ->
     assert result.security_catalog_root_sha256 == (
         TEST_SECURITY_CATALOG.source_root_sha256
     )
+    attestation = result.execution_attestation
+    assert attestation is not None
+    assert attestation.attachment_sha256 == result.attachment_sha256
+    assert (
+        attestation.security_catalog_root_sha256 == result.security_catalog_root_sha256
+    )
+    assert attestation.security_threat_ids == result.security_threat_ids
+    assert attestation.security_evidence_roots == result.security_evidence_roots
 
 
 def test_unittest_and_check_markers_are_summed(tmp_path: Path) -> None:
@@ -781,6 +979,25 @@ def test_execute_job_redacts_query_codes_and_preserves_binary_safe_content(
     assert b"?device_" + b"code=[REDACTED]&x=1\n\x00ok\n" in raw_output
 
 
+def test_execute_job_removes_nonsemantic_end_of_line_spacing(tmp_path: Path) -> None:
+    command = CiCommand(
+        CiJob.SECRET_SCAN,
+        (
+            sys.executable,
+            "-c",
+            'import sys; sys.stdout.buffer.write(b"diagnostic  \\nnext\\t\\r\\nCHECKS_EXECUTED=1  \\n")',
+        ),
+        CountKind.CHECKS,
+    )
+
+    result, raw_output = execute_job(
+        command, tmp_path, _execution_binding(tmp_path, command)
+    )
+
+    assert result.executed_count == 1
+    assert raw_output == b"diagnostic\nnext\r\nCHECKS_EXECUTED=1\n"
+
+
 def test_integration_raw_output_is_returned_for_atomic_publication(
     tmp_path: Path,
 ) -> None:
@@ -845,6 +1062,40 @@ def test_source_tree_identity_binds_ci_contract_but_ignores_ci_runtime_output(
     generated.parent.mkdir(parents=True, exist_ok=True)
     _ = generated.write_text("generated contract")
     assert source_tree_identity(tmp_path) != baseline
+
+
+def test_legacy_checked_in_latest_directory_is_preserved_outside_publish_pointer(
+    tmp_path: Path,
+) -> None:
+    latest = tmp_path / ".ci/evidence/latest"
+    latest.mkdir(parents=True)
+    _ = (latest / "legacy.log").write_bytes(b"legacy evidence")
+    baseline = source_tree_identity(tmp_path)
+
+    archive_legacy_ci_latest(tmp_path)
+
+    assert not latest.exists()
+    archived = tuple((tmp_path / ".ci/evidence").glob(".legacy-latest-*"))
+    assert len(archived) == 1
+    assert (archived[0] / "legacy.log").read_bytes() == b"legacy evidence"
+    assert source_tree_identity(tmp_path) == baseline
+
+
+def test_missing_authority_context_does_not_archive_legacy_latest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    latest = tmp_path / ".ci/evidence/latest"
+    latest.mkdir(parents=True)
+    _ = (latest / "legacy.log").write_bytes(b"legacy evidence")
+    monkeypatch.delenv("GITHUB_SHA", raising=False)
+
+    with pytest.raises(ValueError, match="GITHUB_SHA"):
+        _ = run_ci(tmp_path, MemoryCiAuthority(tmp_path, ()))
+
+    assert latest.is_dir()
+    assert (latest / "legacy.log").read_bytes() == b"legacy evidence"
+    assert tuple((tmp_path / ".ci/evidence").glob(".legacy-latest-*")) == ()
 
 
 def test_contract_ci_commands_execute_repository_gates_without_recursion(
@@ -1108,16 +1359,9 @@ def test_publication_finalization_reconciles_authority_outcome(
                 raise RuntimeError(message)
             case_lines = tuple(
                 b"SECURITY_CASE="
-                + json.dumps(
-                    {
-                        "case_id": f"case-{index}",
-                        "outcome": "passed",
-                        "threat_id": identifier,
-                    },
-                    separators=(",", ":"),
-                ).encode()
+                + _case_evidence(binding).model_dump_json().encode()
                 + b"\n"
-                for index, identifier in enumerate(security_catalog.high_threat_ids)
+                for binding in security_catalog.case_bindings
             )
             evidence_roots = tuple(
                 hashlib.sha256(case_line).hexdigest() for case_line in case_lines
@@ -1130,7 +1374,7 @@ def test_publication_finalization_reconciles_authority_outcome(
                     "evidence_root_sha256": evidence_root,
                 }
                 for identifier, evidence_root in zip(
-                    security_catalog.high_threat_ids,
+                    (binding.threat_id for binding in security_catalog.case_bindings),
                     evidence_roots,
                     strict=True,
                 )
