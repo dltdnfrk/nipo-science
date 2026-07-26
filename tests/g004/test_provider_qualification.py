@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import socket
+import tempfile
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import replace
@@ -253,8 +254,7 @@ def test_external_authority_client_uses_public_only_exact_protocol(
         expected_sha256=sha256(key_path.read_bytes()).hexdigest(),
     )
     receipt = authority.issue(claim)
-    socket_root = Path(".cache").resolve()
-    socket_root.mkdir(exist_ok=True)
+    socket_root = Path(tempfile.mkdtemp(prefix="nq-sock-", dir="/private/tmp"))
     socket_path = socket_root / "q-live-authority.sock"
     socket_path.unlink(missing_ok=True)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -441,8 +441,7 @@ def test_external_authority_rejects_untrusted_responses(failure: str) -> None:
         response = _authority_response(receipt) + b"{}\n"
     else:
         response = b'{"schema_version":1,"receipt":\n'
-    socket_root = Path(".cache").resolve()
-    socket_root.mkdir(exist_ok=True)
+    socket_root = Path(tempfile.mkdtemp(prefix="nq-sock-", dir="/private/tmp"))
     socket_path = socket_root / "q-neg-authority.sock"
     socket_path.unlink(missing_ok=True)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -474,8 +473,7 @@ def test_external_authority_rejects_untrusted_responses(failure: str) -> None:
 def test_external_authority_rejects_socket_path_replacement() -> None:
     claim, authority = _live_claim()
     response = _authority_response(authority.issue(claim))
-    socket_root = Path(".cache").resolve()
-    socket_root.mkdir(exist_ok=True)
+    socket_root = Path(tempfile.mkdtemp(prefix="nq-sock-", dir="/private/tmp"))
     socket_path = socket_root / "q-replace-authority.sock"
     socket_path.unlink(missing_ok=True)
     listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

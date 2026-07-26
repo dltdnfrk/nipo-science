@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from http.client import HTTPConnection
@@ -75,7 +76,6 @@ _SHA256_EVIDENCE: Final = "a" * 64
 _DESTROY_FAILURE: Final = "destroy failed"
 _CLEANUP_LOGIN: Final = "science_workbench_cleanup_test"
 _CLEANUP_PASSWORD: Final = token_urlsafe(24)
-_CACHE_ROOT: Final = Path(__file__).resolve().parents[2] / ".cache"
 _RESPONSE = TypeAdapter(dict[str, object])
 
 
@@ -806,8 +806,8 @@ def test_cleanup_cli_runs_fixed_sweep_through_protected_vault_socket(
             {"schema_version": 1, "evidence_sha256": _SHA256_EVIDENCE}
         )
 
-    _CACHE_ROOT.mkdir(mode=0o700, exist_ok=True)
-    socket_path = _CACHE_ROOT / f"pc-{uuid4().hex[:8]}.sock"
+    socket_root = Path(tempfile.mkdtemp(prefix="nq-sock-", dir="/private/tmp"))
+    socket_path = socket_root / f"pc-{uuid4().hex[:8]}.sock"
     server = SecureProviderUnixServer(socket_path, destroy)
     server_thread = Thread(target=server.serve_forever)
     server_thread.start()
