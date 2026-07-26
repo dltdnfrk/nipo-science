@@ -24,3 +24,6 @@ __pycache__/
 .env.*
 !.env.example
 .DS_Store
+
+# Local product server persistence (tools/run_product_server.py)
+data/
