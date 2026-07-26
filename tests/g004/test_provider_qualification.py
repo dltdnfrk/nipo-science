@@ -254,53 +254,54 @@ def test_external_authority_client_uses_public_only_exact_protocol(
         expected_sha256=sha256(key_path.read_bytes()).hexdigest(),
     )
     receipt = authority.issue(claim)
-    socket_root = Path(tempfile.mkdtemp(prefix="nq-sock-", dir="/private/tmp"))
-    socket_path = socket_root / "q-live-authority.sock"
-    socket_path.unlink(missing_ok=True)
-    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    try:
-        listener.bind(os.fspath(socket_path))
-        socket_path.chmod(0o600)
-        listener.listen(1)
-
-        def serve() -> None:
-            connection = listener.accept()[0]
-            with connection:
-                request = connection.recv(65536)
-                assert (
-                    json.loads(request)["operation"] == "issue_provider_qualification"
-                )
-                response = {
-                    "schema_version": 1,
-                    "receipt": json.loads(qualification_receipt_json(receipt)),
-                }
-                connection.sendall(
-                    json.dumps(
-                        response,
-                        sort_keys=True,
-                        separators=(",", ":"),
-                    ).encode()
-                    + b"\n"
-                )
-
-        server = Thread(target=serve)
-        server.start()
-        issued = UnixSocketQualificationIssuer(
-            QualificationAuthorityClientConfig(socket_path),
-            verifier,
-            active_key_id=verifier.keys[0].key_id,
-        ).issue(claim)
-        server.join(timeout=2)
-
-        assert issued == receipt
-        assert (
-            parse_qualification_receipt_json(qualification_receipt_json(issued))
-            == issued
-        )
-        assert not server.is_alive()
-    finally:
-        listener.close()
+    with tempfile.TemporaryDirectory(prefix="nq-sock-", dir="/private/tmp") as socket_dir:
+        socket_root = Path(socket_dir)
+        socket_path = socket_root / "q-live-authority.sock"
         socket_path.unlink(missing_ok=True)
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            listener.bind(os.fspath(socket_path))
+            socket_path.chmod(0o600)
+            listener.listen(1)
+
+            def serve() -> None:
+                connection = listener.accept()[0]
+                with connection:
+                    request = connection.recv(65536)
+                    assert (
+                        json.loads(request)["operation"] == "issue_provider_qualification"
+                    )
+                    response = {
+                        "schema_version": 1,
+                        "receipt": json.loads(qualification_receipt_json(receipt)),
+                    }
+                    connection.sendall(
+                        json.dumps(
+                            response,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        ).encode()
+                        + b"\n"
+                    )
+
+            server = Thread(target=serve)
+            server.start()
+            issued = UnixSocketQualificationIssuer(
+                QualificationAuthorityClientConfig(socket_path),
+                verifier,
+                active_key_id=verifier.keys[0].key_id,
+            ).issue(claim)
+            server.join(timeout=2)
+
+            assert issued == receipt
+            assert (
+                parse_qualification_receipt_json(qualification_receipt_json(issued))
+                == issued
+            )
+            assert not server.is_alive()
+        finally:
+            listener.close()
+            socket_path.unlink(missing_ok=True)
 
 
 def test_public_key_config_rejects_private_or_unknown_fields(tmp_path: Path) -> None:
@@ -441,71 +442,73 @@ def test_external_authority_rejects_untrusted_responses(failure: str) -> None:
         response = _authority_response(receipt) + b"{}\n"
     else:
         response = b'{"schema_version":1,"receipt":\n'
-    socket_root = Path(tempfile.mkdtemp(prefix="nq-sock-", dir="/private/tmp"))
-    socket_path = socket_root / "q-neg-authority.sock"
-    socket_path.unlink(missing_ok=True)
-    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    try:
-        listener.bind(os.fspath(socket_path))
-        socket_path.chmod(0o600)
-        listener.listen(1)
-
-        def serve() -> None:
-            with listener.accept()[0] as connection:
-                _ = connection.recv(65536)
-                connection.sendall(response)
-
-        server = Thread(target=serve)
-        server.start()
-        with pytest.raises(QualificationAuthorityError):
-            _ = UnixSocketQualificationIssuer(
-                QualificationAuthorityClientConfig(socket_path),
-                verifier,
-                active_key_id=verifier.keys[0].key_id,
-            ).issue(claim)
-        server.join(timeout=2)
-        assert not server.is_alive()
-    finally:
-        listener.close()
+    with tempfile.TemporaryDirectory(prefix="nq-sock-", dir="/private/tmp") as socket_dir:
+        socket_root = Path(socket_dir)
+        socket_path = socket_root / "q-neg-authority.sock"
         socket_path.unlink(missing_ok=True)
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            listener.bind(os.fspath(socket_path))
+            socket_path.chmod(0o600)
+            listener.listen(1)
+
+            def serve() -> None:
+                with listener.accept()[0] as connection:
+                    _ = connection.recv(65536)
+                    connection.sendall(response)
+
+            server = Thread(target=serve)
+            server.start()
+            with pytest.raises(QualificationAuthorityError):
+                _ = UnixSocketQualificationIssuer(
+                    QualificationAuthorityClientConfig(socket_path),
+                    verifier,
+                    active_key_id=verifier.keys[0].key_id,
+                ).issue(claim)
+            server.join(timeout=2)
+            assert not server.is_alive()
+        finally:
+            listener.close()
+            socket_path.unlink(missing_ok=True)
 
 
 def test_external_authority_rejects_socket_path_replacement() -> None:
     claim, authority = _live_claim()
     response = _authority_response(authority.issue(claim))
-    socket_root = Path(tempfile.mkdtemp(prefix="nq-sock-", dir="/private/tmp"))
-    socket_path = socket_root / "q-replace-authority.sock"
-    socket_path.unlink(missing_ok=True)
-    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    replacement = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    try:
-        listener.bind(os.fspath(socket_path))
-        socket_path.chmod(0o600)
-        listener.listen(1)
-
-        def serve() -> None:
-            with listener.accept()[0] as connection:
-                _ = connection.recv(65536)
-                socket_path.unlink()
-                replacement.bind(os.fspath(socket_path))
-                socket_path.chmod(0o600)
-                replacement.listen(1)
-                connection.sendall(response)
-
-        server = Thread(target=serve)
-        server.start()
-        with pytest.raises(QualificationAuthorityError):
-            _ = UnixSocketQualificationIssuer(
-                QualificationAuthorityClientConfig(socket_path),
-                authority.verifier,
-                active_key_id=authority.verifier.keys[0].key_id,
-            ).issue(claim)
-        server.join(timeout=2)
-        assert not server.is_alive()
-    finally:
-        listener.close()
-        replacement.close()
+    with tempfile.TemporaryDirectory(prefix="nq-sock-", dir="/private/tmp") as socket_dir:
+        socket_root = Path(socket_dir)
+        socket_path = socket_root / "q-replace-authority.sock"
         socket_path.unlink(missing_ok=True)
+        listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        replacement = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        try:
+            listener.bind(os.fspath(socket_path))
+            socket_path.chmod(0o600)
+            listener.listen(1)
+
+            def serve() -> None:
+                with listener.accept()[0] as connection:
+                    _ = connection.recv(65536)
+                    socket_path.unlink()
+                    replacement.bind(os.fspath(socket_path))
+                    socket_path.chmod(0o600)
+                    replacement.listen(1)
+                    connection.sendall(response)
+
+            server = Thread(target=serve)
+            server.start()
+            with pytest.raises(QualificationAuthorityError):
+                _ = UnixSocketQualificationIssuer(
+                    QualificationAuthorityClientConfig(socket_path),
+                    authority.verifier,
+                    active_key_id=authority.verifier.keys[0].key_id,
+                ).issue(claim)
+            server.join(timeout=2)
+            assert not server.is_alive()
+        finally:
+            listener.close()
+            replacement.close()
+            socket_path.unlink(missing_ok=True)
 
 
 @pytest.mark.parametrize(

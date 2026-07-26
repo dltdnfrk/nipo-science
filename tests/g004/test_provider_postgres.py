@@ -806,24 +806,25 @@ def test_cleanup_cli_runs_fixed_sweep_through_protected_vault_socket(
             {"schema_version": 1, "evidence_sha256": _SHA256_EVIDENCE}
         )
 
-    socket_root = Path(tempfile.mkdtemp(prefix="nq-sock-", dir="/private/tmp"))
-    socket_path = socket_root / f"pc-{uuid4().hex[:8]}.sock"
-    server = SecureProviderUnixServer(socket_path, destroy)
-    server_thread = Thread(target=server.serve_forever)
-    server_thread.start()
-    try:
-        exit_code = cleanup_main(
-            (),
-            {
-                "PROVIDER_CLEANUP_DATABASE_URL": _cleanup_service_database_url(),
-                "PROVIDER_CLEANUP_EXPECTED_LOGIN_ROLE": _CLEANUP_LOGIN,
-                "PROVIDER_CLEANUP_VAULT_SOCKET": str(socket_path),
-            },
-        )
-    finally:
-        server.shutdown()
-        server_thread.join()
-        server.server_close()
+    with tempfile.TemporaryDirectory(prefix="nq-sock-", dir="/private/tmp") as socket_dir:
+        socket_root = Path(socket_dir)
+        socket_path = socket_root / f"pc-{uuid4().hex[:8]}.sock"
+        server = SecureProviderUnixServer(socket_path, destroy)
+        server_thread = Thread(target=server.serve_forever)
+        server_thread.start()
+        try:
+            exit_code = cleanup_main(
+                (),
+                {
+                    "PROVIDER_CLEANUP_DATABASE_URL": _cleanup_service_database_url(),
+                    "PROVIDER_CLEANUP_EXPECTED_LOGIN_ROLE": _CLEANUP_LOGIN,
+                    "PROVIDER_CLEANUP_VAULT_SOCKET": str(socket_path),
+                },
+            )
+        finally:
+            server.shutdown()
+            server_thread.join()
+            server.server_close()
 
     captured = capsys.readouterr()
     assert exit_code == 0
