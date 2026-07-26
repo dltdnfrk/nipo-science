@@ -20,6 +20,7 @@ import json
 import os
 import stat
 import subprocess
+import sys
 import unicodedata
 import zipfile
 from collections.abc import Iterator, Sequence
@@ -887,6 +888,10 @@ def test_two_paths_that_normalize_together_refuse_the_whole_pack(
     assert not (tmp_path / "refused.zip").exists()
 
 
+@pytest.mark.skipif(
+    sys.platform != "darwin",
+    reason="APFS folds case and normalization; Linux filesystems do not",
+)
 @pytest.mark.parametrize("pair", [CASE_PAIR, NFC_NFD_PAIR, LIGATURE_PAIR])
 def test_the_refused_pairs_really_do_collapse_on_this_filesystem(
     tmp_path: Path,
