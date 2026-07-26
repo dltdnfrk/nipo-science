@@ -30,7 +30,7 @@ PROVIDER_RUNTIME_PYTHON := \
 SPEC_V05_MANIFEST ?= $(ROOT)/docs/requirements/requirements-v0.5.yaml
 SPEC_V05_SPEC ?= $(ROOT)/docs/spec/SPEC-v0.5.md
 
-.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-spec-v05 verify-architecture test-local-config print-local-images prepare-postgres-image test-migrations test-rls test-upload test-artifacts test-science test-dry-lab test-product-ui test-local-workbench test-provider-runtime provider-cleanup-sweep test-e2e-artifacts stack-up smoke-local stack-down ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
+.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-spec-v05 verify-architecture test-local-config print-local-images prepare-postgres-image test-migrations test-rls test-upload test-artifacts test-science test-dry-lab test-product-ui test-local-workbench test-provider-runtime check-quarantine provider-cleanup-sweep test-e2e-artifacts stack-up smoke-local stack-down ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
 
 bootstrap:
 	@set -eu; \
@@ -243,6 +243,11 @@ test-product-ui:
 	PYTHONPATH="$(ROOT)/packages/science:$(ROOT)" "$(VENV)/bin/basedpyright" services/api/product_app.py services/api/product_connectors.py services/api/product_connector_persistence.py services/api/connector_registry.py services/api/product_tenancy.py services/api/product_dry_lab.py tests/g003 tests/connectors; \
 	node --check apps/web/product/app.js; \
 	$(MAKE) test-rls
+
+check-quarantine:
+	@set -eu; \
+	cd "$(ROOT)"; \
+	PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/python" -m tools.platform_policy.saas_quarantine "$(ROOT)"
 
 test-local-workbench:
 	@set -eu; \
