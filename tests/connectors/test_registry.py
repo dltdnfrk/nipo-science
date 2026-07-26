@@ -11,11 +11,24 @@ if TYPE_CHECKING:
 
 PUBMED_URL: Final = "https://pubmed.ncbi.nlm.nih.gov"
 OPENALEX_URL: Final = "https://api.openalex.org"
+ARXIV_URL: Final = "https://export.arxiv.org"
+SEMANTIC_SCHOLAR_URL: Final = "https://api.semanticscholar.org"
+EUROPE_PMC_URL: Final = "https://www.ebi.ac.uk"
+CORE_URL: Final = "https://api.core.ac.uk"
+CROSSREF_URL: Final = "https://api.crossref.org"
 
 
 @pytest.mark.parametrize(
     ("connector_id", "base_url"),
-    [("pubmed", PUBMED_URL), ("openalex", OPENALEX_URL)],
+    [
+        ("pubmed", PUBMED_URL),
+        ("openalex", OPENALEX_URL),
+        ("arxiv", ARXIV_URL),
+        ("semantic_scholar", SEMANTIC_SCHOLAR_URL),
+        ("europe_pmc", EUROPE_PMC_URL),
+        ("core", CORE_URL),
+        ("crossref", CROSSREF_URL),
+    ],
 )
 def test_canonical_connector_registrations_are_disabled_by_default(
     connector_id: str,

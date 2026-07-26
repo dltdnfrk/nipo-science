@@ -27,6 +27,21 @@ from services.api.artifacts.http import ArtifactHttpResponse, ArtifactHttpServic
 from services.api.artifacts.runtime import UUID7_VERSION, Uuid7Factory
 from services.api.bounded_http import BoundedThreadingHttpServer
 from services.api.product_artifacts import ProductArtifactService
+from services.api.product_connectors import (
+    CollectedDocument,
+    CollectionBackend,
+    CollectionFetcher,
+    CollectionPlan,
+    CollectionPlanStore,
+    CollectionStore,
+    ConnectorSettingsBackend,
+    ConnectorSettingsError,
+    ConnectorSettingsStore,
+    StoredCollection,
+    fixture_collection_fetcher,
+    live_collection_fetcher,
+    parse_collection_prompt,
+)
 from services.api.product_dry_lab import (
     DryLabResourceKind,
     LocalRunCreate,
@@ -304,6 +319,9 @@ class ProductServerOptions:
     artifact_http: ArtifactHttpService | None = None
     provider_run_dispatcher: ProviderRunDispatcher | None = None
     uuid7_factory: IdFactory | None = None
+    collection_fetcher: CollectionFetcher | None = None
+    connector_settings: ConnectorSettingsBackend | None = None
+    collections: CollectionBackend | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -618,6 +636,16 @@ class ProductServer(BoundedThreadingHttpServer):
             else _DEVELOPMENT_CSRF_COOKIE
         )
         self.store: ProductStore = ProductStore(clock, options.principal)
+        self.connector_settings: ConnectorSettingsBackend = (
+            options.connector_settings or ConnectorSettingsStore()
+        )
+        self.collection_plans: CollectionPlanStore = CollectionPlanStore(clock)
+        self.collections: CollectionBackend = options.collections or CollectionStore(
+            clock
+        )
+        self.collection_fetcher: CollectionFetcher = (
+            options.collection_fetcher or live_collection_fetcher
+        )
         self.session_authority: SessionAuthority = (
             options.session_authority or self.store
         )
@@ -976,6 +1004,10 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             self._provider_mutation(path)
         elif self._local_auth_mutation(path):
             return
+        elif path.startswith("/api/v1/connectors/"):
+            self._connector_mutation(path)
+        elif self._collection_mutation(path):
+            return
         elif path == "/api/v1/runs":
             self._create_local_run()
         elif path.startswith("/api/v1/runs/"):
@@ -1001,6 +1033,20 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             operation()
         else:
             self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+        return True
+
+    def _collection_mutation(self, path: str) -> bool:
+        """Dispatch collection plan, execute, and materialize mutations."""
+        if path == "/api/v1/collections/plan":
+            self._collection_plan()
+        elif path == "/api/v1/collections/execute":
+            self._collection_execute()
+        elif path.startswith("/api/v1/collections/") and path.endswith(
+            "/materialize"
+        ):
+            self._collection_materialize(path)
+        else:
+            return False
         return True
 
     def do_DELETE(self) -> None:
@@ -1239,10 +1285,17 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
     def _respond_to_api(self, path: str, principal: Principal) -> None:
         if path.startswith("/api/v1/provider-connections"):
             self._provider_get(path, principal)
-        elif path == "/api/v1/me":
-            self._api_me(principal)
-        elif path == "/api/v1/workspace":
-            self._api_workspace(principal)
+        elif (
+            handler := {
+                "/api/v1/me": self._api_me,
+                "/api/v1/workspace": self._api_workspace,
+                "/api/v1/connectors": self._connectors_list,
+                "/api/v1/collections": self._api_collections,
+            }.get(path)
+        ) is not None:
+            handler(principal)
+        elif path.startswith("/api/v1/collections/"):
+            self._api_collection(path, principal)
         elif path == "/api/v1/artifacts":
             self._api_artifacts()
         elif path.startswith("/api/v1/artifacts/"):
@@ -2053,6 +2106,297 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             )
         return True
 
+    def _connectors_list(self, principal: Principal) -> None:
+        """Return the canonical connector registry merged with saved state."""
+        items: JsonList = [
+            {
+                "connector_id": str(item["connector_id"]),
+                "label": str(item["label"]),
+                "note": str(item["note"]),
+                "accepts_key": bool(item["accepts_key"]),
+                "enabled": bool(item["enabled"]),
+                "key_env": (
+                    item["key_env"] if isinstance(item["key_env"], str) else None
+                ),
+                "last_success_at": (
+                    item["last_success_at"]
+                    if isinstance(item["last_success_at"], str)
+                    else None
+                ),
+                "last_failure_at": (
+                    item["last_failure_at"]
+                    if isinstance(item["last_failure_at"], str)
+                    else None
+                ),
+            }
+            for item in self.product_server.connector_settings.list_for(
+                principal.user_id
+            )
+        ]
+        self._send_json(HTTPStatus.OK, {"connectors": items})
+
+    def _connector_mutation(self, path: str) -> None:
+        """Enable or disable one canonical connector for this principal."""
+        identity = self._authenticated_run_request()
+        if identity is None:
+            return
+        principal, _token = identity
+        connector_id = path.removeprefix("/api/v1/connectors/").strip("/")
+        body, status = self._json()
+        if body is None:
+            self._send_body_error(status)
+            return
+        enabled = body.get("enabled")
+        key_env = body.get("key_env")
+        if key_env is not None and not isinstance(key_env, str):
+            self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        if not isinstance(enabled, bool):
+            self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        try:
+            updated = self.product_server.connector_settings.update(
+                principal.user_id,
+                connector_id,
+                enabled=enabled,
+                key_env=key_env or None,
+            )
+        except ConnectorSettingsError as error:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST, {"error": str(error) or "invalid_connector"}
+            )
+            return
+        self._send_json(HTTPStatus.OK, cast("JsonObject", updated))
+
+    def _collection_plan(self) -> None:
+        """Parse a topic into a confirmation-first collection plan."""
+        identity = self._authenticated_run_request()
+        if identity is None:
+            return
+        principal, _token = identity
+        body, status = self._json()
+        if body is None:
+            self._send_body_error(status)
+            return
+        prompt = body.get("prompt")
+        if not isinstance(prompt, str):
+            self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        settings = self.product_server.connector_settings
+        try:
+            source_hint, query, limit = parse_collection_prompt(prompt)
+        except ConnectorSettingsError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+        enabled = settings.enabled_ids(principal.user_id)
+        enabled_ids = set(enabled)
+        connector_id = (
+            source_hint
+            if source_hint and source_hint in enabled_ids
+            else (enabled[0] if enabled else None)
+        )
+        if connector_id is None:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": "no_enabled_connector"})
+            return
+        plan = self.product_server.collection_plans.create(
+            principal.user_id, connector_id, query, limit
+        )
+        label = self._connector_label(principal, connector_id)
+        self._send_json(
+            HTTPStatus.OK,
+            {
+                "plan_id": plan.plan_id,
+                "connector_id": connector_id,
+                "connector_label": label,
+                "query": query,
+                "limit": limit,
+                "summary": f"연결된 {label}에서 '{query}' {limit}건 수집합니다",
+            },
+        )
+
+    def _collection_execute(self) -> None:
+        """Run one confirmed collection plan and return the calibrated CSV input."""
+        identity = self._authenticated_run_request()
+        if identity is None:
+            return
+        principal, _token = identity
+        body, status = self._json()
+        if body is None:
+            self._send_body_error(status)
+            return
+        plan_id = body.get("plan_id")
+        if not isinstance(plan_id, str) or not plan_id:
+            self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        try:
+            plan = self.product_server.collection_plans.consume(
+                principal.user_id, plan_id
+            )
+        except ConnectorSettingsError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+        records = self._run_collection_fetch(plan)
+        if records is None:
+            return
+        stored = self.product_server.collections.create(
+            principal.user_id, plan.connector_id, plan.query, records
+        )
+        csv_text = self.product_server.collections.materialize(
+            principal.user_id,
+            stored.collection_id,
+            _record_ids(stored),
+        )
+        self._send_json(
+            HTTPStatus.OK,
+            {
+                "collection_id": stored.collection_id,
+                "connector_id": plan.connector_id,
+                "connector_label": self._connector_label(
+                    principal, plan.connector_id
+                ),
+                "query": plan.query,
+                "limit": plan.limit,
+                "records": _collected_records_json(stored),
+                "filename": (
+                    f"{plan.connector_id}-{stored.collection_id[:8]}.csv"
+                ),
+                "media_type": "text/csv",
+                "content": csv_text,
+                "row_count": len(stored.records),
+            },
+        )
+
+    def _run_collection_fetch(
+        self, plan: CollectionPlan
+    ) -> list[CollectedDocument] | None:
+        """Fetch records for one consumed plan, reporting any failure inline."""
+        try:
+            records = self.product_server.collection_fetcher(
+                plan.connector_id, plan.query, plan.limit
+            )
+        except ConnectorSettingsError as error:
+            self._record_fetch_outcome(plan, succeeded=False)
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return None
+        except Exception:  # noqa: BLE001 — upstream failures never leak internals
+            self._record_fetch_outcome(plan, succeeded=False)
+            self._send_json(
+                HTTPStatus.BAD_GATEWAY, {"error": "collection_fetch_failed"}
+            )
+            return None
+        if not records:
+            self._record_fetch_outcome(plan, succeeded=False)
+            self._send_json(HTTPStatus.BAD_GATEWAY, {"error": "collection_empty"})
+            return None
+        self._record_fetch_outcome(plan, succeeded=True)
+        return records
+
+    def _record_fetch_outcome(self, plan: CollectionPlan, *, succeeded: bool) -> None:
+        """Stamp the connector's last fetch outcome without masking the result."""
+        try:
+            self.product_server.connector_settings.record_fetch_outcome(
+                plan.principal_id,
+                plan.connector_id,
+                succeeded=succeeded,
+                at=self.product_server.clock(),
+            )
+        except ConnectorSettingsError:
+            return
+
+    def _collection_materialize(self, path: str) -> None:
+        """Render a selected subset of one owned collection as CSV run input."""
+        identity = self._authenticated_run_request()
+        if identity is None:
+            return
+        principal, _token = identity
+        collection_id = (
+            path.removeprefix("/api/v1/collections/")
+            .removesuffix("/materialize")
+            .strip("/")
+        )
+        body, status = self._json()
+        if body is None:
+            self._send_body_error(status)
+            return
+        record_ids_value = body.get("record_ids")
+        if not isinstance(record_ids_value, list) or not record_ids_value:
+            self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+            return
+        record_ids: list[str] = []
+        for item in record_ids_value:
+            if not isinstance(item, str):
+                self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
+                return
+            record_ids.append(item)
+        try:
+            csv_text = self.product_server.collections.materialize(
+                principal.user_id, collection_id, record_ids
+            )
+        except ConnectorSettingsError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+        self._send_json(
+            HTTPStatus.OK,
+            {
+                "filename": f"collection-{collection_id[:8]}-selection.csv",
+                "media_type": "text/csv",
+                "content": csv_text,
+                "row_count": len(record_ids),
+            },
+        )
+
+    def _api_collections(self, principal: Principal) -> None:
+        """List summaries of the principal's stored collections."""
+        collections: JsonList = [
+            {
+                "collection_id": item.collection_id,
+                "connector_id": item.connector_id,
+                "connector_label": self._connector_label(
+                    principal, item.connector_id
+                ),
+                "query": item.query,
+                "created_at": item.created_at.isoformat(),
+                "record_count": len(item.records),
+            }
+            for item in self.product_server.collections.list_for(
+                principal.user_id
+            )
+        ]
+        self._send_json(HTTPStatus.OK, {"collections": collections})
+
+    def _api_collection(self, path: str, principal: Principal) -> None:
+        """Return one owned collection with its structured records."""
+        collection_id = path.removeprefix("/api/v1/collections/").strip("/")
+        stored = self.product_server.collections.get(
+            principal.user_id, collection_id
+        )
+        if stored is None:
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
+        self._send_json(
+            HTTPStatus.OK,
+            {
+                "collection_id": stored.collection_id,
+                "connector_id": stored.connector_id,
+                "connector_label": self._connector_label(
+                    principal, stored.connector_id
+                ),
+                "query": stored.query,
+                "created_at": stored.created_at.isoformat(),
+                "records": _collected_records_json(stored),
+            },
+        )
+
+    def _connector_label(self, principal: Principal, connector_id: str) -> str:
+        """Resolve the product-facing label for one canonical connector id."""
+        return next(
+            str(item["label"])
+            for item in self.product_server.connector_settings.list_for(
+                principal.user_id
+            )
+            if item["connector_id"] == connector_id
+        )
+
     def _create_local_run(self) -> None:
         identity = self._authenticated_run_request()
         if identity is None:
@@ -2072,7 +2416,9 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         if request is None:
             self._send(HTTPStatus.BAD_REQUEST, _BAD_REQUEST)
             return
-        if not self._run_session_is_active(principal, request.research_session_id):
+        if not self._run_session_is_active(
+            principal, request.research_session_id
+        ) or not self._collection_is_owned(principal, request.collection_id):
             self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
             return
         response = dry_lab.create_local_run(
@@ -2109,6 +2455,9 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
         if not self._run_session_is_active(principal, request.research_session_id):
             self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
             return
+        if not self._collection_is_owned(principal, request.collection_id):
+            self._send(HTTPStatus.NOT_FOUND, _NOT_FOUND)
+            return
         response = dry_lab.create_provider_run(
             _digest(token),
             request,
@@ -2133,6 +2482,15 @@ class ProductRequestHandler(BaseHTTPRequestHandler):
             research_session is not None
             and project is not None
             and not project.archived
+        )
+
+    def _collection_is_owned(
+        self, principal: Principal, collection_id: str | None
+    ) -> bool:
+        """Return whether an optional provenance reference resolves for the owner."""
+        return collection_id is None or (
+            self.product_server.collections.get(principal.user_id, collection_id)
+            is not None
         )
 
     def _api_me(self, principal: Principal) -> None:
@@ -2451,6 +2809,74 @@ def _if_match_revision(value: str | None) -> int | None:
     return int(revision) if revision.isdecimal() else None
 
 
+_RUN_INPUT_REQUIRED_KEYS: Final = frozenset({"filename", "media_type", "content"})
+_RUN_INPUT_KEYS: Final = _RUN_INPUT_REQUIRED_KEYS | {"provenance"}
+
+
+def _run_input_is_valid(input_value: JsonValue | None) -> bool:
+    """Return whether the run input object matches the upload contract."""
+    if not isinstance(input_value, dict):
+        return False
+    keys = set(input_value)
+    if not _RUN_INPUT_REQUIRED_KEYS <= keys <= _RUN_INPUT_KEYS:
+        return False
+    if not all(
+        isinstance(input_value.get(field), str)
+        for field in _RUN_INPUT_REQUIRED_KEYS
+    ):
+        return False
+    provenance = input_value.get("provenance")
+    if provenance is None:
+        return True
+    return (
+        isinstance(provenance, dict)
+        and set(provenance) == {"collection_id"}
+        and isinstance(provenance.get("collection_id"), str)
+    )
+
+
+def _run_input_collection_id(input_value: JsonValue | None) -> str | None:
+    """Return the validated optional provenance collection id."""
+    if not isinstance(input_value, dict):
+        return None
+    provenance = input_value.get("provenance")
+    if not isinstance(provenance, dict):
+        return None
+    collection_id = provenance.get("collection_id")
+    return collection_id if isinstance(collection_id, str) else None
+
+
+def _record_ids(stored: StoredCollection) -> list[str]:
+    """Return the positional r1..rN ids of one stored collection."""
+    return [f"r{index + 1}" for index in range(len(stored.records))]
+
+
+def _collected_document_json(
+    record_id: str, document: CollectedDocument
+) -> JsonObject:
+    """Return the JSON contract representation of one collected document."""
+    return {
+        "id": record_id,
+        "title": document.title,
+        "authors": list(document.authors),
+        "year": document.year,
+        "venue": document.venue,
+        "citation_count": document.citation_count,
+        "abstract": document.abstract,
+        "url": document.url,
+    }
+
+
+def _collected_records_json(stored: StoredCollection) -> JsonList:
+    """Return the r1..rN record list for one stored collection."""
+    return [
+        _collected_document_json(record_id, document)
+        for record_id, document in zip(
+            _record_ids(stored), stored.records, strict=True
+        )
+    ]
+
+
 def _local_run_create(body: JsonObject) -> LocalRunCreate | None:
     input_value = body.get("input")
     if (
@@ -2461,21 +2887,18 @@ def _local_run_create(body: JsonObject) -> LocalRunCreate | None:
         or not isinstance(body.get("prompt"), str)
         or not body["prompt"]
         or not isinstance(body.get("research_intent"), dict)
-        or not isinstance(input_value, dict)
-        or set(input_value) != {"filename", "media_type", "content"}
-        or not all(
-            isinstance(input_value.get(field), str)
-            for field in ("filename", "media_type", "content")
-        )
+        or not _run_input_is_valid(input_value)
     ):
         return None
+    input_object = cast("JsonObject", input_value)
     return LocalRunCreate(
         research_session_id=cast("str", body["session_id"]),
         prompt=cast("str", body["prompt"]),
         research_intent=body["research_intent"],
-        filename=cast("str", input_value["filename"]),
-        media_type=cast("str", input_value["media_type"]),
-        content=cast("str", input_value["content"]),
+        filename=cast("str", input_object["filename"]),
+        media_type=cast("str", input_object["media_type"]),
+        content=cast("str", input_object["content"]),
+        collection_id=_run_input_collection_id(input_value),
     )
 
 
@@ -2501,25 +2924,22 @@ def _provider_run_create(body: JsonObject) -> ProviderRunCreate | None:
         or not isinstance(body.get("prompt"), str)
         or not body["prompt"]
         or not isinstance(body.get("research_intent"), dict)
-        or not isinstance(input_value, dict)
-        or set(input_value) != {"filename", "media_type", "content"}
-        or not all(
-            isinstance(input_value.get(field), str)
-            for field in ("filename", "media_type", "content")
-        )
+        or not _run_input_is_valid(input_value)
         or not isinstance(model_id, str)
         or not provider_model_id_is_valid(model_id)
     ):
         return None
+    input_object = cast("JsonObject", input_value)
     return ProviderRunCreate(
         research_session_id=cast("str", session_id),
         prompt=cast("str", body["prompt"]),
         research_intent=body["research_intent"],
-        filename=cast("str", input_value["filename"]),
-        media_type=cast("str", input_value["media_type"]),
-        content=cast("str", input_value["content"]),
+        filename=cast("str", input_object["filename"]),
+        media_type=cast("str", input_object["media_type"]),
+        content=cast("str", input_object["content"]),
         connection_id=cast("str", connection_id),
         model_id=model_id,
+        collection_id=_run_input_collection_id(input_value),
     )
 
 
@@ -2603,6 +3023,9 @@ def _loopback_fixture_options(
         public_origin=options.public_origin,
         provider_run_dispatcher=options.provider_run_dispatcher,
         uuid7_factory=options.uuid7_factory,
+        collection_fetcher=options.collection_fetcher or fixture_collection_fetcher,
+        connector_settings=options.connector_settings,
+        collections=options.collections,
     )
 
 

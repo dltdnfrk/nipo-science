@@ -18,6 +18,11 @@ class ConnectorId(StrEnum):
 
     PUBMED = "pubmed"
     OPENALEX = "openalex"
+    ARXIV = "arxiv"
+    SEMANTIC_SCHOLAR = "semantic_scholar"
+    EUROPE_PMC = "europe_pmc"
+    CORE = "core"
+    CROSSREF = "crossref"
 
 
 class ConnectorBaseUrl(StrEnum):
@@ -25,12 +30,22 @@ class ConnectorBaseUrl(StrEnum):
 
     PUBMED = "https://pubmed.ncbi.nlm.nih.gov"
     OPENALEX = "https://api.openalex.org"
+    ARXIV = "https://export.arxiv.org"
+    SEMANTIC_SCHOLAR = "https://api.semanticscholar.org"
+    EUROPE_PMC = "https://www.ebi.ac.uk"
+    CORE = "https://api.core.ac.uk"
+    CROSSREF = "https://api.crossref.org"
 
 
 CANONICAL_CONNECTOR_REGISTRY: Final = MappingProxyType(
     {
         ConnectorId.PUBMED: ConnectorBaseUrl.PUBMED,
         ConnectorId.OPENALEX: ConnectorBaseUrl.OPENALEX,
+        ConnectorId.ARXIV: ConnectorBaseUrl.ARXIV,
+        ConnectorId.SEMANTIC_SCHOLAR: ConnectorBaseUrl.SEMANTIC_SCHOLAR,
+        ConnectorId.EUROPE_PMC: ConnectorBaseUrl.EUROPE_PMC,
+        ConnectorId.CORE: ConnectorBaseUrl.CORE,
+        ConnectorId.CROSSREF: ConnectorBaseUrl.CROSSREF,
     }
 )
 

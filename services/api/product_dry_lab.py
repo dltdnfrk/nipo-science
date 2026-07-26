@@ -117,7 +117,7 @@ _STAGE_TONES: Final[dict[str, str]] = {
     "cleanup": "positive",
 }
 _ACTION_PRESENTATION: Final[dict[str, tuple[str, bool]]] = {
-    "create-run": ("Run 생성 및 ActionPlan 고정", False),
+    "create-run": ("연구 시작하기", False),
     "approve": ("계획 승인", False),
     "reject": ("계획 거절", False),
     "cancel": ("실행 취소", False),
@@ -154,6 +154,7 @@ class LocalRunCreate:
     filename: str
     media_type: str
     content: str
+    collection_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +169,7 @@ class ProviderRunCreate:
     content: str
     connection_id: str
     model_id: str
+    collection_id: str | None = None
 
 
 class _RunCreateFields(Protocol):
@@ -188,6 +190,9 @@ class _RunCreateFields(Protocol):
 
     @property
     def content(self) -> str: ...
+
+    @property
+    def collection_id(self) -> str | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -458,6 +463,11 @@ class ProductDryLabService:
                 "session_id": request.research_session_id,
                 "prompt": request.prompt,
                 "plan_digest": plan.digest,
+                "input_provenance": (
+                    {"collection_id": request.collection_id}
+                    if request.collection_id is not None
+                    else None
+                ),
             }
             record = _RunRecord(
                 vertical,

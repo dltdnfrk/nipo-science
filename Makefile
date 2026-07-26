@@ -226,8 +226,8 @@ test-product-ui:
 	@set -eu; \
 	cd "$(ROOT)"; \
 	PYTHONPATH="$(ROOT)/packages/science:$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" tests/g003 -v; \
-	"$(VENV)/bin/ruff" check services/api/product_app.py services/api/product_tenancy.py services/api/product_dry_lab.py tests/g003; \
-	PYTHONPATH="$(ROOT)/packages/science:$(ROOT)" "$(VENV)/bin/basedpyright" services/api/product_app.py services/api/product_tenancy.py services/api/product_dry_lab.py tests/g003; \
+	"$(VENV)/bin/ruff" check services/api/product_app.py services/api/product_connectors.py services/api/product_connector_persistence.py services/api/connector_registry.py services/api/product_tenancy.py services/api/product_dry_lab.py tests/g003 tests/connectors; \
+	PYTHONPATH="$(ROOT)/packages/science:$(ROOT)" "$(VENV)/bin/basedpyright" services/api/product_app.py services/api/product_connectors.py services/api/product_connector_persistence.py services/api/connector_registry.py services/api/product_tenancy.py services/api/product_dry_lab.py tests/g003 tests/connectors; \
 	node --check apps/web/product/app.js; \
 	$(MAKE) test-rls
 
