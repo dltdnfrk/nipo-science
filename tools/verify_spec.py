@@ -21,8 +21,13 @@ from tools.spec_contract import (
     DRY_LAB_CHAIN,
     EXPECTED_IDS,
     P0_IDS,
+    RV_IDS,
     SKILL_IDS,
     STACK,
+    V05_DRY_LAB_CHAIN,
+    V05_EXPECTED_IDS,
+    V05_P0_IDS,
+    V05_STACK,
     ContractParseError,
     VerificationError,
     VerificationReport,
@@ -31,10 +36,12 @@ from tools.spec_contract import (
     child_map,
     child_str,
     child_strs,
+    declares_manifest,
+    frontmatter_fields,
     frontmatter_version,
     load_root,
 )
-from tools.spec_runtime import verify_runtime
+from tools.spec_runtime import verify_runtime, verify_runtime_v05
 
 EXPECTED_ARGUMENTS: Final = 2
 
@@ -169,13 +176,120 @@ def verify_contract(manifest_path: Path, spec_path: Path) -> VerificationReport:
     return VerificationReport(version, len(requirement_ids), len(P0_IDS))
 
 
+def verify_contract_v05(manifest_path: Path, spec_path: Path) -> VerificationReport:
+    """Verify the local-first v0.5 manifest invariants and SPEC metadata."""
+    root = load_root(manifest_path)
+    errors: list[str] = []
+    fields = frontmatter_fields(spec_path)
+    spec = child_map(root, "spec")
+    version = fields.get("version", "").strip('"')
+    add_error(version == "0.5" == child_str(spec, "version"), "SPEC version", errors)
+    add_error(child_str(spec, "path") == "docs/spec/SPEC-v0.5.md", "SPEC path", errors)
+    add_error(
+        child_str(spec, "supersedes") == "docs/spec/SPEC-v0.4.md",
+        "SPEC supersession",
+        errors,
+    )
+    add_error(
+        declares_manifest(fields, manifest_path),
+        "SPEC manifest declaration",
+        errors,
+    )
+    add_error(child_map(root, "stack") == V05_STACK, "required local stack", errors)
+    add_error(child_strs(root, "p0_features") == V05_P0_IDS, "P0 L01-L12 IDs", errors)
+
+    verify_runtime_v05(root, errors)
+
+    money = child_map(root, "monetary_semantics")
+    empty_money = child_str(money, "state") == "absent" and all(
+        money.get(key) == []
+        for key in (
+            "schema_fields",
+            "api_operations",
+            "event_fields",
+            "error_codes",
+            "approval_fields",
+            "metrics",
+        )
+    )
+    add_error(empty_money, "zero monetary semantics", errors)
+    deployment = child_map(root, "deployment")
+    add_error(
+        child_str(deployment, "shape") == "single_user_on_device"
+        and child_str(deployment, "tenancy") == "absent"
+        and child_str(deployment, "accounts") == "absent"
+        and child_str(deployment, "roles") == "absent"
+        and child_str(deployment, "listener") == "loopback_only"
+        and child_str(deployment, "remote_access_toggle") == "absent",
+        "single-user loopback-only deployment",
+        errors,
+    )
+    scope = child_map(root, "scope")
+    add_error(
+        child_str(scope, "product_use") == "research_only_non_clinical"
+        and child_str(scope, "clinical_diagnosis") == "forbidden",
+        "research-only scope",
+        errors,
+    )
+    review = child_map(root, "review")
+    add_error(
+        not child_bool(review, "reviewer_reexecution"),
+        "Reviewer non-reexecution",
+        errors,
+    )
+    capabilities = child_map(review, "reviewer_capabilities")
+    add_error(
+        set(capabilities)
+        == {
+            "runner",
+            "python",
+            "bash",
+            "connector",
+            "network",
+            "tool_execute",
+            "artifact_write",
+            "version_update",
+        }
+        and all(value is False for value in capabilities.values()),
+        "Reviewer capabilities",
+        errors,
+    )
+    add_error(child_strs(review, "rules") == RV_IDS, "RV01-RV05 review rules", errors)
+    add_error(
+        child_strs(child_map(root, "dry_lab"), "ordered_chain") == V05_DRY_LAB_CHAIN,
+        "complete local dry-lab chain",
+        errors,
+    )
+    release = child_map(root, "release_gate")
+    add_error(
+        frozenset(child_strs(release, "required")) == V05_EXPECTED_IDS,
+        "release gate requirement IDs",
+        errors,
+    )
+    requirement_ids = frozenset(child_map(root, "requirements"))
+    add_error(
+        requirement_ids == V05_EXPECTED_IDS,
+        "exact v0.5 AC-L/LS/RV/GL/LN IDs",
+        errors,
+    )
+    if errors:
+        raise VerificationError(tuple(errors))
+    return VerificationReport(version, len(requirement_ids), len(V05_P0_IDS))
+
+
 def main(arguments: list[str]) -> int:
     """Run the verifier CLI and return a process exit code."""
     if len(arguments) != EXPECTED_ARGUMENTS:
         write_line(sys.stderr, "usage: verify_spec.py REQUIREMENTS_YAML SPEC_MD")
         return 2
+    manifest_path = Path(arguments[0])
+    spec_path = Path(arguments[1])
     try:
-        report = verify_contract(Path(arguments[0]), Path(arguments[1]))
+        fields = frontmatter_fields(spec_path)
+        if fields.get("version", "").strip('"') == "0.5":
+            report = verify_contract_v05(manifest_path, spec_path)
+        else:
+            report = verify_contract(manifest_path, spec_path)
     except (
         FileNotFoundError,
         json.JSONDecodeError,

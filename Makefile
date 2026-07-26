@@ -25,7 +25,12 @@ PROVIDER_RUNTIME_PYTHON := \
 	services/api/product_app.py \
 	tests/g004
 
-.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-architecture test-local-config print-local-images prepare-postgres-image test-migrations test-rls test-upload test-artifacts test-science test-dry-lab test-product-ui test-local-workbench test-provider-runtime provider-cleanup-sweep test-e2e-artifacts stack-up smoke-local stack-down ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
+# SPEC-v0.5 verifier inputs. Overridable so the Stage 3 re-anchor to canonical
+# docs/requirements/requirements.yaml is a make-argument change, not a code change.
+SPEC_V05_MANIFEST ?= $(ROOT)/docs/requirements/requirements-v0.5.yaml
+SPEC_V05_SPEC ?= $(ROOT)/docs/spec/SPEC-v0.5.md
+
+.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-spec-v05 verify-architecture test-local-config print-local-images prepare-postgres-image test-migrations test-rls test-upload test-artifacts test-science test-dry-lab test-product-ui test-local-workbench test-provider-runtime provider-cleanup-sweep test-e2e-artifacts stack-up smoke-local stack-down ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
 
 bootstrap:
 	@set -eu; \
@@ -122,7 +127,15 @@ verify-spec:
 	cd "$(ROOT)"; \
 	if [ -x "$(VENV)/bin/python" ]; then python="$(VENV)/bin/python"; else python="$$(command -v python3)"; fi; \
 	PYTHONDONTWRITEBYTECODE=1 "$$python" -m unittest discover -s "$(ROOT)/tools/tests" -p "test_verify_spec.py" -v; \
-	PYTHONDONTWRITEBYTECODE=1 "$$python" -m tools.verify_spec "$(ROOT)/docs/requirements/requirements.yaml" "$(ROOT)/docs/spec/SPEC-v0.4.md"
+	PYTHONDONTWRITEBYTECODE=1 "$$python" -m tools.verify_spec "$(ROOT)/docs/requirements/requirements.yaml" "$(ROOT)/docs/spec/SPEC-v0.4.md"; \
+	PYTHONDONTWRITEBYTECODE=1 "$$python" -m tools.verify_spec "$(SPEC_V05_MANIFEST)" "$(SPEC_V05_SPEC)"
+
+verify-spec-v05:
+	@set -eu; \
+	cd "$(ROOT)"; \
+	if [ -x "$(VENV)/bin/python" ]; then python="$(VENV)/bin/python"; else python="$$(command -v python3)"; fi; \
+	PYTHONDONTWRITEBYTECODE=1 "$$python" -m unittest discover -s "$(ROOT)/tools/tests" -p "test_verify_spec.py" -v; \
+	PYTHONDONTWRITEBYTECODE=1 "$$python" -m tools.verify_spec "$(SPEC_V05_MANIFEST)" "$(SPEC_V05_SPEC)"
 
 verify-architecture:
 	@set -eu; \

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Final, Protocol, override
 
 if TYPE_CHECKING:
@@ -72,6 +73,64 @@ STACK: Final = {
     "python": "3.12.13",
     "uv": "0.11.28",
     "postgresql": "18.4",
+}
+
+# SPEC-v0.5 (local-first) normative inventory.
+# V05_EXPECTED_IDS is the confirmed v0.5 requirement ID set. Stage 3 of the
+# local-first migration replaces the TRUSTED_REQUIREMENT_IDS constant in
+# tools/platform_policy/ci_contract.py with exactly this frozenset (MEDIUM-1),
+# so this block is the single source of truth for that substitution.
+V05_P0_IDS: Final = tuple(f"L{number:02d}" for number in range(1, 13))
+V05_AC_IDS: Final = (
+    "AC-L01",
+    "AC-L02",
+    "AC-L03",
+    "AC-L04",
+    "AC-L05",
+    "AC-L05-B",
+    "AC-L06",
+    "AC-L06-B",
+    "AC-L07",
+    "AC-L07-B",
+    "AC-L08",
+    "AC-L09",
+    "AC-L09-B",
+    "AC-L10",
+    "AC-L11",
+    "AC-L11-B",
+    "AC-L12",
+    "AC-L12-B",
+    "AC-SAFE",
+    "AC-DETERMINISM",
+    "AC-LOCAL",
+)
+V05_LS_IDS: Final = tuple(f"LS{number:02d}" for number in range(1, 11))
+V05_GL_IDS: Final = tuple(f"GL{number:02d}" for number in range(1, 9))
+V05_LN_IDS: Final = tuple(f"LN{number:02d}" for number in range(1, 9))
+V05_EXPECTED_IDS: Final = frozenset(
+    V05_P0_IDS + V05_AC_IDS + V05_LS_IDS + RV_IDS + V05_GL_IDS + V05_LN_IDS
+)
+V05_DRY_LAB_CHAIN: Final = (
+    "scientific_input",
+    "research_intent",
+    "immutable_action_plan",
+    "in_process_python",
+    "csv",
+    "png",
+    "markdown",
+    "ledger",
+    "provenance",
+    "persisted_review",
+    "export",
+)
+V05_STACK: Final = {
+    "python": "3.12.13",
+    "uv": "0.11.28",
+    "sqlite_minimum": "3.44.0",
+    "platform": "darwin",
+    "node": "24.17.0",
+    "pnpm": "11.12.0",
+    "postgresql": "absent",
 }
 
 
@@ -182,8 +241,8 @@ def load_root(path: Path) -> dict[str, JsonValue]:
     return as_map(decode_json(json.loads, text), "root")
 
 
-def frontmatter_version(path: Path) -> str:
-    """Parse and return the normative Markdown frontmatter version."""
+def frontmatter_fields(path: Path) -> dict[str, str]:
+    """Parse and validate the normative Markdown frontmatter fields."""
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or lines[0] != "---":
         raise ContractParseError(str(path), "normative frontmatter")
@@ -196,7 +255,28 @@ def frontmatter_version(path: Path) -> str:
     fields = dict(line.split(": ", 1) for line in lines[1:end])
     if fields.get("status") != "normative":
         raise ContractParseError(str(path), "normative status")
+    return fields
+
+
+def frontmatter_version(path: Path) -> str:
+    """Parse and return the normative Markdown frontmatter version."""
+    fields = frontmatter_fields(path)
     manifest_path = "docs/requirements/requirements.yaml"
     if fields.get("requirements_manifest") != manifest_path:
         raise ContractParseError(str(path), "canonical requirements manifest path")
     return fields.get("version", "").strip('"')
+
+
+def declares_manifest(fields: dict[str, str], manifest_path: Path) -> bool:
+    """Return whether normative frontmatter declares the verified manifest.
+
+    The declared path is repository-relative, so the manifest only has to
+    resolve to the same relative tail; the manifest location stays a CLI-time
+    parameter instead of a code constant.
+    """
+    declared = PurePosixPath(fields.get("requirements_manifest", ""))
+    if declared.is_absolute() or not declared.parts:
+        return False
+    resolved = manifest_path.resolve().parts
+    depth = len(declared.parts)
+    return len(resolved) >= depth and resolved[-depth:] == declared.parts

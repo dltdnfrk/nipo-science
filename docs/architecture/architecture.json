@@ -11,9 +11,13 @@
     {"id": "application-sole-tool-executor", "adr": "decisions/ADR-0007-tool-execution.md", "status": "accepted"},
     {"id": "reviewer-non-reexecution", "adr": "decisions/ADR-0008-reviewer.md", "status": "accepted"},
     {"id": "oauth-f13-state-separation", "adr": "decisions/ADR-0009-oauth-f13-separation.md", "status": "accepted"},
-    {"id": "external-provider-qualification-authority", "adr": "decisions/ADR-0010-provider-qualification-authority.md", "status": "accepted"}
+    {"id": "external-provider-qualification-authority", "adr": "decisions/ADR-0010-provider-qualification-authority.md", "status": "accepted"},
+    {"id": "local-first-single-user", "adr": "decisions/ADR-0011-local-first-single-user.md", "status": "accepted"}
   ],
   "trust_boundaries": [
+    {"id": "local-web-to-loopback-api", "owner": "local-platform", "source": "apps-web-local", "target": "nipo-local-loopback-api", "data": ["commands", "queries", "local_session_credential"]},
+    {"id": "loopback-api-to-local-data-root", "owner": "local-platform", "source": "nipo-local-loopback-api", "target": "researcher-owned-data-root", "data": ["artifact_versions", "exports", "settings"]},
+    {"id": "loopback-api-to-provider-endpoint", "owner": "local-platform", "source": "nipo-local-loopback-api", "target": "researcher-owned-provider-endpoint", "data": ["prompts", "model_responses"]},
     {"id": "browser-to-same-origin-web", "owner": "identity-platform", "source": "browser", "target": "web", "data": ["auth_session", "csrf_token"]},
     {"id": "web-to-application-api", "owner": "api-platform", "source": "web", "target": "application-api", "data": ["commands", "queries", "sse"]},
     {"id": "application-to-postgresql", "owner": "data-platform", "source": "application-api", "target": "postgresql-rls", "data": ["tenant_records", "run_events"]},

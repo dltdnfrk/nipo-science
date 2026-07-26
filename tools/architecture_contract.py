@@ -4,6 +4,14 @@ from __future__ import annotations
 
 from typing import Final
 
+# History principle: a decision removed from REQUIRED_DECISIONS keeps its ADR
+# document under docs/architecture/decisions/ as history; removal from this
+# frozenset never deletes the ADR file. ADR-0011 (local-first-single-user) is
+# registered in docs/architecture/architecture.json but deliberately absent
+# from the three sets below: rewriting them for the local-first topology is
+# Stage 4 work, and adding the decision now would force threat-model.json and
+# data-classification.json changes that must land in the same commit to keep
+# verify-architecture (CI-006) green.
 REQUIRED_DECISIONS: Final = frozenset(
     {
         "isolated-monorepo-service-boundaries",
