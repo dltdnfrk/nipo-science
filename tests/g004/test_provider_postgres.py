@@ -68,6 +68,12 @@ from sqlalchemy.engine import make_url
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
+
+def _socket_temp_base() -> str:
+    """Short, real (non-symlink) temp root: /private/tmp on macOS, /tmp elsewhere."""
+    return "/private/tmp" if Path("/private/tmp").is_dir() else "/tmp"  # noqa: S108
+
+
 pytest_plugins = ("services.api.tests.persistence.conftest",)
 pytestmark = pytest.mark.usefixtures("migrated_database")
 
@@ -538,10 +544,8 @@ def test_cleanup_service_login_accepts_exact_baseline() -> None:
             "DROP FUNCTION IF EXISTS public.provider_test_surplus()",
         ),
         (
-            "GRANT SELECT (name) ON organizations TO "
-            "science_workbench_cleanup_test",
-            "REVOKE SELECT (name) ON organizations FROM "
-            "science_workbench_cleanup_test",
+            "GRANT SELECT (name) ON organizations TO science_workbench_cleanup_test",
+            "REVOKE SELECT (name) ON organizations FROM science_workbench_cleanup_test",
         ),
         (
             "CREATE FOREIGN DATA WRAPPER provider_test_fdw NO HANDLER NO VALIDATOR; "
@@ -577,10 +581,8 @@ def test_cleanup_service_login_accepts_exact_baseline() -> None:
             "science_workbench_provider_cleanup; SELECT lo_unlink(987654321)",
         ),
         (
-            "GRANT SET ON PARAMETER work_mem TO "
-            "science_workbench_provider_cleanup",
-            "REVOKE SET ON PARAMETER work_mem FROM "
-            "science_workbench_provider_cleanup",
+            "GRANT SET ON PARAMETER work_mem TO science_workbench_provider_cleanup",
+            "REVOKE SET ON PARAMETER work_mem FROM science_workbench_provider_cleanup",
         ),
         (
             "CREATE FOREIGN DATA WRAPPER provider_test_owned_fdw NO HANDLER NO "
@@ -806,7 +808,9 @@ def test_cleanup_cli_runs_fixed_sweep_through_protected_vault_socket(
             {"schema_version": 1, "evidence_sha256": _SHA256_EVIDENCE}
         )
 
-    with tempfile.TemporaryDirectory(prefix="nq-sock-", dir="/private/tmp") as socket_dir:
+    with tempfile.TemporaryDirectory(
+        prefix="nq-sock-", dir=_socket_temp_base()
+    ) as socket_dir:
         socket_root = Path(socket_dir)
         socket_path = socket_root / f"pc-{uuid4().hex[:8]}.sock"
         server = SecureProviderUnixServer(socket_path, destroy)

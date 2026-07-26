@@ -45,6 +45,13 @@ from services.api.provider_qualification_receipt import (
 from .provider_qualification_support import TestQualificationAuthority
 
 type Json = object
+
+
+def _socket_temp_base() -> str:
+    """Short, real (non-symlink) temp root: /private/tmp on macOS, /tmp elsewhere."""
+    return "/private/tmp" if Path("/private/tmp").is_dir() else "/tmp"  # noqa: S108
+
+
 type Profile = dict[str, Json]
 type Mutator = Callable[[Profile], None]
 _CASES = Path(__file__).parent / "fixtures" / "golden_session_cases.json"
@@ -254,7 +261,9 @@ def test_external_authority_client_uses_public_only_exact_protocol(
         expected_sha256=sha256(key_path.read_bytes()).hexdigest(),
     )
     receipt = authority.issue(claim)
-    with tempfile.TemporaryDirectory(prefix="nq-sock-", dir="/private/tmp") as socket_dir:
+    with tempfile.TemporaryDirectory(
+        prefix="nq-sock-", dir=_socket_temp_base()
+    ) as socket_dir:
         socket_root = Path(socket_dir)
         socket_path = socket_root / "q-live-authority.sock"
         socket_path.unlink(missing_ok=True)
@@ -269,7 +278,8 @@ def test_external_authority_client_uses_public_only_exact_protocol(
                 with connection:
                     request = connection.recv(65536)
                     assert (
-                        json.loads(request)["operation"] == "issue_provider_qualification"
+                        json.loads(request)["operation"]
+                        == "issue_provider_qualification"
                     )
                     response = {
                         "schema_version": 1,
@@ -442,7 +452,9 @@ def test_external_authority_rejects_untrusted_responses(failure: str) -> None:
         response = _authority_response(receipt) + b"{}\n"
     else:
         response = b'{"schema_version":1,"receipt":\n'
-    with tempfile.TemporaryDirectory(prefix="nq-sock-", dir="/private/tmp") as socket_dir:
+    with tempfile.TemporaryDirectory(
+        prefix="nq-sock-", dir=_socket_temp_base()
+    ) as socket_dir:
         socket_root = Path(socket_dir)
         socket_path = socket_root / "q-neg-authority.sock"
         socket_path.unlink(missing_ok=True)
@@ -475,7 +487,9 @@ def test_external_authority_rejects_untrusted_responses(failure: str) -> None:
 def test_external_authority_rejects_socket_path_replacement() -> None:
     claim, authority = _live_claim()
     response = _authority_response(authority.issue(claim))
-    with tempfile.TemporaryDirectory(prefix="nq-sock-", dir="/private/tmp") as socket_dir:
+    with tempfile.TemporaryDirectory(
+        prefix="nq-sock-", dir=_socket_temp_base()
+    ) as socket_dir:
         socket_root = Path(socket_dir)
         socket_path = socket_root / "q-replace-authority.sock"
         socket_path.unlink(missing_ok=True)
