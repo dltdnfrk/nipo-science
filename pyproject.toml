@@ -29,8 +29,14 @@ package = false
 typeCheckingMode = "all"
 pythonVersion = "3.12"
 pythonPlatform = "All"
-include = ["services", "packages/science", "packages/contracts/python", "tests"]
-extraPaths = ["packages/contracts/python", "packages/science"]
+include = [
+  "services",
+  "packages/science",
+  "packages/contracts/python",
+  "apps/local",
+  "tests",
+]
+extraPaths = ["packages/contracts/python", "packages/science", "apps/local", "apps/local/tests"]
 exclude = ["**/__pycache__", "**/.venv", "**/build", "**/dist"]
 reportUnusedCallResult = "warning"
 reportUnnecessaryTypeIgnoreComment = "error"
@@ -42,7 +48,13 @@ reportImplicitStringConcatenation = "none"
 [tool.ruff]
 target-version = "py312"
 line-length = 88
-src = ["services", "packages/science", "packages/contracts/python", "tests"]
+src = [
+  "services",
+  "packages/science",
+  "packages/contracts/python",
+  "apps/local",
+  "tests",
+]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -74,6 +86,8 @@ unfixable = []
 "services/api/tests/persistence/**/*.py" = ["D", "S101", "S603", "S607", "S608", "PLR2004"]
 "services/api/tests/persistence/*.py" = ["D", "S101", "S603", "S607", "S608", "PLR2004"]
 "tests/upload/fixtures.py" = ["PLR0913"]
+"apps/local/tests/**/*.py" = ["S101", "ARG", "PLR2004", "SLF001", "D", "INP001"]
+"apps/local/tests/*.py" = ["S101", "S603", "S607", "ARG", "PLR2004", "SLF001", "D", "INP001"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -86,7 +100,7 @@ docstring-code-line-length = "dynamic"
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests", "packages/contracts/python/tests"]
-pythonpath = [".", "packages/contracts/python", "packages/science"]
+testpaths = ["tests", "packages/contracts/python/tests", "apps/local/tests"]
+pythonpath = [".", "packages/contracts/python", "packages/science", "apps/local"]
 addopts = ["-ra", "--strict-config", "--strict-markers"]
 filterwarnings = ["error"]

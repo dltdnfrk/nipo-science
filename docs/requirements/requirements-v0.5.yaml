@@ -1,0 +1,461 @@
+{
+  "schema_version": "1.0",
+  "spec": {
+    "document_id": "FS-SPEC-001",
+    "version": "0.5",
+    "status": "normative",
+    "path": "docs/spec/SPEC-v0.5.md",
+    "supersedes": "docs/spec/SPEC-v0.4.md",
+    "supersession_rationale": "docs/architecture/decisions/ADR-0011-local-first-single-user.md"
+  },
+  "stack": {
+    "python": "3.12.13",
+    "uv": "0.11.28",
+    "sqlite_minimum": "3.44.0",
+    "platform": "darwin",
+    "node": "24.17.0",
+    "pnpm": "11.12.0",
+    "postgresql": "absent"
+  },
+  "scope": {
+    "product_use": "research_only_non_clinical",
+    "clinical_diagnosis": "forbidden",
+    "patient_care_decisions": "forbidden",
+    "regulated_pathogen_procedure_automation": "forbidden",
+    "irreversible_wet_lab_action": "forbidden",
+    "refusal_outcomes": ["insufficient_data", "inconclusive", "safe_refusal"],
+    "fabrication": "forbidden"
+  },
+  "deployment": {
+    "shape": "single_user_on_device",
+    "tenancy": "absent",
+    "accounts": "absent",
+    "roles": "absent",
+    "authority": "operating_system_account_owning_the_data_root",
+    "identity_fields": "persisted_as_fixed_constants_for_portability_never_for_authorization",
+    "data_root": "~/.nipo-science",
+    "data_root_exclusion": "never_default_to_an_implicitly_cloud_synced_directory",
+    "listener": "loopback_only",
+    "remote_access_toggle": "absent"
+  },
+  "p0_features": [
+    "L01", "L02", "L03", "L04", "L05", "L06",
+    "L07", "L08", "L09", "L10", "L11", "L12"
+  ],
+  "execution": {
+    "language": "deterministic_python",
+    "isolation_level": "in_process",
+    "isolation_disclosure": "explicit_field_on_every_durable_execution_record",
+    "provided_controls": [],
+    "absent_controls": [
+      "subprocess_boundary",
+      "filesystem_confinement",
+      "network_confinement",
+      "syscall_confinement",
+      "cpu_memory_walltime_process_limits",
+      "privilege_reduction"
+    ],
+    "sandbox_claim": "forbidden_without_an_outcome_test_of_the_specific_denial",
+    "literal_control_claims": [],
+    "residual_risk": "analysis_code_runs_with_the_researcher_full_account_authority",
+    "untrusted_third_party_analysis_code": "out_of_supported_use_until_isolation_exists_and_is_outcome_tested",
+    "input_parsing": "bounded_and_never_executed",
+    "determinism": {
+      "scope": ["csv", "png", "markdown"],
+      "invariance": ["separate_interpreter_process", "differing_hash_seed"],
+      "ledger": "identical_except_execution_bound_fields",
+      "forbidden_inputs_to_rendering": [
+        "clock", "locale", "random", "hostname", "username", "absolute_path"
+      ]
+    }
+  },
+  "providers": {
+    "account_model": "researcher_own_subscription_or_api_key",
+    "registry_size": 13,
+    "selection": "explicit_provider_and_model_persisted_with_the_run",
+    "automatic_fallback": "forbidden",
+    "required_default": null,
+    "qualification_authority": "absent",
+    "signed_receipt_chain": "absent",
+    "organization_binding": "absent",
+    "failure_states": [
+      "quota_exhausted",
+      "authentication_failed",
+      "cancelled",
+      "unavailable",
+      "terminal_error"
+    ],
+    "failure_effect": "surfaced_provider_neutral_never_reselects_provider_model_or_credential",
+    "artifact_effect_on_failure": "existing_artifact_versions_unchanged"
+  },
+  "credentials": {
+    "plaintext_at_rest": "forbidden",
+    "master_key": {
+      "holder": "macos_keychain_generic_password",
+      "bytes": 32,
+      "encoding": "base64_44_printable_ascii",
+      "reason": "immune_to_measured_security_cli_truncation_newline_and_hex_defects"
+    },
+    "provider_keys": {
+      "cipher": "aes_256_gcm",
+      "additional_authenticated_data": "provider_id",
+      "storage": "ciphertext_only_in_local_credentials_file",
+      "cross_slot_reuse": "rejected_by_aad_binding"
+    },
+    "write_verification": "read_back_and_compare_before_reporting_success",
+    "storage_fidelity": "byte_exact_reject_rather_than_normalize",
+    "read_failure": "distinguishable_from_absence_and_never_falls_through",
+    "corrupt_store": "reported_never_quarantined_discarded_or_overwritten",
+    "environment_fallback": {
+      "variable": "NIPO_<PROVIDER_ID>_API_KEY",
+      "mode": "read_only",
+      "disclosure_required": true,
+      "reason": "process_environment_is_inherited_by_children_and_readable_same_account"
+    },
+    "forbidden_contexts": [
+      "log",
+      "exception_message",
+      "repr",
+      "process_argument_list",
+      "artifact",
+      "run_record",
+      "export",
+      "model_context"
+    ],
+    "status_resolution": "without_decrypting_or_unlocking",
+    "keychain_item_acl": {
+      "trusted_application_list": "absent",
+      "claim": "must_not_claim_only_this_application_can_read_the_master_key",
+      "residual_threat": "another_process_running_as_the_same_researcher"
+    }
+  },
+  "monetary_semantics": {
+    "state": "absent",
+    "schema_fields": [],
+    "api_operations": [],
+    "event_fields": [],
+    "error_codes": [],
+    "approval_fields": [],
+    "metrics": []
+  },
+  "intent_and_approval": {
+    "requirement_id": "L04",
+    "research_intent": {
+      "fields": [
+        "question", "rationale", "intended_benefit", "success_criteria",
+        "constraints", "stop_conditions", "research_mode", "data_origin"
+      ],
+      "optional_fields": ["synthetic_generator_ref", "synthetic_validator_ref"],
+      "research_modes": ["ai_for_science", "copilot", "bounded_agentic"],
+      "data_origins": ["observed", "synthetic", "mixed"],
+      "system_authored_defaults": "forbidden",
+      "canonicalization": "sorted_keys_compact_separators_ensure_ascii_false_utf8",
+      "digest": "sha256_over_canonical_bytes",
+      "text_validation": "reject_non_nfc_boundary_whitespace_surrogate_empty_and_colliding_entries_never_rewrite",
+      "synthetic_data": "distinct_generator_and_validator_required_observed_carries_neither",
+      "independence_claim": "not_established_by_declaration"
+    },
+    "action_plan_approval": {
+      "immutable": true,
+      "single_use": true,
+      "binding": [
+        "action_plan_sha256",
+        "research_intent_sha256",
+        "project_id",
+        "expires_at"
+      ],
+      "intent_mutation_effect": "changes_plan_digest_and_requires_a_new_approval",
+      "rejected": ["mutated", "expired", "replayed", "already_consumed"],
+      "rejection_side_effects": "zero",
+      "consumption": "commits_together_with_execution_start"
+    }
+  },
+  "artifacts": {
+    "versions_immutable": true,
+    "correction": "new_version_never_overwrite",
+    "addressing": "sha256_content_address_stored_once_per_installation",
+    "commit": "compare_and_swap_against_exact_base_version_no",
+    "rejected_commits": [
+      "payload_digest_mismatch",
+      "size_disagreement",
+      "non_derived_object_key",
+      "duplicate_version_id",
+      "stale_base",
+      "unsorted_lineage",
+      "duplicate_lineage",
+      "unresolvable_lineage"
+    ],
+    "read_verification": "recompute_digest_and_fail_loudly_without_returning_bytes",
+    "failure_path_deletion": "forbidden",
+    "reclamation": "explicit_sweep_serialized_against_committers_with_minimum_age",
+    "producer_chosen_object_key": "forbidden",
+    "output_registration": "out_of_band_watcher_derives_digest_and_mints_opaque_reference",
+    "recorded_fields": [
+      "content_sha256", "size_bytes", "media_type", "producing_execution_id",
+      "environment_sha256", "code_sha256", "runtime_adapter_id",
+      "runtime_connection_id", "skill_content_hashes", "source_hashes",
+      "input_version_ids"
+    ],
+    "skill_content_hashes": "empty_by_construction_no_skill_participates_in_a_local_deterministic_run"
+  },
+  "provenance": {
+    "pinned": [
+      "input_sha256",
+      "research_intent_sha256",
+      "code_sha256",
+      "environment_sha256",
+      "producing_execution_id"
+    ],
+    "verification": "independently_recomputable_from_exported_artifacts_and_pinned_toolchain",
+    "self_reported_digest": "must_not_be_presented_as_provenance",
+    "environment_digest_coverage": "every_dependency_whose_version_can_change_a_pinned_digest_or_artifact_byte",
+    "environment_digest_status": "incomplete_pydantic_not_covered_and_can_change_input_sha256",
+    "truncation": "detectable_not_impossible",
+    "run_record": {
+      "created_before_any_publication": true,
+      "updated_after_every_committed_output": true,
+      "terminal_states": ["completed", "failed"],
+      "failure_reason": "non_secret",
+      "execution_identity": "fenced_by_exclusive_creation_one_chain_per_execution_id",
+      "retry": "requires_a_new_execution_identity",
+      "automatic_replay": "forbidden"
+    }
+  },
+  "review": {
+    "persisted": true,
+    "input_pinning": "immutable_versions_and_execution_refs",
+    "states": ["queued", "running", "completed", "failed"],
+    "deduplication": "canonical_pinned_input_digest",
+    "findings_submission": "exactly_once",
+    "reviewer_reexecution": false,
+    "reviewer_capabilities": {
+      "runner": false,
+      "python": false,
+      "bash": false,
+      "connector": false,
+      "network": false,
+      "tool_execute": false,
+      "artifact_write": false,
+      "version_update": false
+    },
+    "capability_absence": "structural_not_merely_unused",
+    "verdicts": ["pass", "warn", "fail", "inconclusive"],
+    "finding_statuses": ["open", "resolved", "rebutted", "accepted_risk"],
+    "inconclusive": "normal_verdict_required_for_missing_unreachable_or_uncheckable_evidence",
+    "correction_path": "new_execution_and_new_artifact_version_then_a_new_review",
+    "rules": ["RV01", "RV02", "RV03", "RV04", "RV05"]
+  },
+  "export": {
+    "selection": "explicit_version_ids_never_latest",
+    "contents": [
+      "selected_artifacts",
+      "manifest.json",
+      "checksums.sha256",
+      "provenance_manifest",
+      "approved_action_plan",
+      "research_intent_sha256",
+      "review_status"
+    ],
+    "canonicalization": "sorted_keys_compact_separators_ensure_ascii_true_utf8_non_self_referential",
+    "verification": "independently_recomputable_from_the_pack_alone",
+    "rejected": [
+      "absolute_path",
+      "drive_qualified_path",
+      "backslash",
+      "dot_or_dotdot_segment",
+      "segment_ending_in_dot",
+      "reserved_device_name",
+      "link_entry",
+      "nfkc_casefold_collision",
+      "directory_prefix_collision",
+      "reserved_pack_root",
+      "unsorted_or_non_unique_selection",
+      "selection_not_equal_to_exported_entries",
+      "credential_material"
+    ],
+    "rejection_mode": "refuse_to_produce_a_pack_never_sanitize"
+  },
+  "storage": {
+    "engine": "sqlite",
+    "journal_mode": "wal",
+    "synchronous": "full",
+    "table_mode": "strict",
+    "minimum_version": "3.44.0",
+    "minimum_version_reason": "ordered_aggregate_required_by_the_lineage_projection",
+    "blobs": "sharded_content_addressed_directory_under_the_data_root",
+    "absent": ["postgresql", "row_level_security", "object_store", "redis", "network_database"],
+    "entities": [
+      "projects", "sessions", "artifacts", "artifact_versions",
+      "artifact_version_inputs", "session_links", "runs", "executions",
+      "action_plans", "approvals", "reviews", "review_findings",
+      "export_selections"
+    ],
+    "referential_integrity": "every_parent_reference_must_resolve_to_an_existing_row",
+    "identifiers": "uuidv7",
+    "times": "utc",
+    "portability": "no_absolute_path_hostname_username_or_machine_identifier_in_a_version_or_its_provenance"
+  },
+  "dry_lab": {
+    "ordered_chain": [
+      "scientific_input",
+      "research_intent",
+      "immutable_action_plan",
+      "in_process_python",
+      "csv",
+      "png",
+      "markdown",
+      "ledger",
+      "provenance",
+      "persisted_review",
+      "export"
+    ],
+    "action_plan_approval_required": true,
+    "stage_skipping": "forbidden_in_the_release_vertical",
+    "artifact_versions_immutable": true,
+    "export_pins_versions": true
+  },
+  "conformance": {
+    "implemented_and_verified": ["L05", "L06", "L07", "L08", "L09", "L11"],
+    "partially_implemented": {
+      "L01": "loopback_interface_serves_the_front_end_at_its_own_origin_first_run_install_flow_absent",
+      "L04": "research_intent_action_plan_and_one_use_approval_present"
+    },
+    "not_implemented": ["L02", "L03", "L10", "L12"],
+    "contracts_present_but_unreachable_from_the_local_app": ["L12"],
+    "disclosed_divergences": [
+      "execution_isolation_is_in_process",
+      "skill_content_hashes_empty_by_construction",
+      "session_links_carry_no_execution_reference_so_execution_ownership_is_unchecked",
+      "the_download_signing_key_is_stored_plaintext_at_mode_0600_in_the_data_root"
+    ],
+    "closed_divergences": {
+      "environment_digest_does_not_cover_every_byte_shaping_dependency": "workbench.environment_facts pins pillow, pydantic and pydantic-core alongside the interpreter",
+      "the_producer_path_only_ever_commits_version_1_so_correction_to_version_2_has_no_producer": "workbench.correct_analysis commits the next Version by compare-and-swap and leaves the corrected Version byte-identical",
+      "executions_have_no_table_so_producing_execution_id_is_fenced_only_by_a_file": "the executions table exists and fences the produced-execution id inside the claiming transaction"
+    },
+    "claim_rule": "a_requirement_listed_as_not_implemented_must_not_be_described_as_satisfied"
+  },
+  "definition_of_done": {
+    "required_per_requirement": [
+      "implementation",
+      "automated_test_that_fails_when_the_named_behaviour_is_broken",
+      "mutation_verification_of_that_test",
+      "raw_evidence",
+      "evidence_checksum",
+      "owner",
+      "rollback_note"
+    ],
+    "external_boundary_rule": "keychain_filesystem_other_process_and_provider_endpoint_behaviours_require_a_real_system_test",
+    "blockers": [
+      "todo_standing_in_for_required_behaviour",
+      "skipped_or_exclusive_test",
+      "stub_returning_a_fixed_value",
+      "unimplemented_branch"
+    ],
+    "repository_gates": [
+      "ruff check",
+      "ruff format --check",
+      "basedpyright typeCheckingMode=all zero errors",
+      "pytest filterwarnings=error"
+    ]
+  },
+  "release_gate": {
+    "required": [
+      "L01", "L02", "L03", "L04", "L05", "L06", "L07", "L08", "L09", "L10",
+      "L11", "L12",
+      "AC-L01", "AC-L02", "AC-L03", "AC-L04", "AC-L05", "AC-L05-B",
+      "AC-L06", "AC-L06-B", "AC-L07", "AC-L07-B", "AC-L08",
+      "AC-L09", "AC-L09-B", "AC-L10", "AC-L11", "AC-L11-B",
+      "AC-L12", "AC-L12-B", "AC-SAFE", "AC-DETERMINISM", "AC-LOCAL",
+      "LS01", "LS02", "LS03", "LS04", "LS05", "LS06", "LS07", "LS08", "LS09",
+      "LS10", "RV01", "RV02", "RV03", "RV04", "RV05",
+      "GL01", "GL02", "GL03", "GL04", "GL05", "GL06", "GL07", "GL08",
+      "LN01", "LN02", "LN03", "LN04", "LN05", "LN06", "LN07", "LN08"
+    ],
+    "end_to_end": "clean_machine_state_from_a_real_measurement_file_to_an_independently_verified_export_pack",
+    "blocked_by": [
+      "automatic_provider_fallback",
+      "sandbox_or_confinement_claim_without_an_outcome_test",
+      "reviewer_execution_or_artifact_write_capability",
+      "secret_in_a_durable_or_observable_context",
+      "artifact_version_overwrite",
+      "non_deterministic_scientific_output",
+      "monetary_semantics",
+      "listener_beyond_loopback",
+      "telemetry_or_implicit_cloud_sync_of_the_data_root",
+      "any_requirement_still_listed_as_not_implemented"
+    ],
+    "authorizes": "implementation_and_verification_only_not_distribution"
+  },
+  "requirements": {
+    "L01": {"kind": "feature", "priority": "P0", "statement": "Single-user local installation with a fixed local identity, an owner-only data root outside implicitly synced directories, and no listener bound beyond loopback."},
+    "L02": {"kind": "feature", "priority": "P0", "statement": "Persistent local Projects and Sessions with list, resume, and archive that survive restart."},
+    "L03": {"kind": "feature", "priority": "P0", "statement": "A real measurement file loads into a typed scientific input with declared units, calibration, and data origin; malformed input is refused with the science package's own issue codes before any Artifact exists."},
+    "L04": {"kind": "feature", "priority": "P0", "statement": "A complete ResearchIntent and an immutable one-use ActionPlan approval bound to its canonical digest."},
+    "L05": {"kind": "feature", "priority": "P0", "statement": "Deterministic Python execution whose actual isolation level is disclosed as an explicit field on every durable record it produces."},
+    "L06": {"kind": "feature", "priority": "P0", "statement": "Immutable content-addressed Artifact Versions committed by compare-and-swap against an exact base Version."},
+    "L07": {"kind": "feature", "priority": "P0", "statement": "Provenance pinning input, intent, code, environment, and producing execution, independently recomputable from the artifacts and the pinned toolchain alone."},
+    "L08": {"kind": "feature", "priority": "P0", "statement": "Durable Run records whose truncation is detectable, with a produced-execution identity that publishes at most one chain."},
+    "L09": {"kind": "feature", "priority": "P0", "statement": "Local provider registry and credential custody with explicit provider and model selection."},
+    "L10": {"kind": "feature", "priority": "P0", "statement": "A model turn bound to the selected provider and model with no automatic fallback."},
+    "L11": {"kind": "feature", "priority": "P0", "statement": "A persisted trace-only Reviewer over pinned evidence implementing RV01-RV05."},
+    "L12": {"kind": "feature", "priority": "P0", "statement": "A version-pinned Export Pack with manifest, checksums, provenance, ActionPlan, pinned ResearchIntent digest, and Review status."},
+
+    "AC-L01": {"kind": "acceptance", "priority": "release", "statement": "A fresh install creates an owner-only data root outside any implicitly synced directory, binds no socket outside loopback, and offers no configuration, environment variable, or flag that enables remote access; a cross-origin state-changing request to the local interface is rejected."},
+    "AC-L02": {"kind": "acceptance", "priority": "release", "statement": "A Project and Session created before restart list and resume after restart with ordered history, archive blocks further writes, and a Session link cannot be created for a Session that does not exist."},
+    "AC-L03": {"kind": "acceptance", "priority": "release", "statement": "A real measurement file with declared units and calibration loads into the typed input and analyses; a file missing units, missing calibration, or malformed is refused with the science package's own issue code and creates no Artifact, no Version, and no Run record in a publishable state."},
+    "AC-L04": {"kind": "acceptance", "priority": "release", "statement": "An incomplete ResearchIntent is rejected at every boundary; an accepted intent fixes the plan digest; and a mutated, expired, replayed, or already-consumed approval is rejected with zero execution side effects while approval consumption and execution start commit together."},
+    "AC-L05": {"kind": "acceptance", "priority": "release", "statement": "An approved plan executes deterministic Python and produces the CSV, PNG, Markdown, and evidence-ledger Versions in chain order."},
+    "AC-L05-B": {"kind": "acceptance", "priority": "release", "statement": "Every durable execution record carries the isolation level as an explicit field whose current value is in_process; no product surface, document, or artifact describes that execution as sandboxed or confined; and any isolation claim that is added is accompanied by an outcome test demonstrating the specific denial it names."},
+    "AC-L06": {"kind": "acceptance", "priority": "release", "statement": "Committing from Version 1 creates Version 2 while Version 1's bytes, digest, and metadata are unchanged, and identical content across Projects is stored once."},
+    "AC-L06-B": {"kind": "acceptance", "priority": "release", "statement": "A stale base version, a payload contradicting its digest, a contradictory size, a foreign object key, a duplicate Version identifier, and unsorted, duplicated, or unresolvable lineage are each rejected without any write, and no failure path deletes content."},
+    "AC-L07": {"kind": "acceptance", "priority": "release", "statement": "Every Version records input, intent, code, environment, and producing-execution provenance, and the evidence ledger pins the digests the store actually holds."},
+    "AC-L07-B": {"kind": "acceptance", "priority": "release", "statement": "A verifier holding only the exported artifacts and the pinned toolchain recomputes the input digest, the intent digest, the code digest, the environment digest, and every artifact digest and reaches the recorded values, trusting no statement the run made about itself; a digest that cannot be recomputed independently fails the check."},
+    "AC-L08": {"kind": "acceptance", "priority": "release", "statement": "A chain interrupted at any point leaves a failed Run record naming exactly the outputs committed so far, a reader distinguishes it from a completed chain without re-execution, and a second publication attempt under the same produced-execution identity is refused."},
+    "AC-L09": {"kind": "acceptance", "priority": "release", "statement": "A provider key stored through the registry round-trips byte-exact, is ciphertext-only at rest, cannot be decrypted into another provider's slot, and a corrupt store or an unreadable master key is reported loudly rather than silently discarded or overwritten."},
+    "AC-L09-B": {"kind": "acceptance", "priority": "release", "statement": "No key material appears in any listing, on-disk file, repr, exception message, process argument list, log, Artifact, Run record, Export, or model context; a credential read failure is not reported as absence and never falls through to another source; and status is resolved without decrypting or unlocking."},
+    "AC-L10": {"kind": "acceptance", "priority": "release", "statement": "A model turn uses exactly the provider and model the researcher selected and persists that selection with the Run; quota, authentication, cancellation, unavailability, and terminal failure surface as provider-neutral states without selecting another provider, model, or credential, and leave existing Artifact Versions unchanged."},
+    "AC-L11": {"kind": "acceptance", "priority": "release", "statement": "A persisted Review over pinned Versions catches a numeric claim absent from pinned output, an identifier that does not support its claim, and a figure that does not correspond to its pinned input, code, and output digests, and submits findings exactly once."},
+    "AC-L11-B": {"kind": "acceptance", "priority": "release", "statement": "Every attempt by the Reviewer to execute Python, execute a shell, invoke a Runner, call a connector, execute a tool, open a network connection, write or update an Artifact Version, or cause re-execution is rejected without creating an execution or changing an Artifact; and evidence that is missing, unreachable, or uncheckable yields inconclusive rather than pass."},
+    "AC-L12": {"kind": "acceptance", "priority": "release", "statement": "An Export Pack contains the selected CSV, PNG, Markdown, ledger, manifest, checksums, provenance, ActionPlan, pinned ResearchIntent digest, and Review status, and verifies independently from the pack alone."},
+    "AC-L12-B": {"kind": "acceptance", "priority": "release", "statement": "Export refuses to produce a pack, rather than sanitizing, for an absolute or drive-qualified path, a backslash, a dot or dotdot segment, a segment ending in a dot, a reserved device name, a link entry, an NFKC-casefold collision, a directory-prefix collision, a reserved pack root, an unsorted or non-unique selection, a selection unequal to the exported entries, or any credential material."},
+    "AC-SAFE": {"kind": "acceptance", "priority": "release", "statement": "Clinical, diagnostic, patient-care, regulated-pathogen-procedure, and irreversible wet-lab requests stop or remain bounded research support; insufficient_data, inconclusive, and refusal are produced instead of a fabricated diagnosis, measurement, or citation; and the research-only non-clinical notice is presented with the time the researcher acknowledged it."},
+    "AC-DETERMINISM": {"kind": "acceptance", "priority": "release", "statement": "Three runs of the same scientific input and the same ResearchIntent in separate interpreter processes with differing hash seeds produce byte-identical CSV, PNG, and Markdown, and evidence ledgers identical except for their execution-bound fields."},
+    "AC-LOCAL": {"kind": "acceptance", "priority": "release", "statement": "With the network observed, no research content, artifact byte, provenance digest, credential, or usage record leaves the machine except in the model turn the researcher explicitly initiated to the provider they selected; there is no telemetry, analytics, crash upload, update beacon, or implicit cloud sync of the data root."},
+
+    "LS01": {"kind": "security", "priority": "P0", "statement": "No listener is bound beyond loopback, cross-origin state-changing requests are rejected, and the local session credential is required and is not derivable from readable data-root metadata."},
+    "LS02": {"kind": "security", "priority": "P0", "statement": "Provider credentials are ciphertext-only at rest under a Keychain-held 32-byte master key and are sealed with AES-256-GCM using the provider identifier as additional authenticated data."},
+    "LS03": {"kind": "security", "priority": "P0", "statement": "No secret appears in a log, exception message, repr, process argument list, Artifact, Run record, Export, or model context."},
+    "LS04": {"kind": "security", "priority": "P0", "statement": "Execution isolation is disclosed as an explicit field and is never overstated; no confinement guarantee is claimed without an outcome test of the specific denial."},
+    "LS05": {"kind": "security", "priority": "P0", "statement": "Input parsing is bounded and never executes input: no code evaluation, no executable deserialization, and no archive expansion without declared entry-count and output-size bounds."},
+    "LS06": {"kind": "security", "priority": "P0", "statement": "File content, retrieved text, and model output remain untrusted data and cannot be promoted to instruction."},
+    "LS07": {"kind": "security", "priority": "P0", "statement": "Export and file paths reject absolute paths, traversal, links, reserved roots, directory-prefix collisions, and NFKC-casefold-normalized collisions."},
+    "LS08": {"kind": "security", "priority": "P0", "statement": "Every data-root file holding a secret or private research content is owner-only from the instant it first exists and is never created readable and tightened afterwards."},
+    "LS09": {"kind": "security", "priority": "P0", "statement": "Every blob read verifies content against its recorded digest and fails loudly on mismatch without returning bytes."},
+    "LS10": {"kind": "security", "priority": "P0", "statement": "Egress is limited to the provider endpoint the researcher selected; there is no telemetry, analytics, crash upload, update beacon, or implicit cloud sync of the data root."},
+
+    "LN01": {"kind": "nonfunctional", "priority": "release", "statement": "Cold start to an interactive state is at most five seconds and single-modality analysis P95 is at most ten seconds on a supported Mac."},
+    "LN02": {"kind": "nonfunctional", "priority": "release", "statement": "Three runs of the same input and intent in separate interpreter processes with differing hash seeds produce byte-identical CSV, PNG, and Markdown."},
+    "LN03": {"kind": "nonfunctional", "priority": "release", "statement": "Artifact read checksum mismatches are zero."},
+    "LN04": {"kind": "nonfunctional", "priority": "release", "statement": "A process killed at any point in the chain leaves a Run record a reader cannot mistake for complete, and restart reconciles state within five seconds without replaying a side effect."},
+    "LN05": {"kind": "nonfunctional", "priority": "release", "statement": "An Export Pack up to 500 MiB completes within five minutes and verifies independently."},
+    "LN06": {"kind": "nonfunctional", "priority": "release", "statement": "Copying the data root to another machine with the same pinned toolchain reproduces every read and every recorded digest."},
+    "LN07": {"kind": "nonfunctional", "priority": "release", "statement": "When a graphical interface is present the P0 flow is keyboard-complete with zero serious automated WCAG 2.2 AA violations."},
+    "LN08": {"kind": "nonfunctional", "priority": "release", "statement": "With no network available every stage except the model turn completes, and network loss never corrupts an Artifact Version or silently changes the selected provider."},
+
+    "GL01": {"kind": "golden_run", "priority": "release", "statement": "The reference spectrum produces four Artifact Versions with the expected digests."},
+    "GL02": {"kind": "golden_run", "priority": "release", "statement": "An input missing calibration or units terminates as insufficient_data with no Artifact Version asserting a conclusion."},
+    "GL03": {"kind": "golden_run", "priority": "release", "statement": "Probe analysis separates molecular, optical, and experimental-artifact hypotheses and states no diagnosis."},
+    "GL04": {"kind": "golden_run", "priority": "release", "statement": "A correction produces Version 2 while Version 1's bytes and digest are unchanged."},
+    "GL05": {"kind": "golden_run", "priority": "release", "statement": "A chain killed mid-publish is readable as failed with exactly the outputs committed so far."},
+    "GL06": {"kind": "golden_run", "priority": "release", "statement": "The Reviewer catches a numeric overstatement and an unsupported identifier and returns inconclusive for evidence it cannot reach."},
+    "GL07": {"kind": "golden_run", "priority": "release", "statement": "An Export Pack verifies independently and contains no credential material."},
+    "GL08": {"kind": "golden_run", "priority": "release", "statement": "A prompt-injection payload embedded in an input file or a retrieved source is never promoted to instruction."},
+
+    "RV01": {"kind": "review_rule", "priority": "P0", "statement": "Every numeric claim exists in pinned execution output or pinned source evidence."},
+    "RV02": {"kind": "review_rule", "priority": "P0", "statement": "Every cited identifier resolves and supports its claim; when the machine is offline or the identifier cannot be checked the finding is inconclusive, never pass."},
+    "RV03": {"kind": "review_rule", "priority": "P0", "statement": "Tables and figures correspond to the pinned input, code, and output digests."},
+    "RV04": {"kind": "review_rule", "priority": "P0", "statement": "The stated evidence level never exceeds the level of the evidence actually retrieved."},
+    "RV05": {"kind": "review_rule", "priority": "P0", "statement": "Output respects the research-only, non-clinical, and safety limits."}
+  }
+}

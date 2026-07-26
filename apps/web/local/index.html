@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Nipo Science local — 이 컴퓨터에서만 동작하는 단일 사용자 연구 워크벤치">
+  <!--
+    The launcher may inject the per-run local session credential here before
+    serving this document. It is a session token for the loopback API, not a
+    provider key: no provider key is ever placed in this page, in any request
+    this page renders back, or in browser storage.
+  -->
+  <meta name="nipo-local-token" content="">
+  <title>Nipo Science local</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
+  <div class="app-shell">
+    <aside class="global-nav" aria-label="주요 탐색">
+      <a class="brand" href="#/settings/models" aria-label="Nipo Science local 홈">
+        <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+          <path d="M10 11.5 20 6l10 5.5v17L20 34 10 28.5z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 11.5 20 17l10-5.5M20 17v17" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="10" cy="11.5" r="2.5" fill="currentColor"/>
+          <circle cx="30" cy="11.5" r="2.5" fill="currentColor"/>
+          <circle cx="20" cy="34" r="2.5" fill="currentColor"/>
+          <circle cx="20" cy="17" r="2.5" fill="currentColor"/>
+        </svg>
+        <span class="brand-copy">
+          <span class="brand-kicker">NIPO LABS</span>
+          <span>Nipo Science local</span>
+        </span>
+      </a>
+      <nav aria-label="제품 메뉴">
+        <p class="nav-section-label">연구 공간</p>
+        <ul>
+          <li>
+            <a data-route="#/workspace" href="#/workspace">
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 3h5v5H3zM12 3h5v5h-5zM3 12h5v5H3zM12 12h5v5h-5z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+              <span>워크스페이스</span>
+            </a>
+          </li>
+          <li>
+            <a data-route="#/artifacts" href="#/artifacts">
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m10 2 7 3.5-7 3.5-7-3.5L10 2Zm-7 7 7 3.5L17 9M3 12.5 10 16l7-3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg>
+              <span>아티팩트</span>
+            </a>
+          </li>
+          <li>
+            <a data-route="#/runs" href="#/runs">
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h3l2-5 2 10 2-5h3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg>
+              <span>실행</span>
+            </a>
+          </li>
+          <li>
+            <a data-route="#/settings/models" href="#/settings/models">
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1 4.7 4.7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.5"/></svg>
+              <span>모델 설정</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <div class="nav-context">
+        <span class="nav-context-label">실행 위치</span>
+        <span class="nav-context-value" id="local-identity" role="status">로컬 연결 확인 중</span>
+      </div>
+    </aside>
+    <div class="workspace-frame">
+      <header class="workspace-bar">
+        <div class="workspace-bar__context">
+          <span class="workspace-bar__eyebrow">NIPO SCIENCE / LOCAL WORKBENCH</span>
+          <span class="workspace-bar__title" id="workspace-title">이 컴퓨터에서만 동작합니다</span>
+        </div>
+        <div class="actions" id="workspace-actions"></div>
+      </header>
+      <main id="main-content" class="main-scroll" tabindex="-1">
+        <div id="live-region" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+        <div id="error-region" class="inline-error" role="alert" hidden></div>
+        <div id="screen" class="screen" aria-busy="true">
+          <h1>Nipo Science local 불러오는 중</h1>
+        </div>
+      </main>
+    </div>
+  </div>
+  <noscript><p class="noscript">이 화면을 사용하려면 JavaScript를 활성화해야 합니다.</p></noscript>
+  <script src="app.js" defer></script>
+</body>
+</html>
