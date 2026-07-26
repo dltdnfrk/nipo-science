@@ -230,6 +230,7 @@ class CiJob(StrEnum):
     SECRET_SCAN = b"secret-scan".decode()
     DRY_LAB = "dry-lab"
     PRODUCT_UI = "product-ui"
+    LOCAL_WORKBENCH = "local-workbench"
     PROVIDER_RUNTIME = "provider-runtime"
     SECURITY = "security"
     RECOVERY = "recovery"
@@ -508,7 +509,7 @@ class CiCatalogJob(BaseModel):
 
 
 class CiControlCatalog(BaseModel):
-    """Canonical 27-job catalog resolved from an independent authority."""
+    """Canonical 28-job catalog resolved from an independent authority."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
 

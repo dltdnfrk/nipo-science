@@ -1118,7 +1118,7 @@ def test_canonical_fixture_finalizes_and_verifies_document(
     document = canonical_bytes(envelope)
     payload = verify_finalized_release_document(document, trust=canonical_fixture.trust)
     assert payload.receipt.outcome == "incomplete"
-    assert len(payload.receipt.controls) == 27
+    assert len(payload.receipt.controls) == 28
     assert (
         len(
             {
@@ -1659,7 +1659,7 @@ def test_topology_session_manifest_and_catalog_forgeries_are_rejected(
         update={"controls": canonical_fixture.receipt.controls[:-1]}
     )
     short_receipt = _reseal_receipt_anchors(short_receipt, canonical_fixture.trust)
-    with pytest.raises(ReleaseContractError, match="27-control catalog"):
+    with pytest.raises(ReleaseContractError, match="28-control catalog"):
         _ = canonical_fixture.finalizer.finalize(short_receipt)
 
     duplicate_receipt = canonical_fixture.receipt.model_copy(

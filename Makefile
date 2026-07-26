@@ -25,7 +25,7 @@ PROVIDER_RUNTIME_PYTHON := \
 	services/api/product_app.py \
 	tests/g004
 
-.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-architecture test-local-config print-local-images prepare-postgres-image test-migrations test-rls test-upload test-artifacts test-science test-dry-lab test-product-ui test-provider-runtime provider-cleanup-sweep test-e2e-artifacts stack-up smoke-local stack-down ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
+.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-architecture test-local-config print-local-images prepare-postgres-image test-migrations test-rls test-upload test-artifacts test-science test-dry-lab test-product-ui test-local-workbench test-provider-runtime provider-cleanup-sweep test-e2e-artifacts stack-up smoke-local stack-down ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
 
 bootstrap:
 	@set -eu; \
@@ -230,6 +230,15 @@ test-product-ui:
 	PYTHONPATH="$(ROOT)/packages/science:$(ROOT)" "$(VENV)/bin/basedpyright" services/api/product_app.py services/api/product_connectors.py services/api/product_connector_persistence.py services/api/connector_registry.py services/api/product_tenancy.py services/api/product_dry_lab.py tests/g003 tests/connectors; \
 	node --check apps/web/product/app.js; \
 	$(MAKE) test-rls
+
+test-local-workbench:
+	@set -eu; \
+	cd "$(ROOT)"; \
+	PYTHONPATH="$(ROOT)/apps/local:$(ROOT)/packages/science:$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" apps/local/tests -v; \
+	"$(VENV)/bin/ruff" check apps/local tests/e2e/local_workbench_fixture.py; \
+	"$(VENV)/bin/ruff" format --check apps/local tests/e2e/local_workbench_fixture.py; \
+	PYTHONPATH="$(ROOT)/apps/local:$(ROOT)/packages/science:$(ROOT)" "$(VENV)/bin/basedpyright" apps/local tests/e2e/local_workbench_fixture.py; \
+	node --check apps/web/local/app.js
 
 test-provider-runtime:
 	@set -eu; \

@@ -40,7 +40,7 @@ The service is authoritative for source checkout, command execution, atomic run 
 Each High-threat catalog entry must bind one `threat_id` to the exact pytest `case_id`, whole source-file SHA-256, test-function AST SHA-256, denial-observation AST SHA-256, and postcondition-observation AST SHA-256. The service must treat this catalog as independently reviewed policy, not derive it from the requesting checkout. The runner rederives every binding before and after the selected child process; the evidence parser rejects relabeling, case swaps, omitted observations, stale catalog replay, and recomputed roots for altered bindings.
 
 The checked-in command catalog is deliberately not semantic release evidence. Its
-27 commands carry no `requirement_ids`; all normative IDs are listed under
+28 commands carry no `requirement_ids`; all normative IDs are listed under
 `unverified_requirement_ids`. A local pass therefore cannot claim requirement
 coverage, and release finalization rejects that catalog. A success-capable catalog
 must come from the independent authority, bind every mapped requirement to exact

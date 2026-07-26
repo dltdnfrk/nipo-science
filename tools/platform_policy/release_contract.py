@@ -218,6 +218,7 @@ CI_JOB_CATEGORIES: dict[CiJob, EvidenceCategory] = {
     CiJob.SECRET_SCAN: EvidenceCategory.SECURITY,
     CiJob.DRY_LAB: EvidenceCategory.INTEGRATION,
     CiJob.PRODUCT_UI: EvidenceCategory.E2E,
+    CiJob.LOCAL_WORKBENCH: EvidenceCategory.INTEGRATION,
     CiJob.PROVIDER_RUNTIME: EvidenceCategory.PROVIDER,
     CiJob.SECURITY: EvidenceCategory.SECURITY,
     CiJob.RECOVERY: EvidenceCategory.RECOVERY,
@@ -2690,7 +2691,7 @@ def _verify_finalization_candidate(
     expected = {job.value: job for job in CiJob}
     controls = {item.control_id: item for item in receipt.controls}
     if len(controls) != len(receipt.controls) or set(controls) != set(expected):
-        msg = "controls do not match the canonical 27-control catalog"
+        msg = "controls do not match the canonical 28-control catalog"
         raise _contract_error(msg)
     _verify_canonical_control_logs(
         receipt,

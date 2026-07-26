@@ -37,6 +37,7 @@ from tools.platform_policy.ci_paths import (
     G002_UPLOAD_PYTHON_PATHS,
     G003_SCIENCE_PYTHON_PATHS,
     G004_ARTIFACT_UI_PYTHON_PATHS,
+    G005_LOCAL_PYTHON_PATHS,
 )
 from tools.platform_policy.ci_runner import (
     CiCommand,
@@ -1120,6 +1121,7 @@ def test_contract_ci_commands_execute_repository_gates_without_recursion(
         CiJob.GENERATED_DRIFT: "check-generated-contracts",
         CiJob.DRY_LAB: "test-dry-lab",
         CiJob.PRODUCT_UI: "test-product-ui",
+        CiJob.LOCAL_WORKBENCH: "test-local-workbench",
         CiJob.PROVIDER_RUNTIME: "test-provider-runtime",
     }
 
@@ -1183,6 +1185,8 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
         "tests/artifacts",
         "packages/science",
         "tests/science",
+        "apps/local",
+        "tests/e2e/local_workbench_fixture.py",
         "services/api/artifact_ui_app.py",
         "services/api/artifact_ui_http.py",
         "services/api/product_artifact_fixtures.py",
@@ -1208,6 +1212,8 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
     assert integrated_artifacts == set(G002_ARTIFACT_PYTHON_PATHS)
     integrated_science = {"packages/science", "tests/science"}
     assert integrated_science == set(G003_SCIENCE_PYTHON_PATHS)
+    integrated_local = {"apps/local", "tests/e2e/local_workbench_fixture.py"}
+    assert integrated_local == set(G005_LOCAL_PYTHON_PATHS)
     integrated_artifact_ui = {
         "services/api/artifact_ui_app.py",
         "services/api/artifact_ui_http.py",
@@ -1246,6 +1252,7 @@ def test_extended_release_categories_are_exactly_once_and_non_vacuous(
     expected_paths: dict[CiJob, str] = {
         CiJob.DRY_LAB: "test-dry-lab",
         CiJob.PRODUCT_UI: "test-product-ui",
+        CiJob.LOCAL_WORKBENCH: "test-local-workbench",
         CiJob.PROVIDER_RUNTIME: "test-provider-runtime",
         CiJob.SECURITY: "tools.platform_policy.security_gate",
         CiJob.RECOVERY: "tests/platform/test_g005_recovery_contract.py",

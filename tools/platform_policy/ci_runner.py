@@ -1772,6 +1772,9 @@ def ci_commands(root: Path) -> tuple[CiCommand, ...]:
         CiCommand(CiJob.DRY_LAB, (*make, "test-dry-lab"), CountKind.PYTEST),
         CiCommand(CiJob.PRODUCT_UI, (*make, "test-product-ui"), CountKind.PYTEST),
         CiCommand(
+            CiJob.LOCAL_WORKBENCH, (*make, "test-local-workbench"), CountKind.PYTEST
+        ),
+        CiCommand(
             CiJob.PROVIDER_RUNTIME, (*make, "test-provider-runtime"), CountKind.PYTEST
         ),
         CiCommand(

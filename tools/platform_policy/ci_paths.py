@@ -54,6 +54,11 @@ G003_SCIENCE_PYTHON_PATHS: Final = (
     "tests/science",
 )
 
+G005_LOCAL_PYTHON_PATHS: Final = (
+    "apps/local",
+    "tests/e2e/local_workbench_fixture.py",
+)
+
 G004_ARTIFACT_UI_PYTHON_PATHS: Final = (
     "services/api/artifact_ui_app.py",
     "services/api/artifact_ui_http.py",
@@ -76,4 +81,5 @@ RELEASE_PYTHON_PATHS: Final = (
     + G002_ARTIFACT_PYTHON_PATHS
     + G003_SCIENCE_PYTHON_PATHS
     + G004_ARTIFACT_UI_PYTHON_PATHS
+    + G005_LOCAL_PYTHON_PATHS
 )
