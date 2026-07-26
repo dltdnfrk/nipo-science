@@ -1,8 +1,10 @@
 # Nipo Science Design Contract
 
 Status: active Nipo Labs redesign contract
-Decision date: 2026-07-22
-Direction: **Spectral Control Room**
+Decision date: 2026-07-22, revised 2026-07-25
+Direction: **Research Ledger** (supersedes Spectral Control Room; 2026-07-25 palette: vermilion seal replaces teal — no AI-startup accent colors)
+
+Revision note (2026-07-25): the Spectral Control Room execution read as generic AI-SaaS — neon mint on near-black, a decorative hero, and hierarchy carried by bold weight and font size alone. The direction pivots to a light, warm-neutral **research ledger**: print-inspired surfaces, disciplined ink actions, and a single deep teal reserved for live/positive signals. The evidence-first principles (§2) are unchanged.
 
 ## 0. Research log
 
@@ -20,7 +22,7 @@ Direction: **Spectral Control Room**
 
 ## 1. Direction
 
-Nipo Science is the research operating system inside **Nipo Labs**. The atmosphere is a dark spectral control room: quiet near-black depth, calibrated mint light, fine coordinate grids, and dense evidence surfaces that feel measured rather than decorated. The signature material is **luminous graphite**: stacked charcoal surfaces defined by luminance, hairline cool borders, and a local mint rim only where an action or live state earns it.
+Nipo Science is the research operating system inside **Nipo Labs**. The atmosphere is a precision research ledger: warm off-white canvas, white evidence surfaces ruled by hairlines, and ink-on-paper typography that separates labels, values, and actions by role rather than by size alone. The signature material is the **ruled ledger line**: 1px hairlines dividing lists, metrics, and evidence rows, with a deep teal edge only where a live state or affirmative signal earns it.
 
 The memorable moment is the workspace's **evidence signal**. Project, run, and artifact counts form a restrained spectral trace that resolves into the primary action. It is not a looping decoration: it communicates that inputs travel through approval, execution, evidence, review, and export. Hover/focus exposes the same path without hiding content; reduced-motion users receive the final state immediately.
 
@@ -28,7 +30,7 @@ Avoid:
 
 - minerals, paper notebooks, earth greens, laboratory stock imagery, clinical symbols, and diagnostic language;
 - purple/blue AI gradients, floating glass cards, glow on every surface, chat-first composition, and decorative orbit graphics;
-- equal-height card walls, pill overload, tiny Korean metadata, and status conveyed by color alone.
+- neon accent on near-black "AI SaaS" palettes, oversized decorative heroes, equal-height card walls, pill overload, tiny Korean metadata, hierarchy carried by bold weight and font size alone, and status conveyed by color alone.
 
 ## 2. Product principles and users
 
@@ -65,25 +67,28 @@ Tablet (768–1023px): 208px rail, one main scroll owner, support columns collap
 
 ## 4. Design tokens
 
-### Color: one spectral mint story
+### Color: ink on paper, one vermilion seal
 
-Canvas and graphite:
+Canvas and surfaces:
 
-- `--canvas: #07090d`; `--canvas-ambient: #09111a`; `--nav: #0a0d12`;
-- `--surface-1: #0f141c`; `--surface-2: #151c27`; `--surface-3: #1b2431`; `--surface-hover: #202b39`;
-- `--text-strong: #f4f7fb`; `--text: #d2dae5`; `--text-muted: #91a0b2`; `--text-faint: #8291a5`;
-- `--line-subtle: rgba(213, 231, 255, 0.08)`; `--line: rgba(213, 231, 255, 0.14)`; `--line-strong: rgba(213, 231, 255, 0.24)`.
+- `--canvas: #f5f2ec`; `--canvas-ambient: #f0ede5`; `--nav: #ede9df`;
+- `--surface-1: #ffffff`; `--surface-2: #f7f5f0`; `--surface-3: #ece9e0`; `--surface-hover: #f1eee6`;
+- `--text-strong: #1d1a16`; `--text: #35322c`; `--text-muted: #5f5b52`; `--text-faint: #656156`;
+- `--line-subtle: #e5e1d5`; `--line: #d9d4c6`; `--line-strong: #bcb6a4`;
+- `--ink: #1d1a16` for primary action fills (text on it is always white).
 
-Spectral mint ramp:
+Vermilion seal ramp (approval/live signal only, never decoration). The single accent is the
+낙관 vermilion: approval is the product's core rite, so the affirmative signal is a seal stamp,
+not an AI-startup teal.
 
-- `--signal-100: #d7fff3`; `--signal-300: #82f2cc`; `--signal-500: #39d9ac`; `--signal-700: #16866b`; `--signal-900: #0d3d33`;
-- `--signal-wash: rgba(57, 217, 172, 0.10)`; `--signal-glow: rgba(57, 217, 172, 0.22)`.
+- `--signal-100: #7e2410`; `--signal-300: #bf3f1f`; `--signal-500: #9e3018`; `--signal-700: #7e2410`; `--signal-900: #5a1a0c`;
+- `--signal-wash: rgba(191, 63, 31, 0.08)`; `--signal-glow` is retired: no glow shadows anywhere.
 
 Functional exceptions:
 
-- `--attention: #f2c66d`; `--attention-wash: rgba(242, 198, 109, 0.10)`;
-- `--danger: #ff8a84`; `--danger-wash: rgba(255, 138, 132, 0.10)`;
-- `--info: #89c7ff`; `--info-wash: rgba(137, 199, 255, 0.10)`.
+- `--attention: #8a5a00`; `--attention-wash: #f5ebd2`;
+- `--danger: #a62c3a`; `--danger-wash: #f8e6e8` (cooler than the seal so destructive never reads as approval);
+- `--info: #4a5560`; `--info-wash: rgba(74, 85, 96, 0.09)`.
 
 Every pairing must meet WCAG 2.2 AA. Signal/status never relies on color alone.
 
@@ -91,17 +96,17 @@ Every pairing must meet WCAG 2.2 AA. Signal/status never relies on color alone.
 
 - UI/CJK: `Pretendard Variable`, `Pretendard`, `SUIT Variable`, `SUIT`, `Apple SD Gothic Neo`, system-ui, sans-serif;
 - technical: `SFMono-Regular`, `Cascadia Code`, `Roboto Mono`, ui-monospace, monospace;
-- display: 40/44 desktop, 32/38 tablet, 28/34 mobile, 650 weight, negative tracking;
-- h1: 32/38 desktop to 26/32 mobile, 650; h2: 19/26, 620; h3: 16/24, 620;
+- h1: 30/36 desktop to 26/32 mobile, 650, negative tracking; h2: 17/24, 650; h3: 15/24, 620;
+- no display-size marketing type anywhere; the largest text on a route is the h1;
 - body: 16/26, 400–500; metadata: 13–14/20; technical values: 12–13/20 with tabular numerals and anywhere wrap;
 - labels use sentence case or short Korean nouns; avoid all-caps except the `NIPO LABS` brand signature and technical overlines.
 
 ### Spacing, shape, focus, z-index
 
 - base 4px; scale 4/8/12/16/20/24/32/40/48/64;
-- radius 4px micro, 8px control, 12px panel, 16px hero; no pill content cards;
+- radius 3px micro, 6px control, 10px panel, 10px hero; no pill content cards;
 - z-index 0 canvas, 10 sticky, 30 overlay, 50 dialog, 100 skip link;
-- focus: 2px `--signal-300` ring with 3px canvas separation;
+- focus: 2px `--signal-500` ring with 3px separation;
 - touch targets: 44px minimum; buttons use 44–48px height.
 
 ## 5. Reusable primitives and required states
@@ -121,9 +126,10 @@ Primitive showcase: `apps/web/product/showcase.html` is the equivalent state har
 
 Material recipe:
 
-- base panel: `--surface-1` + 1px `--line-subtle` + inset top highlight;
-- raised panel: `--surface-2` + `--line` + one cool ambient shadow;
-- active evidence: local `--signal-wash` background, signal edge, and small glow only around the active affordance;
+- base panel: `--surface-1` + 1px `--line-subtle` + one low ambient shadow (`--shadow-panel`);
+- raised panel: `--surface-2` + `--line`;
+- active evidence: 3px inset `--signal-300` leading edge + tinted border; no glow, no gradient wash;
+- primary actions: solid `--ink` fill, white text, weight 650; secondary actions: `--surface-1` fill + `--line` border so a route never shows two competing filled buttons;
 - overlays: opaque enough for text contrast; blur is optional support, never the only separation.
 
 ## 6. Motion and interaction

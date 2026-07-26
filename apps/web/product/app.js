@@ -27,10 +27,18 @@
   let dryLabState = {};
   let artifactLibrary = [];
   let providerRegistry = [];
+  let connectorRegistry = [];
+  let collectedInput = null;
+  let pendingCollectionPlan = null;
+  let pendingCollection = null;
   let providerConnections = [];
   let providerAuthorization = null;
   let providerAuthorizationTimer = 0;
   let workspaceSessions = [];
+  let workspaceCollections = [];
+  let workspaceHistoryDetail = null;
+  let workspacePollTimer = null;
+  let workspacePollDigest = "";
   let artifactActionEpoch = 0;
   let artifactSelectionPending = 0;
   let artifactMutationPending = false;
@@ -79,6 +87,15 @@
   }
   function hashValue(label, value = "") { return element("div", {}, element("p", { class: "hash-label", text: label }), element("code", { class: "hash", text: value || "서버 확인 대기" })); }
   function objectSummary(label, id) { return keyValues([[`${label} ID`, id], ["생성 시각", dryLabState.created_at]]); }
+  const STAGE_STEP_LABELS = ["입력", "승인", "실행", "근거", "검토"];
+  const STAGE_STEP_INDEX = { new: 0, upload: 0, plan: 1, approve: 1, execute: 2, review: 3, export: 4 };
+  function stageStepper(stage, { mini = false } = {}) {
+    const index = STAGE_STEP_INDEX[stage] ?? -1;
+    return element("ol", { class: `signal-trace${mini ? " mini" : ""}`, "aria-label": "진행 단계" },
+      ...STAGE_STEP_LABELS.map((label, stepIndex) =>
+        element("li", { class: stepIndex < index ? "done" : stepIndex === index ? "current" : "" },
+          element("span", { class: "signal-step-label", text: label }))));
+  }
   function value(key) { return dryLabState[key] !== undefined && dryLabState[key] !== null ? dryLabState[key] : "서버 확인 대기"; }
   function resourceList(key) { return Array.isArray(dryLabState[key]) ? dryLabState[key] : []; }
   function dryLabContractError() { return requestFailure(502, "서버의 실행 리소스 응답을 확인할 수 없습니다."); }
@@ -304,43 +321,65 @@
     const projects = data.projects.length
       ? data.projects.map((project) => element("li", {}, element("strong", { text: project.name || "이름 없는 프로젝트" }), element("p", { class: "metadata" }, text("프로젝트 식별자와 최신 활동은 서버에서 "), phrase("제공됩니다."))))
       : [element("li", { class: "empty-state", text: "표시할 프로젝트가 없습니다. 새 연구 입력을 업로드해 시작하세요." })];
-    const recent = data.recent_runs.length
-      ? data.recent_runs.map((run) => {
-          const links = run.links.map((link) => workspaceResourceLink(link, run.id)).filter(Boolean);
-          return element("li", { "data-run-id": run.id }, element("strong", { text: run.name }), element("code", { class: "activity-run-id", title: run.id, text: run.display_id }), element("p", { class: "metadata" }, text("생성 시각 "), element("time", { datetime: run.created_at, text: run.created_at })), element("p", { class: "metadata activity-status", text: run.stage_label }), links.length ? element("div", { class: "activity-links", "aria-label": `${run.display_id} 다음 행동` }, ...links) : element("p", { class: "metadata", text: "열 수 있는 리소스가 없습니다." }));
-        })
-      : [element("li", { class: "empty-state" }, phrase("최근 실행"), text(" "), phrase("기록이 없습니다."))];
     const metrics = [
       ["프로젝트", data.projects.length],
       ["연구 세션", data.sessions.length],
       ["최근 실행", data.recent_runs.length],
     ];
-    const signalSteps = ["입력", "승인", "실행", "근거", "검토"];
-    const signalTrace = element("ol", { class: "signal-trace", "aria-label": "입력→승인→실행→근거→검토" },
-      ...signalSteps.map((step) => element("li", { class: "signal-step" }, element("span", { class: "signal-step-label", text: step }))),
-    );
-    const workspaceHero = element("section", { class: "workspace-hero", "aria-labelledby": "workspace-hero-title" },
-      element("div", { class: "workspace-hero-copy" },
-        element("p", { class: "page-eyebrow", text: "NIPO LABS" }),
-        element("h2", { id: "workspace-hero-title", text: "Nipo Labs Research OS" }),
-        element("p", { class: "lede", text: "입력부터 근거 검토까지 연구의 흐름을 한 곳에서 확인합니다." }),
-        element("div", { class: "workspace-actions" },
-          element("a", { class: "button", href: "/upload", text: "새 연구 시작" }),
-          element("a", { class: "resource-link", href: "/artifacts", text: "아티팩트 라이브러리" }),
-        ),
-      ),
-      element("div", { class: "workspace-signal" },
-        element("p", { class: "page-eyebrow", text: "연구 신호" }),
-        signalTrace,
-      ),
-    );
+    const recent = data.recent_runs.length
+      ? data.recent_runs.map((run) => {
+          const links = run.links.map((link) => workspaceResourceLink(link, run.id)).filter(Boolean);
+          return element("li", { "data-run-id": run.id }, element("strong", { text: run.name }), element("code", { class: "activity-run-id", title: run.id, text: run.display_id }), element("p", { class: "metadata" }, text("생성 시각 "), element("time", { datetime: run.created_at, text: run.created_at })), stageStepper(run.stage, { mini: true }), element("p", { class: "metadata activity-status", text: run.stage_label }), links.length ? element("div", { class: "activity-links", "aria-label": `${run.display_id} 다음 행동` }, ...links) : element("p", { class: "metadata", text: "열 수 있는 리소스가 없습니다." }));
+        })
+      : [element("li", { class: "empty-state" }, phrase("최근 실행"), text(" "), phrase("기록이 없습니다."))];
+    const actionable = data.recent_runs.find((run) => run.links.length > 0);
+    const nextAction = actionable
+      ? (() => {
+          const rawLink = actionable.links.find((link) => link.kind === "approval") || actionable.links[0];
+          const href = validWorkspaceLink(rawLink, actionable.id) ? rawLink.href : null;
+          return element("section", { class: "panel accent next-action", "aria-label": "지금 할 일" },
+            element("p", { class: "page-eyebrow", text: "지금 할 일" }),
+            element("h2", { text: actionable.name }),
+            element("p", {}, text(`현재 단계는 ${actionable.stage_label}입니다. 다음 행동: `), element("strong", { text: rawLink.label })),
+            stageStepper(actionable.stage),
+            href ? element("div", { class: "workspace-actions" }, element("a", { class: "button", href, text: rawLink.label })) : null);
+        })()
+      : element("section", { class: "panel next-action", "aria-label": "지금 할 일" },
+          element("p", { class: "page-eyebrow", text: "지금 할 일" }),
+          element("h2", { text: "새 연구를 시작해 보세요" }),
+          element("p", { text: "입력 파일과 연구 질문만 준비하면 됩니다. 나머지는 단계별로 안내합니다." }),
+          element("div", { class: "workspace-actions" },
+            element("a", { class: "button", href: "/upload", text: "새 연구 시작" }),
+            element("a", { class: "resource-link", href: "/artifacts", text: "아티팩트 라이브러리" })));
     const metricStrip = element("dl", { class: "metric-strip", "aria-label": "워크스페이스 지표" },
       ...metrics.map(([label, count]) => element("div", { class: "metric" },
         element("dt", { class: "metric-label", text: label }),
         element("dd", { class: "metric-value", text: String(count) }),
       )),
     );
-    return [...header("워크스페이스", "조직의 프로젝트와 최근 연구 활동을 한 흐름으로 확인합니다.", "워크스페이스"), workspaceHero, metricStrip, element("div", { class: "section-grid workspace-grid" }, panel("프로젝트", element("ul", { class: "activity-list" }, projects)), panel("최근 활동", element("ul", { class: "activity-list" }, recent), true))];
+    return [...header("워크스페이스", "조직의 프로젝트와 최근 연구 활동을 한 흐름으로 확인합니다.", "워크스페이스"), nextAction, metricStrip, element("div", { class: "section-grid workspace-grid" }, panel("프로젝트", element("ul", { class: "activity-list" }, projects)), panel("최근 활동", element("ul", { class: "activity-list" }, recent), true), collectionHistorySection())];
+  }
+  function collectionHistorySection() {
+    if (workspaceHistoryDetail) {
+      const rows = workspaceHistoryDetail.records.map((record) => element("tr", { "data-record-id": record.id },
+        collectRecordCell(record.title),
+        collectRecordCell(record.year),
+        collectRecordCell(record.venue),
+        collectRecordCell(record.citation_count)));
+      return panel(`지난 수집 — ${workspaceHistoryDetail.query}`,
+        element("div", {},
+          element("table", { class: "collect-table" },
+            element("thead", {}, element("tr", {}, ...["제목", "연도", "저널", "인용수"].map((label) => element("th", { scope: "col", text: label })))),
+            element("tbody", {}, ...rows)),
+          element("div", { class: "button-row" }, buttonWithAttributes("목록으로", "collection-history-back", "secondary", {}))),
+        true);
+    }
+    if (!workspaceCollections.length) return panel("지난 수집", element("p", { class: "metadata", text: "아직 수집한 문헌이 없습니다. 업로드 화면의 수집 패널에서 시작하세요." }), true);
+    return panel("지난 수집",
+      element("ul", { class: "activity-list" }, workspaceCollections.map((item) => element("li", { "data-collection-id": item.collection_id },
+        element("button", { class: "resource-link collection-history-open", type: "button", "data-action": "collection-history-open", "data-collection-id": item.collection_id, text: item.query }),
+        element("p", { class: "metadata" }, text(`${item.connector_label} · ${item.record_count}건 · `), element("time", { datetime: item.created_at, text: formatTimestamp(item.created_at) }))))),
+      true);
   }
   function researchIntentForm() {
     const providerOptions = providerConnections
@@ -348,7 +387,9 @@
       .map((connection) => element("option", { value: connection.id, text: `제공자 모델 · ${connection.selected_model}` }));
     return panel("왜 이 연구인가", [
       element("p", { text: "연구 질문과 검증 경계를 승인 전에 고정합니다. 실데이터와 합성데이터의 출처도 구분합니다." }),
-      element("label", { class: "field" }, text("연구 질문"), element("textarea", { id: "research-question", rows: "2", required: "", "aria-describedby": "research-question-help" }), element("span", { id: "research-question-help", class: "help", text: "AI가 바꾸지 못하는 인간 소유 질문입니다." })),
+      element("label", { class: "field" }, text("연구 질문"), element("textarea", { id: "research-question", rows: "2", required: "", placeholder: "예: 보정 실행의 재현성을 검증할 수 있는가?", "aria-describedby": "research-question-help" }), element("span", { id: "research-question-help", class: "help", text: "AI가 바꾸지 못하는 인간 소유 질문입니다." })),
+      element("details", { class: "adv-opts" },
+        element("summary", {}, text("세부 조건 "), element("span", { class: "help", text: "중요성·가치·기준·제약·실행 환경 — 승인 전에 모두 고정됩니다" })),
       element("label", { class: "field" }, text("왜 중요한가"), element("textarea", { id: "research-rationale", rows: "2", required: "" })),
       element("label", { class: "field" }, text("기대 가치"), element("textarea", { id: "research-benefit", rows: "2", required: "" })),
       element("label", { class: "field" }, text("성공 기준"), element("textarea", { id: "research-success-criteria", rows: "3", required: "", "aria-describedby": "criteria-help" }), element("span", { id: "criteria-help", class: "help", text: "검증할 기준을 한 줄에 하나씩 입력합니다." })),
@@ -360,19 +401,31 @@
       element("label", { class: "field" }, text("합성 데이터 검증기 참조"), element("input", { id: "research-validator-ref", type: "text", "aria-describedby": "synthetic-help" }), element("span", { id: "synthetic-help", class: "help", text: "합성 또는 혼합 데이터일 때 서로 다른 생성기와 검증기를 입력합니다." })),
       element("label", { class: "field" }, text("연구 세션"), element("select", { id: "dry-lab-session", required: "" }, ...workspaceSessions.map((session) => element("option", { value: session.id, text: session.name || session.id })))),
       element("label", { class: "field" }, text("실행 환경"), element("select", { id: "run-execution-target", required: "" }, element("option", { value: "local_dry_lab", text: "로컬 드라이랩" }), ...providerOptions), element("span", { class: "help", text: providerOptions.length ? "제공자 실행도 같은 ActionPlan 승인 후에만 시작합니다." : "검증 완료된 제공자 연결이 없으면 로컬 드라이랩만 사용할 수 있습니다." })),
-      element("label", { class: "field" }, text("실행 요청"), element("textarea", { id: "dry-lab-prompt", rows: "2", required: "" })),
-      buttonWithAttributes("Run 생성 및 ActionPlan 고정", "create-run", "", { "data-endpoint": "/api/v1/runs" }),
+      element("label", { class: "field" }, text("실행 요청"), element("textarea", { id: "dry-lab-prompt", rows: "2", required: "", placeholder: "예: 보정값을 정규화하고 실행 근거를 검토한다." })),
+      ),
+      buttonWithAttributes("연구 시작하기", "create-run", "", { "data-endpoint": "/api/v1/runs" }),
     ], true);
   }
   function upload() {
     return [
       ...header("연구 입력 업로드", "형식과 크기를 확인하고 연구 목적과 검증 기준을 고정합니다."),
       element("div", { class: "section-grid upload-grid" },
+        element("div", { class: "stack" },
+        panel("주제로 수집", [
+          element("p", {}, text("연결된 데이터 소스에서 주제 관련 문서를 가져와 연구 입력 CSV로 만듭니다. 소스는 "), element("a", { href: "/settings/providers", text: "설정" }), text("에서 연결합니다.")),
+          element("div", { class: "collect-chat" },
+            element("input", { id: "collect-prompt", type: "text", placeholder: "예: knowledge graph extraction 논문 5개 수집해줘", "aria-label": "수집 주제 입력" }),
+            buttonWithAttributes("수집 계획", "collect-plan", "", { id: "collect-plan-btn" })),
+          element("div", { id: "collect-confirm", class: "confirm-card", role: "status", hidden: "" }),
+          element("div", { id: "collect-results", class: "collect-results", hidden: "" }),
+          element("p", { id: "collect-result", class: "metadata", hidden: "" }),
+        ]),
         panel("업로드 검증", [
           element("p", {}, text("보정 메타데이터가 포함된 CSV 형식과 파일 제한을 검사합니다. 검사가 실패한 입력은 "), phrase("원자적으로"), text(" "), phrase("거부됩니다.")),
           element("label", { class: "field" }, text("연구 입력 CSV"), element("input", { id: "dry-lab-file", class: "visually-hidden", type: "file", accept: ".csv,text/csv", "aria-describedby": "dry-lab-file-name upload-help" }), element("span", { class: "button secondary file-picker", text: "CSV 선택" }), element("span", { id: "dry-lab-file-name", class: "file-name metadata", text: "선택한 파일 없음" }), element("span", { id: "upload-help", class: "help", text: "CSV 내용과 형식은 서버 확인 후 표시됩니다." })),
           element("p", { class: "help", text: "Run 생성 시 서버가 입력 검증과 ActionPlan 고정을 원자적으로 수행합니다." }),
         ]),
+        ),
         element("div", { class: "stack" },
           researchIntentForm(),
           panel("검증된 미리보기", [status("Run 생성 전"), element("p", { text: "개인 식별 정보나 전체 원본을 노출하지 않는 제한된 표본 미리보기가 표시됩니다." })]),
@@ -396,7 +449,15 @@
     const expiry = plan.approval_expires_at
       ? element("p", { class: "approval-expiry" }, text("승인 만료 시각 "), element("time", { datetime: plan.approval_expires_at, text: plan.approval_expires_at }))
       : element("p", { class: "approval-expiry", text: `승인 유효 기간 ${expiryPolicy}` });
-    return [...header("ActionPlan 승인", [text("실행 전에 고정된 계획과 1회 실행 범위, "), phrase("승인 만료를 검토합니다.")]), element("div", { class: "section-grid" }, panel("불변 승인", [status(dryLabState.display.stage_label, dryLabState.display.stage_tone), objectSummary("Run", dryLabState.run_id), hashValue("계획 다이제스트", plan.digest), keyValues([["권한 범위", plan.scope_label], ["상태", plan.approval_status_label], ["만료 정책", expiryPolicy]]), expiry, actions.length ? element("div", { class: "button-row" }, ...actions) : null, executeCapability && !hasApproval ? element("p", { id: "approval-memory-help", class: "help", text: "새로고침 후에는 승인 권한을 복원하지 않습니다. 계획을 다시 생성해 승인하세요." }) : null], true), panel("승인 전 확인", element("p", {}, text("다이제스트와 범위는 승인 후 "), phrase("변경할 수 없습니다."), text(" 서버 응답 전에는 승인 완료로 표시되지 않습니다."))) )];
+    const intent = isObject(dryLabState.research_intent) ? dryLabState.research_intent : null;
+    return [...header("ActionPlan 승인", [text("실행 전에 고정된 계획과 1회 실행 범위, "), phrase("승인 만료를 검토합니다.")]), element("div", { class: "journey-stepper" }, stageStepper("approve")), element("div", { class: "section-grid" },
+      panel("무엇을 승인하나요?", [
+        element("p", {}, text("아래 연구를 "), phrase("1회 격리 실행"), text("하는 계획입니다. 승인하면 계획이 고정되고, 결과는 근거와 함께 기록됩니다.")),
+        intent ? keyValues([["연구 질문", intent.question], ["중요성", intent.rationale]]) : element("p", { class: "metadata", text: "연구 목적은 서버 확인 대기 중입니다." }),
+        keyValues([["권한 범위", plan.scope_label]]),
+      ], true),
+      panel("불변 승인", [status(dryLabState.display.stage_label, dryLabState.display.stage_tone), objectSummary("Run", dryLabState.run_id), element("details", { class: "adv-opts" }, element("summary", {}, text("기술 세부 정보 "), element("span", { class: "help", text: "다이제스트·식별자" })), hashValue("계획 다이제스트", plan.digest)), keyValues([["상태", plan.approval_status_label], ["만료 정책", expiryPolicy]]), expiry, actions.length ? element("div", { class: "button-row" }, ...actions) : null, executeCapability && !hasApproval ? element("p", { id: "approval-memory-help", class: "help", text: "새로고침 후에는 승인 권한을 복원하지 않습니다. 계획을 다시 생성해 승인하세요." }) : null]),
+      panel("승인 전 확인", element("p", {}, text("다이제스트와 범위는 승인 후 "), phrase("변경할 수 없습니다."), text(" 서버 응답 전에는 승인 완료로 표시되지 않습니다."))) )];
   }
   function run() {
     const artifactsLink = resourceLink("artifacts");
@@ -406,7 +467,7 @@
     const providerPanel = isObject(providerState)
       ? panel("제공자 실행 경계", [status(providerState.dispatch_status === "queued" ? "대기열 등록" : "승인 대기", providerState.dispatch_status === "queued" ? "attention" : "neutral"), keyValues([["연결 ID", providerState.connection_id], ["모델", providerState.model_id], ["자격 영수증", providerState.qualification_receipt_id || "실행 전 확인 대기"]])])
       : null;
-    return [...header("연구 실행 기록", [text("입력부터 격리 실행과 근거 검토까지 "), phrase("순서대로 추적합니다.")]), element("div", { class: "section-grid run-grid" }, element("div", { class: "stack" }, panel("현재 상태", [status(dryLabState.display.stage_label, dryLabState.display.stage_tone), objectSummary("Run", dryLabState.run_id), hashValue("연구 목적 체크섬", dryLabState.research_intent_sha256), element("p", {}, text("연결이 끊긴 경우 서버의 Run 리소스를 다시 읽어 "), phrase("서버 상태를"), text(" 확인합니다.")), nextAction || cancelAction ? element("div", { class: "button-row" }, ...[nextAction, cancelAction].filter(Boolean)) : null], true), providerPanel, artifactsLink ? panel("연결된 아티팩트", element("a", { class: "resource-link", href: artifactsLink.href, text: artifactsLink.label })) : null), panel("실행 타임라인", timeline()))];
+    return [...header("연구 실행 기록", [text("입력부터 격리 실행과 근거 검토까지 "), phrase("순서대로 추적합니다.")]), element("div", { class: "journey-stepper" }, stageStepper("execute")), element("div", { class: "section-grid run-grid" }, element("div", { class: "stack" }, panel("현재 상태", [status(dryLabState.display.stage_label, dryLabState.display.stage_tone), objectSummary("Run", dryLabState.run_id), hashValue("연구 목적 체크섬", dryLabState.research_intent_sha256), element("p", {}, text("연결이 끊긴 경우 서버의 Run 리소스를 다시 읽어 "), phrase("서버 상태를"), text(" 확인합니다.")), nextAction || cancelAction ? element("div", { class: "button-row" }, ...[nextAction, cancelAction].filter(Boolean)) : null], true), providerPanel, artifactsLink ? panel("연결된 아티팩트", element("a", { class: "resource-link", href: artifactsLink.href, text: artifactsLink.label })) : null), panel("실행 타임라인", timeline()))];
   }
   function artifactLibraryView() {
     const items = artifactLibrary.length
@@ -581,7 +642,7 @@
     const finding = verified
       ? element("p", {}, text("독립 검토가 "), phrase("실행 결과와"), text(" "), phrase("고정된 체크섬을"), text(" "), phrase("확인했습니다."))
       : element("p", {}, text("독립 검토에서 "), phrase("실행 결과 또는"), text(" "), phrase("고정된 체크섬의"), text(" "), phrase("불일치를 발견했습니다."));
-    return [...header("검토 결과", [text("고정된 근거에 연결된 결과를 읽습니다. "), phrase("이 화면은"), text(" "), phrase("재실행하지"), text(" "), phrase("않습니다.")]), element("div", { class: "section-grid" }, panel("검토 발견 사항", [status(reviewState.verdict, verified ? "positive" : "danger"), objectSummary("Review", dryLabState.review_id), hashValue("연구 목적 체크섬", dryLabState.research_intent_sha256), finding, exportAction ? element("div", { class: "button-row" }, exportAction) : null], true), panel("고정된 근거", [hashes.length ? keyValues(hashes) : element("p", { class: "empty-state", text: "고정된 근거가 없습니다." }), element("p", { text: "이 검토는 위 불변 버전의 근거에 고정되어 있습니다." })]))];
+    return [...header("검토 결과", [text("고정된 근거에 연결된 결과를 읽습니다. "), phrase("이 화면은"), text(" "), phrase("재실행하지"), text(" "), phrase("않습니다.")]), element("div", { class: "journey-stepper" }, stageStepper("review")), element("div", { class: "section-grid" }, panel("검토 발견 사항", [status(reviewState.verdict, verified ? "positive" : "danger"), objectSummary("Review", dryLabState.review_id), hashValue("연구 목적 체크섬", dryLabState.research_intent_sha256), finding, exportAction ? element("div", { class: "button-row" }, exportAction) : null], true), panel("고정된 근거", [hashes.length ? keyValues(hashes) : element("p", { class: "empty-state", text: "고정된 근거가 없습니다." }), element("p", { text: "이 검토는 위 불변 버전의 근거에 고정되어 있습니다." })]))];
   }
   function exportScreen() {
     const exportState = dryLabState.export;
@@ -592,7 +653,7 @@
       : cleanupReceipt
         ? panel("정리 영수증", [status("런타임 정리 완료", "positive"), keyValues([["런타임 데이터 제거", cleanupReceipt.removed_runtime_data ? "예" : "아니요"], ["보존된 아티팩트", `${cleanupReceipt.preserved_artifact_hashes.length}개`]])])
         : null;
-    return [...header("내보내기", [text("선택한 불변 버전과 재현성 매니페스트를 "), phrase("함께 준비했습니다.")]), element("div", { class: "section-grid export-grid" }, panel("재현성 상태", [status(dryLabState.display.stage_label, dryLabState.display.stage_tone), objectSummary("Export", dryLabState.export_id), hashValue("매니페스트 체크섬", exportState.manifest_sha256), hashValue("연구 목적 체크섬", dryLabState.research_intent_sha256), element("p", {}, text("서버가 매니페스트와 불변 결과 경로를 "), phrase("확인했습니다."))], true), panel("포함된 경로", [element("ul", { class: "export-paths" }, ...exportState.paths.map((path) => element("li", { text: path }))), element("p", { class: "help" }, text("내보내기는 검토에서 고정한 버전만 포함하며 이후 변경으로 "), phrase("대체되지"), text(" "), phrase("않습니다."))]), cleanupPanel)];
+    return [...header("내보내기", [text("선택한 불변 버전과 재현성 매니페스트를 "), phrase("함께 준비했습니다.")]), element("div", { class: "journey-stepper" }, stageStepper("export")), element("div", { class: "section-grid export-grid" }, panel("재현성 상태", [status(dryLabState.display.stage_label, dryLabState.display.stage_tone), objectSummary("Export", dryLabState.export_id), hashValue("매니페스트 체크섬", exportState.manifest_sha256), hashValue("연구 목적 체크섬", dryLabState.research_intent_sha256), element("p", {}, text("서버가 매니페스트와 불변 결과 경로를 "), phrase("확인했습니다."))], true), panel("포함된 경로", [element("ul", { class: "export-paths" }, ...exportState.paths.map((path) => element("li", { text: path }))), element("p", { class: "help" }, text("내보내기는 검토에서 고정한 버전만 포함하며 이후 변경으로 "), phrase("대체되지"), text(" "), phrase("않습니다."))]), cleanupPanel)];
   }
   function providerQualification(qualification) {
     if (!qualification) return "검증 기록 없음";
@@ -602,6 +663,31 @@
   }
   function providerHealthLabel(health) {
     return PROVIDER_HEALTH_LABELS[health] || "상태를 확인할 수 없음";
+  }
+  function formatTimestamp(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value : date.toLocaleString("ko-KR", { hour12: false });
+  }
+  function connectorCard(connector) {
+    const enabled = connector.enabled === true;
+    const keyInput = connector.accepts_key
+      ? element("label", { class: "field" }, text("키 환경변수 이름"), element("input", { id: `connector-key-${connector.connector_id}`, type: "text", value: connector.key_env || "", placeholder: "예: NCBI_KEY" }))
+      : null;
+    return element("article", { class: "provider-card", "data-connector-id": connector.connector_id },
+      element("h3", { text: connector.label }),
+      status(enabled ? "연결됨" : "해제됨", enabled ? "positive" : "neutral"),
+      keyValues([
+        ["안내", connector.note],
+        ["API 키", connector.accepts_key ? (connector.key_env || "미등록") : "불필요"],
+        ["마지막 수집 성공", connector.last_success_at ? formatTimestamp(connector.last_success_at) : "기록 없음"],
+        ["마지막 수집 실패", connector.last_failure_at ? formatTimestamp(connector.last_failure_at) : "기록 없음"],
+      ]),
+      keyInput,
+      element("div", { class: "button-row" },
+        enabled && connector.accepts_key
+          ? buttonWithAttributes("키 저장", "connector-toggle", "secondary", { "data-connector-id": connector.connector_id, "data-enabled": "true", "data-key-save": "true", "aria-label": `${connector.label} 키 저장` })
+          : null,
+        buttonWithAttributes(enabled ? "연결 해제" : "연결", "connector-toggle", enabled ? "secondary" : "", { "data-connector-id": connector.connector_id, "data-enabled": enabled ? "true" : "false" })));
   }
   function providers() {
     const adapters = providerRegistry.filter((adapter) => adapter && typeof adapter.id === "string");
@@ -681,6 +767,12 @@
       panel("연결 정책", element("p", { "aria-label": "자동 대체 없음" }, text("OAuth 구독 연결만 사용합니다. API 키 또는 BYOK는 사용하지 않습니다. "), phrase("자동 대체"), text(" "), phrase("없음")), true),
       authorizationPanel,
       receiptPanel,
+      connectorRegistry.length
+        ? element("section", { class: "connector-section", "aria-label": "데이터 소스 연결" },
+            element("h2", { text: "데이터 소스 연결" }),
+            element("p", { class: "metadata", text: "주제 수집에 사용하는 문헌 API입니다. 키는 환경변수 이름만 저장되며 평문은 어디에도 남지 않습니다." }),
+            element("div", { class: "connector-grid" }, connectorRegistry.map(connectorCard)))
+        : null,
       element("section", { class: "provider-grid", "aria-label": "제공자 연결 목록" }, cards),
     ].filter(Boolean);
   }
@@ -721,7 +813,7 @@
     headers["X-CSRF-Token"] = csrfToken;
     return headers;
   }
-  async function dryLabRequest(path, payload = {}) { const response = await fetch(path, { method: "POST", headers: mutationHeaders(), credentials: "same-origin", body: JSON.stringify(payload) }); const data = await response.json().catch(() => ({})); if (!response.ok) throw requestFailure(response.status, data.message || data.detail || data.code || "요청을 완료하지 못했습니다."); return data; }
+  async function dryLabRequest(path, payload = {}) { const response = await fetch(path, { method: "POST", headers: mutationHeaders(), credentials: "same-origin", body: JSON.stringify(payload) }); const data = await response.json().catch(() => ({})); if (!response.ok) throw requestFailure(response.status, data.message || data.detail || data.error || data.code || "요청을 완료하지 못했습니다."); return data; }
   async function refreshNamedResource(path) {
     const match = path.match(/^\/(runs|reviews|exports)\/([A-Za-z0-9._-]+)(?:\/approval)?$/);
     if (!match) return false;
@@ -808,6 +900,86 @@
       typeof connection.qualification?.cleanup_verified === "boolean" &&
       typeof connection.qualification?.live === "boolean" &&
       typeof connection.revision === "string" && connection.revision;
+  }
+  async function refreshConnectorState() {
+    try {
+      const data = await request("/api/v1/connectors");
+      if (!Array.isArray(data.connectors)) throw requestFailure(502, "데이터 소스 연결 응답을 확인할 수 없습니다.");
+      connectorRegistry = data.connectors;
+    } catch (reason) {
+      // 커넥터를 아직 제공하지 않는 서피스(아티팩트 픽스처 등)에서는 섹션을 숨긴다
+      if (![403, 404].includes(reason?.status)) throw reason;
+      connectorRegistry = [];
+    }
+  }
+  function validateCollectionSummary(item) {
+    if (!isObject(item) || typeof item.collection_id !== "string" || !item.collection_id) throw requestFailure(502, "수집 이력 응답을 확인할 수 없습니다.");
+    if (typeof item.connector_label !== "string" || typeof item.query !== "string" || !Number.isInteger(item.record_count)) throw requestFailure(502, "수집 이력 응답을 확인할 수 없습니다.");
+    if (typeof item.created_at !== "string" || Number.isNaN(Date.parse(item.created_at))) throw requestFailure(502, "수집 이력 응답을 확인할 수 없습니다.");
+    return item;
+  }
+  function validateCollectionRecord(record) {
+    if (!isObject(record) || typeof record.id !== "string" || typeof record.title !== "string") throw requestFailure(502, "수집 상세 응답을 확인할 수 없습니다.");
+    return {
+      id: record.id,
+      title: record.title,
+      year: typeof record.year === "number" ? record.year : null,
+      venue: typeof record.venue === "string" ? record.venue : null,
+      citation_count: typeof record.citation_count === "number" ? record.citation_count : null,
+    };
+  }
+  async function refreshWorkspaceCollections() {
+    try {
+      const data = await request("/api/v1/collections");
+      workspaceCollections = Array.isArray(data.collections) ? data.collections.map(validateCollectionSummary) : [];
+    } catch {
+      // 수집 이력을 불러오지 못하더라도 워크스페이스 자체는 그대로 연다
+      workspaceCollections = [];
+    }
+  }
+  async function openCollectionHistory(collectionId) {
+    if (!collectionId) throw new Error("수집 식별자가 없습니다.");
+    const detail = await request(`/api/v1/collections/${collectionId}`);
+    if (!isObject(detail) || !Array.isArray(detail.records)) throw requestFailure(502, "수집 상세 응답을 확인할 수 없습니다.");
+    workspaceHistoryDetail = {
+      collection_id: detail.collection_id,
+      query: typeof detail.query === "string" && detail.query ? detail.query : "수집 결과",
+      records: detail.records.map(validateCollectionRecord),
+    };
+  }
+  function workspaceRunsDigest(runs) {
+    return JSON.stringify(runs.map((run) => [run.id, run.stage, run.stage_label]));
+  }
+  function stopWorkspacePolling() {
+    if (workspacePollTimer !== null) {
+      clearInterval(workspacePollTimer);
+      workspacePollTimer = null;
+    }
+  }
+  function scheduleWorkspacePolling(path) {
+    stopWorkspacePolling();
+    if (path !== "/workspace") return;
+    workspacePollDigest = workspaceRunsDigest(currentWorkspace.recent_runs);
+    workspacePollTimer = setInterval(() => { void pollWorkspaceRuns(); }, 5000);
+  }
+  async function pollWorkspaceRuns() {
+    if (location.pathname !== "/workspace") {
+      stopWorkspacePolling();
+      return;
+    }
+    try {
+      const response = await request("/api/v1/workspace");
+      if (!Array.isArray(response.recent_runs)) return;
+      const runs = response.recent_runs.map(validateWorkspaceRun);
+      const digest = workspaceRunsDigest(runs);
+      if (digest === workspacePollDigest) return;
+      workspacePollDigest = digest;
+      currentWorkspace = { ...currentWorkspace, recent_runs: runs };
+      live.textContent = "실행 상태가 서버에서 갱신되었습니다.";
+      render("/workspace", currentWorkspace);
+    } catch {
+      // 폴 실패는 조용히 다음 주기에 재시도한다
+    }
   }
   async function refreshProviderState() {
     const [registry, connections] = await Promise.all([
@@ -992,6 +1164,143 @@
     }
     target?.focus();
   }
+  async function handleConnectorToggle(buttonNode) {
+    const connectorId = buttonNode.dataset.connectorId;
+    const enabled = buttonNode.dataset.keySave === "true" || buttonNode.dataset.enabled !== "true";
+    const payload = { enabled };
+    if (enabled) {
+      const keyInput = document.querySelector(`#connector-key-${connectorId}`);
+      if (keyInput?.value.trim()) payload.key_env = keyInput.value.trim();
+    }
+    await dryLabRequest(`/api/v1/connectors/${connectorId}`, payload);
+    await refreshConnectorState();
+    live.textContent = "데이터 소스 연결 상태를 저장했습니다.";
+  }
+  function renderCollectConfirm(plan) {
+    const card = document.querySelector("#collect-confirm");
+    if (!card) return;
+    card.replaceChildren(
+      element("p", { class: "confirm-summary" }, text("이 내용으로 수집할까요? "), element("strong", { text: plan.summary })),
+      element("div", { class: "button-row" },
+        buttonWithAttributes("이대로 수집", "collect-execute", "", {}),
+        buttonWithAttributes("다시 입력", "collect-cancel", "secondary", {})));
+    card.hidden = false;
+  }
+  function resetCollectionState() {
+    pendingCollectionPlan = null;
+    pendingCollection = null;
+    collectedInput = null;
+    ["#collect-confirm", "#collect-results"].forEach((selector) => {
+      const card = document.querySelector(selector);
+      if (card) {
+        card.replaceChildren();
+        card.hidden = true;
+      }
+    });
+  }
+  function syncCollectFileName() {
+    const fileInput = document.querySelector("#dry-lab-file");
+    const fileName = document.querySelector("#dry-lab-file-name");
+    if (fileName) fileName.textContent = fileInput?.files[0]?.name || "선택한 파일 없음";
+  }
+  function collectRecordCell(value) {
+    return element("td", { text: value === null || value === undefined ? "—" : String(value) });
+  }
+  function updateCollectMaterializeButton() {
+    const card = document.querySelector("#collect-results");
+    const submit = card?.querySelector('[data-action="collect-materialize"]');
+    if (!card || !submit) return;
+    const selected = card.querySelectorAll(".collect-row-check:checked").length;
+    submit.textContent = `선택한 ${selected}건으로 연구 입력 생성`;
+    submit.disabled = selected === 0;
+  }
+  function renderCollectResults(collection) {
+    const card = document.querySelector("#collect-results");
+    if (!card) return;
+    const rows = collection.records.map((record) => element("tr", { "data-record-id": record.id },
+      element("td", {}, element("input", { class: "collect-row-check", type: "checkbox", checked: "", "data-record-id": record.id, "aria-label": `${record.title} 선택` })),
+      collectRecordCell(record.title),
+      collectRecordCell(record.year),
+      collectRecordCell(record.venue),
+      collectRecordCell(record.citation_count)));
+    card.replaceChildren(
+      element("p", { class: "confirm-summary" }, text("수집 결과 "), element("strong", { text: `${collection.records.length}건` }), text(" — 연구 입력에 포함할 문서를 선택하세요.")),
+      element("table", { class: "collect-table" },
+        element("thead", {}, element("tr", {},
+          element("th", { scope: "col" }, element("span", { class: "visually-hidden", text: "선택" })),
+          ...["제목", "연도", "저널", "인용수"].map((label) => element("th", { scope: "col", text: label })))),
+        element("tbody", {}, ...rows)),
+      element("div", { class: "button-row" },
+        buttonWithAttributes(`선택한 ${collection.records.length}건으로 연구 입력 생성`, "collect-materialize", "", {}),
+        buttonWithAttributes("다시 입력", "collect-cancel", "secondary", {})));
+    card.hidden = false;
+  }
+  async function handleCollectAction(buttonNode) {
+    const action = buttonNode.dataset.action;
+    const result = document.querySelector("#collect-result");
+    if (action === "collect-cancel") {
+      resetCollectionState();
+      const fileInput = document.querySelector("#dry-lab-file");
+      if (fileInput) fileInput.value = "";
+      syncCollectFileName();
+      if (result) result.hidden = true;
+      return;
+    }
+    if (action === "collect-plan") {
+      const promptInput = document.querySelector("#collect-prompt");
+      const prompt = promptInput?.value.trim() || "";
+      if (!prompt) {
+        promptInput?.focus();
+        throw new Error("수집할 주제를 입력하세요.");
+      }
+      resetCollectionState();
+      syncCollectFileName();
+      pendingCollectionPlan = await dryLabRequest("/api/v1/collections/plan", { prompt });
+      renderCollectConfirm(pendingCollectionPlan);
+      if (result) result.hidden = true;
+      return;
+    }
+    if (action === "collect-materialize") {
+      if (!pendingCollection) throw new Error("먼저 수집을 실행하세요.");
+      const card = document.querySelector("#collect-results");
+      const selected = [...(card?.querySelectorAll(".collect-row-check:checked") || [])].map((box) => box.dataset.recordId);
+      if (!selected.length) throw new Error("연구 입력에 포함할 문서를 선택하세요.");
+      const materialized = await dryLabRequest(`/api/v1/collections/${pendingCollection.collection_id}/materialize`, { record_ids: selected });
+      if (typeof materialized.filename !== "string" || typeof materialized.content !== "string") throw new Error("서버의 연구 입력 응답을 확인할 수 없습니다.");
+      collectedInput = {
+        filename: materialized.filename,
+        media_type: materialized.media_type,
+        content: materialized.content,
+        provenance: { collection_id: pendingCollection.collection_id },
+      };
+      pendingCollection = null;
+      const fileInput = document.querySelector("#dry-lab-file");
+      if (fileInput) fileInput.value = "";
+      const fileName = document.querySelector("#dry-lab-file-name");
+      if (fileName) fileName.textContent = `수집 결과: ${materialized.filename} (${materialized.row_count}건)`;
+      if (card) {
+        card.replaceChildren();
+        card.hidden = true;
+      }
+      if (result) {
+        result.hidden = false;
+        result.textContent = "수집한 문서가 연구 입력으로 준비됐습니다. 아래에서 연구 목적을 고정하고 시작하세요.";
+      }
+      return;
+    }
+    if (!pendingCollectionPlan) throw new Error("먼저 수집 계획을 만드세요.");
+    const collected = await dryLabRequest("/api/v1/collections/execute", { plan_id: pendingCollectionPlan.plan_id });
+    if (typeof collected.collection_id !== "string" || !collected.collection_id || !Array.isArray(collected.records)) throw new Error("서버의 수집 결과 응답을 확인할 수 없습니다.");
+    pendingCollection = { collection_id: collected.collection_id, records: collected.records };
+    pendingCollectionPlan = null;
+    const card = document.querySelector("#collect-confirm");
+    if (card) {
+      card.replaceChildren();
+      card.hidden = true;
+    }
+    if (result) result.hidden = true;
+    renderCollectResults(pendingCollection);
+  }
   async function handleAction(buttonNode) {
     const action = buttonNode.dataset.action;
     const artifactAction = ["select-version", "attach", "detach", "create-version"].includes(action);
@@ -1001,7 +1310,9 @@
     buttonNode.disabled = true;
     buttonNode.setAttribute("aria-busy", "true");
     live.textContent = "서버 확인을 기다리고 있습니다.";
-    if (action.startsWith("provider-")) {
+    if (action === "connector-toggle") {
+      await handleConnectorToggle(buttonNode);
+    } else if (action.startsWith("provider-")) {
       await handleProviderAction(buttonNode);
     } else if (action === "select-version") {
       const applied = await refreshArtifactState(
@@ -1036,6 +1347,11 @@
       if (requestEpoch !== artifactActionEpoch) return;
       dryLabState = { ...dryLabState, ...created, artifact_versions: created.versions };
       live.textContent = "새 불변 Version을 생성했습니다.";
+    } else if (action === "collection-history-open") {
+      await openCollectionHistory(buttonNode.dataset.collectionId || "");
+      live.textContent = "수집 결과를 다시 열었습니다.";
+    } else if (action === "collection-history-back") {
+      workspaceHistoryDetail = null;
     } else {
       const capability = actionCapability(action);
       const endpoint = buttonNode.dataset.endpoint;
@@ -1048,13 +1364,14 @@
       const runId = action === "create-run" ? "" : requiredRunId();
       if (action === "create-run") {
         const file = document.querySelector("#dry-lab-file").files[0];
-        if (!file) throw new Error("업로드할 연구 입력 파일을 선택하세요.");
+        const input = collectedInput ?? (file ? { filename: file.name, media_type: "text/csv", content: await file.text() } : null);
+        if (!input) throw new Error("업로드할 연구 입력 파일을 선택하세요.");
         payload = {
           ...selectedExecutionTarget(),
           session_id: selectedDryLabSessionId(),
           prompt: requiredFieldValue("dry-lab-prompt", "실행 요청"),
           research_intent: researchIntentPayload(),
-          input: { filename: file.name, media_type: "text/csv", content: await file.text() },
+          input,
         };
       }
       if (action === "approve") payload.plan_digest = requiredPlanDigest();
@@ -1069,6 +1386,7 @@
         payload.confirmed = true;
       }
       const response = await dryLabRequest(endpoint, payload);
+      if (action === "create-run") collectedInput = null;
       if (action === "approve") {
         if (typeof response.token !== "string" || !response.token) throw new Error("승인 권한 응답을 확인할 수 없습니다.");
         approvalTokens.set(runId, response.token);
@@ -1095,6 +1413,21 @@
     const buttonNode = event.target.closest("button[data-action]");
     if (!buttonNode) return;
     const action = buttonNode.dataset.action;
+    if (["collect-plan", "collect-execute", "collect-materialize", "collect-cancel"].includes(action)) {
+      buttonNode.disabled = true;
+      handleCollectAction(buttonNode)
+        .catch((reason) => {
+          const result = document.querySelector("#collect-result");
+          if (result) {
+            result.hidden = false;
+            result.textContent = reason.message;
+          }
+        })
+        .finally(() => {
+          if (buttonNode.isConnected) buttonNode.disabled = false;
+        });
+      return;
+    }
     const selection = action === "select-version";
     const mutation = ["attach", "detach", "create-version"].includes(action);
     if ((selection || mutation) && artifactMutationPending) return;
@@ -1136,7 +1469,14 @@
   }
   screen.addEventListener("click", onScreenClick);
   screen.addEventListener("change", (event) => {
+    if (event.target.classList?.contains("collect-row-check")) {
+      updateCollectMaterializeButton();
+      return;
+    }
     if (event.target.id !== "dry-lab-file") return;
+    resetCollectionState();
+    const result = document.querySelector("#collect-result");
+    if (result) result.hidden = true;
     const fileName = document.querySelector("#dry-lab-file-name");
     if (fileName) fileName.textContent = event.target.files[0]?.name || "선택한 파일 없음";
   });
@@ -1178,9 +1518,18 @@
       if (path === "/artifacts") await refreshArtifactLibrary();
       if (/^\/artifacts\/[A-Za-z0-9._-]+$/.test(path)) await refreshArtifactState(path);
       if (path === "/settings/providers") {
+        await refreshConnectorState();
         await completeProviderCallback();
-        await refreshProviderState();
+        try {
+          await refreshProviderState();
+        } catch (reason) {
+          if (reason?.status !== 403) throw reason;
+          providerRegistry = [];
+          providerConnections = [];
+        }
       }
+      if (path === "/workspace") await refreshWorkspaceCollections();
+      if (path !== "/workspace") workspaceHistoryDetail = null;
       live.textContent = "워크스페이스 정보를 불러왔습니다.";
     } catch (reason) {
       error.hidden = false;
@@ -1192,6 +1541,7 @@
     }
     screen.className = "screen";
     render(renderPath, workspaceData);
+    scheduleWorkspacePolling(renderPath);
     screen.setAttribute("aria-busy", "false");
     if (focusRoute) focusRouteHeading();
   }

@@ -56,25 +56,25 @@ def test_product_shell_has_semantic_landmarks_and_accessible_bootstrap() -> None
         '<meta name="viewport" content="width=device-width, initial-scale=1">' in HTML
     )
     assert ":focus-visible" in CSS
-    assert "outline: 2px solid var(--signal-300)" in CSS
+    assert "outline: 2px solid var(--signal-500)" in CSS
     assert "prefers-reduced-motion: reduce" in CSS
     assert "overflow-x: hidden" in CSS
 
 
-def test_spectral_control_room_tokens_and_typography_are_preserved() -> None:
+def test_research_ledger_tokens_and_typography_are_preserved() -> None:
     expected_tokens = {
-        "--canvas": "#07090d",
-        "--surface-1": "#0f141c",
-        "--surface-2": "#151c27",
-        "--surface-3": "#1b2431",
-        "--text-strong": "#f4f7fb",
-        "--text": "#d2dae5",
-        "--text-muted": "#91a0b2",
-        "--signal-100": "#d7fff3",
-        "--signal-300": "#82f2cc",
-        "--signal-500": "#39d9ac",
-        "--attention": "#f2c66d",
-        "--danger": "#ff8a84",
+        "--canvas": "#f5f2ec",
+        "--surface-1": "#ffffff",
+        "--surface-2": "#f7f5f0",
+        "--surface-3": "#ece9e0",
+        "--text-strong": "#1d1a16",
+        "--text": "#35322c",
+        "--text-muted": "#5f5b52",
+        "--signal-100": "#7e2410",
+        "--signal-300": "#bf3f1f",
+        "--signal-500": "#9e3018",
+        "--attention": "#8a5a00",
+        "--danger": "#a62c3a",
     }
     for name, value in expected_tokens.items():
         assert f"{name}: {value}" in CSS
@@ -82,12 +82,17 @@ def test_spectral_control_room_tokens_and_typography_are_preserved() -> None:
     assert "--font-ui:" in CSS
     assert "--font-mono:" in CSS
     assert "overflow-wrap: anywhere" in CSS
-    assert "linear-gradient" in CSS
-    assert "radial-gradient" in CSS
     assert ".workspace-hero" in CSS
     assert ".signal-trace" in CSS
     assert ".metric-strip" in CSS
-    assert "#6f42c1" not in CSS.lower()
+    lowered = CSS.lower()
+    # The ledger direction bans decorative gradients and the retired AI-SaaS
+    # ramps (neon mint, startup teal); the violet ban predates both contracts.
+    assert "radial-gradient" not in lowered
+    assert "#6f42c1" not in lowered
+    assert "#82f2cc" not in lowered
+    assert "#39d9ac" not in lowered
+    assert "#14705e" not in lowered
 
 
 PRODUCT_SOURCE = HTML + JAVASCRIPT
@@ -290,8 +295,9 @@ def test_dry_lab_mutations_target_the_server_issued_run() -> None:
     assert "localStorage" not in JAVASCRIPT
     assert "sessionStorage" not in JAVASCRIPT
     assert (
-        'input: { filename: file.name, media_type: "text/csv", '
-        "content: await file.text() }"
+        "const input = collectedInput ?? (file ? "
+        '{ filename: file.name, media_type: "text/csv", '
+        "content: await file.text() } : null);"
     ) in JAVASCRIPT
     assert "dryLabState = validateDryLabResource(response);" in JAVASCRIPT
     assert (

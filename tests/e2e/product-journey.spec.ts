@@ -21,6 +21,7 @@ async function expectVisibleHashes(page: Page): Promise<void> {
 }
 
 async function fillRunForm(page: Page, suffix: string, fileSuffix: string): Promise<void> {
+  await page.locator(".adv-opts > summary").first().click();
   await page.locator("#dry-lab-file").setInputFiles({
     name: `calibrated-${fileSuffix}.csv`,
     mimeType: "text/csv",
@@ -327,7 +328,7 @@ async function completeJourney(page: Page, suffix: string, fileSuffix: string, c
   await expect(page.getByRole("heading", { name: "연구 입력 업로드" })).toBeVisible();
   if (captureProject) await captureRoute(page, captureProject, "upload");
   await fillRunForm(page, suffix, fileSuffix);
-  await page.getByRole("button", { name: "Run 생성 및 ActionPlan 고정" }).click();
+  await page.getByRole("button", { name: "연구 시작하기" }).click();
   await expect(page).toHaveURL(new RegExp(`${productOrigin}/runs/[^/]+/approval$`, "u"));
   await expect(page.getByRole("heading", { name: "ActionPlan 승인" })).toBeVisible();
   const runId = new URL(page.url()).pathname.split("/")[2];
@@ -501,7 +502,7 @@ test("primitive showcase renders under the product CSP", async ({ page }) => {
   expect(metrics.overflow).toBeLessThanOrEqual(1);
   expect(Number.parseFloat(metrics.reducedMotionDuration)).toBeLessThanOrEqual(0.00001);
   expect(metrics.shortTargets).toEqual([]);
-  expect(metrics.focusOutline).toBe("2px rgb(130, 242, 204)");
+  expect(metrics.focusOutline).toBe("2px rgb(158, 48, 24)");
   expect(browserErrors).toEqual([]);
   if (captureDirectory) {
     const viewport = page.viewportSize();
@@ -574,7 +575,7 @@ test("failed Run creation reports an alert and restores focus", async ({ page })
   await page.goto(`${productOrigin}/upload`);
   await expect(page.locator("#research-mode")).toHaveValue("");
   await expect(page.locator("#research-data-origin")).toHaveValue("");
-  const create = page.getByRole("button", { name: "Run 생성 및 ActionPlan 고정" });
+  const create = page.getByRole("button", { name: "연구 시작하기" });
   await create.click();
   await expect(page.getByRole("alert")).toContainText("업로드할 연구 입력 파일을 선택하세요.");
   await expect(create).toBeFocused();
@@ -597,7 +598,7 @@ test("provider Run creation sends the complete intent before approval", async ({
   await page.locator("#run-execution-target").selectOption(
     "018f0d7d-6b17-7a91-8b31-2f7331677d10",
   );
-  await page.getByRole("button", { name: "Run 생성 및 ActionPlan 고정" }).click();
+  await page.getByRole("button", { name: "연구 시작하기" }).click();
 
   await expect.poll(() => submitted).toMatchObject({
     execution_mode: "provider_model",
@@ -624,7 +625,7 @@ test("malformed exact resource response fails closed", async ({ page }) => {
   await authenticateProduct(page, "foreign");
   await page.goto(`${productOrigin}/upload`);
   await fillRunForm(page, "계약 오류", "contract-error");
-  await page.getByRole("button", { name: "Run 생성 및 ActionPlan 고정" }).click();
+  await page.getByRole("button", { name: "연구 시작하기" }).click();
   const runId = new URL(page.url()).pathname.split("/")[2];
   await page.route(`${productOrigin}/api/v1/runs/${runId}`, async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: '{"stage":"execute"}' });
@@ -829,7 +830,7 @@ test("approval rejection and Run cancellation are terminal and output-free", asy
   await authenticateProduct(page, "foreign");
   await page.goto(`${productOrigin}/upload`);
   await fillRunForm(page, "승인 거절", "approval-reject");
-  await page.getByRole("button", { name: "Run 생성 및 ActionPlan 고정" }).click();
+  await page.getByRole("button", { name: "연구 시작하기" }).click();
   await expect(page).toHaveURL(new RegExp(`${productOrigin}/runs/[^/]+/approval$`, "u"));
   const rejectedRunId = new URL(page.url()).pathname.split("/")[2];
   await page.getByRole("button", { name: "계획 거절" }).click();
@@ -842,7 +843,7 @@ test("approval rejection and Run cancellation are terminal and output-free", asy
 
   await page.goto(`${productOrigin}/upload`);
   await fillRunForm(page, "실행 취소", "run-cancel");
-  await page.getByRole("button", { name: "Run 생성 및 ActionPlan 고정" }).click();
+  await page.getByRole("button", { name: "연구 시작하기" }).click();
   await expect(page).toHaveURL(new RegExp(`${productOrigin}/runs/[^/]+/approval$`, "u"));
   const cancelledRunId = new URL(page.url()).pathname.split("/")[2];
   await page.getByRole("button", { name: "계획 승인" }).click();
