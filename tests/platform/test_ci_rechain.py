@@ -389,3 +389,136 @@ def test_main_rechains_the_checked_in_catalog(
     verified = load_checked_in_ci_catalog(catalog)
     item = next(job for job in verified.jobs if job.job is CiJob.SPEC)
     assert item.argv == portable_ci_argv(commands[CiJob.SPEC], tmp_path)
+
+
+_SPEC_METADATA_JSON: Final = (
+    '{"spec":{"control_ids":["CI-005"],"category":"contract",'
+    '"environment_profile":"local-ci","prerequisites":[],"blockers":[]}}\n'
+)
+INVALID_METADATA_DOCUMENTS: Final = (
+    b"not json\n",
+    b'{"spec":{}}\n',
+    b'{"spec":"text"}\n',
+    b'{"spec":{"control_ids":[],"category":"contract"}}\n',
+    b'{"spec":{"control_ids":["CI-005"],"category":"contract","rogue":1}}\n',
+)
+
+
+def _drop_spec_job(document: dict[str, object]) -> None:
+    jobs = _catalog_jobs(document)
+    jobs[:] = [
+        job for job in jobs if cast("dict[str, object]", job)["job"] != str(CiJob.SPEC)
+    ]
+
+
+def _write_metadata(root: Path, payload: bytes) -> Path:
+    path = root / "new-job-metadata.json"
+    _ = path.write_bytes(payload)
+    return path
+
+
+def test_main_consumes_a_metadata_file_for_a_job_missing_from_the_catalog(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _ = _seed_root(tmp_path)
+    catalog = _write_document(tmp_path, _seed_catalog(tmp_path))
+    _rewrite_document(tmp_path, _drop_spec_job)
+    metadata_path = _write_metadata(tmp_path, _SPEC_METADATA_JSON.encode())
+    monkeypatch.setattr(sys, "argv", ["ci_rechain", str(tmp_path), str(metadata_path)])
+
+    assert ci_rechain.main() == 0
+
+    captured = capsys.readouterr()
+    assert "CI_RECHAINED" in captured.out
+    assert f"added={CiJob.SPEC}" in captured.out
+    item = next(
+        job for job in load_checked_in_ci_catalog(catalog).jobs if job.job is CiJob.SPEC
+    )
+    assert item.control_ids == ("CI-005",)
+    assert item.category == "contract"
+
+
+def test_main_rejects_a_metadata_file_for_a_job_already_in_the_catalog(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _ = _seed_root(tmp_path)
+    catalog = _write_document(tmp_path, _seed_catalog(tmp_path))
+    original = catalog.read_bytes()
+    metadata_path = _write_metadata(tmp_path, _SPEC_METADATA_JSON.encode())
+    monkeypatch.setattr(sys, "argv", ["ci_rechain", str(tmp_path), str(metadata_path)])
+
+    assert ci_rechain.main() == 1
+
+    assert "CI re-chain failed" in capsys.readouterr().err
+    assert catalog.read_bytes() == original
+    assert not (tmp_path / TEMPORARY_RELATIVE_PATH).exists()
+
+
+def test_main_rejects_a_missing_metadata_file_when_a_job_is_missing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _ = _seed_root(tmp_path)
+    catalog = _write_document(tmp_path, _seed_catalog(tmp_path))
+    _rewrite_document(tmp_path, _drop_spec_job)
+    original = catalog.read_bytes()
+    monkeypatch.setattr(sys, "argv", ["ci_rechain", str(tmp_path)])
+
+    assert ci_rechain.main() == 1
+
+    assert "CI re-chain failed" in capsys.readouterr().err
+    assert catalog.read_bytes() == original
+
+
+def test_main_rejects_invalid_metadata_documents(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    for index, payload in enumerate(INVALID_METADATA_DOCUMENTS):
+        case_root = tmp_path / f"case{index}"
+        _ = case_root.mkdir()
+        _ = _seed_root(case_root)
+        _ = _write_document(case_root, _seed_catalog(case_root))
+        metadata_path = _write_metadata(case_root, payload)
+        monkeypatch.setattr(
+            sys, "argv", ["ci_rechain", str(case_root), str(metadata_path)]
+        )
+
+        assert ci_rechain.main() == 1, payload
+
+        assert "CI re-chain failed" in capsys.readouterr().err
+
+
+def test_main_rejects_a_metadata_document_with_an_unknown_job_name(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _ = _seed_root(tmp_path)
+    _ = _write_document(tmp_path, _seed_catalog(tmp_path))
+    metadata_path = _write_metadata(
+        tmp_path, b'{"rogue-job":{"control_ids":["CI-005"],"category":"contract"}}\n'
+    )
+    monkeypatch.setattr(sys, "argv", ["ci_rechain", str(tmp_path), str(metadata_path)])
+
+    assert ci_rechain.main() == 1
+
+    assert "CI re-chain failed" in capsys.readouterr().err
+
+
+def test_main_rejects_excess_argv(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["ci_rechain", "a", "b", "c"])
+
+    assert ci_rechain.main() == 2
+
+    captured = capsys.readouterr()
+    assert "usage:" in captured.err
