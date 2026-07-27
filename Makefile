@@ -15,10 +15,6 @@ PNPM_STORE_DIR := $(PNPM_ROOT)/store
 PNPM_CACHE_DIR := $(ROOT)/.cache/pnpm
 NODE_MODULES := $(ROOT)/node_modules
 CONTRACT_NODE_MODULES := $(ROOT)/packages/contracts/node_modules
-DOCKER_ANONYMOUS_CONFIG := $(ROOT)/infra/local/docker-anonymous
-POSTGRES_IMAGE := postgres:18.4-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15
-LOCAL_IMAGES := $(POSTGRES_IMAGE) redis:8.2.7-alpine@sha256:223b183cbc49f5ff48728e1fc52ccf101f05072decad2bd9867281a3c9bf75fd minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 axllent/mailpit:v1.27.8@sha256:6abc8e633df15eaf785cfcf38bae48e66f64beecdc03121e249d0f9ec15f0707 nginx:1.29.5-alpine@sha256:1eff5a5f3fcf8431a0abb7eddf5471fec24e5e1905a2581aeacdb07a4479b92b python:3.12.13-alpine3.23@sha256:601d3d3797e90e2534782e69c85fafb7971b43f24c7b1b079b7e48dd435e458d ghcr.io/astral-sh/uv:0.11.28@sha256:0f36cb9361a3346885ca3677e3767016687b5a170c1a6b88465ec14aefec90aa
-CLAMAV_IMAGE := clamav/clamav:1.4.3@sha256:75fb5fd95fcbe1d7e6d240c369c1572b686ee2c95949d1042b5148de8eddebb4
 
 
 # SPEC-v0.5 verifier inputs. Overridable so the Stage 3 re-anchor to canonical
@@ -26,7 +22,7 @@ CLAMAV_IMAGE := clamav/clamav:1.4.3@sha256:75fb5fd95fcbe1d7e6d240c369c1572b686ee
 SPEC_V05_MANIFEST ?= $(ROOT)/docs/requirements/requirements-v0.5.yaml
 SPEC_V05_SPEC ?= $(ROOT)/docs/spec/SPEC-v0.5.md
 
-.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-spec-v05 verify-architecture test-local-config print-local-images prepare-postgres-image test-migrations test-rls test-upload test-artifacts test-science test-dry-lab test-local-workbench check-quarantine stack-up smoke-local stack-down ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
+.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-spec-v05 verify-architecture test-upload test-artifacts test-science test-dry-lab test-local-workbench check-quarantine ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
 
 bootstrap:
 	@set -eu; \
@@ -140,43 +136,6 @@ verify-architecture:
 	PYTHONDONTWRITEBYTECODE=1 "$$python" -m unittest discover -s "$(ROOT)/tests" -p "test_architecture.py" -v; \
 	PYTHONDONTWRITEBYTECODE=1 "$$python" "$(ROOT)/tools/verify_architecture.py" "$(ROOT)/docs/architecture"
 
-test-local-config:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	PYTHONPATH="$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" tests/local_stack -v; \
-	"$(VENV)/bin/ruff" check services/local tests/local_stack; \
-	PYTHONPATH="$(ROOT)" "$(VENV)/bin/basedpyright" services/local tests/local_stack; \
-	docker compose -f compose.yaml config --quiet
-
-print-local-images:
-	@printf '%s\n' $(LOCAL_IMAGES) $(CLAMAV_IMAGE)
-
-prepare-postgres-image:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	command -v docker >/dev/null 2>&1 || { echo "error: Docker is required" >&2; exit 1; }; \
-	docker_bin="$$(command -v docker)"; \
-	docker info >/dev/null 2>&1 || { echo "error: Docker engine is unavailable" >&2; exit 1; }; \
-	docker_host="$$(docker context inspect "$$(docker context show)" --format '{{.Endpoints.docker.Host}}')"; \
-	DOCKER_HOST="$$docker_host" sh infra/local/pull-anonymous.sh "$$docker_bin" "$(POSTGRES_IMAGE)"
-
-test-migrations: prepare-postgres-image
-	@set -eu; \
-	cd "$(ROOT)"; \
-	PYTHONPATH="$(ROOT)/packages/contracts/python:$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" \
-		services/api/tests/persistence/test_schema_artifacts.py \
-		services/api/tests/persistence/test_principal.py \
-		services/api/tests/persistence/test_migrations.py -v; \
-	"$(VENV)/bin/ruff" check services/api/persistence services/api/migrations services/api/tests/persistence; \
-	PYTHONPATH="$(ROOT)/packages/contracts/python:$(ROOT)" "$(VENV)/bin/basedpyright" services/api/persistence services/api/migrations services/api/tests/persistence
-
-test-rls: prepare-postgres-image
-	@set -eu; \
-	cd "$(ROOT)"; \
-	PYTHONPATH="$(ROOT)/packages/contracts/python:$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" services/api/tests/persistence/test_rls*.py -v; \
-	"$(VENV)/bin/ruff" check services/api/persistence services/api/migrations services/api/tests/persistence; \
-	PYTHONPATH="$(ROOT)/packages/contracts/python:$(ROOT)" "$(VENV)/bin/basedpyright" services/api/persistence services/api/migrations services/api/tests/persistence
-
 test-upload:
 	@set -eu; \
 	cd "$(ROOT)"; \
@@ -184,31 +143,12 @@ test-upload:
 	"$(VENV)/bin/ruff" check services/api/upload tests/upload services/local/scanner.py tests/local_stack/test_scanner.py; \
 	PYTHONPATH="$(ROOT)" "$(VENV)/bin/basedpyright" services/api/upload tests/upload services/local/scanner.py tests/local_stack/test_scanner.py
 
-test-artifacts: prepare-postgres-image
+test-artifacts:
 	@set -eu; \
 	cd "$(ROOT)"; \
-	PYTHONPATH="$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" \
-		tests/artifacts \
-		services/api/tests/persistence/test_artifact_composition.py \
-		services/api/tests/persistence/test_artifact_composition_postgres.py \
-		services/api/tests/persistence/test_artifact_persistence.py \
-		services/api/tests/persistence/test_artifact_persistence_races.py \
-		services/api/tests/persistence/test_artifact_project_guards.py -v; \
-	"$(VENV)/bin/ruff" check \
-		services/api/artifacts \
-		tests/artifacts \
-		services/api/tests/persistence/test_artifact_composition.py \
-		services/api/tests/persistence/test_artifact_composition_postgres.py \
-		services/api/tests/persistence/test_artifact_persistence.py \
-		services/api/tests/persistence/test_artifact_persistence_races.py \
-		services/api/tests/persistence/test_artifact_project_guards.py; \
-	PYTHONPATH="$(ROOT)" "$(VENV)/bin/basedpyright" \
-		services/api/artifacts \
-		tests/artifacts services/api/tests/persistence/test_artifact_composition.py \
-		services/api/tests/persistence/test_artifact_composition_postgres.py \
-		services/api/tests/persistence/test_artifact_persistence.py \
-		services/api/tests/persistence/test_artifact_persistence_races.py \
-		services/api/tests/persistence/test_artifact_project_guards.py
+	PYTHONPATH="$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" tests/artifacts -v; \
+	"$(VENV)/bin/ruff" check services/api/artifacts tests/artifacts; \
+	PYTHONPATH="$(ROOT)" "$(VENV)/bin/basedpyright" services/api/artifacts tests/artifacts
 
 test-science:
 	@set -eu; \
@@ -244,30 +184,6 @@ test-security:
 	cd "$(ROOT)"; \
 	test -n "$(CASE)" || { echo "error: CASE is required" >&2; exit 1; }; \
 	PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/python" -m tools.platform_policy.security_gate --case "$(CASE)"
-
-stack-up: test-local-config
-	@set -eu; \
-	cd "$(ROOT)"; \
-	command -v docker >/dev/null 2>&1 || { echo "error: Docker is required" >&2; exit 1; }; \
-	docker_bin="$$(command -v docker)"; \
-	docker info >/dev/null 2>&1 || { echo "error: Docker engine is unavailable" >&2; exit 1; }; \
-	docker_host="$$(docker context inspect "$$(docker context show)" --format '{{.Endpoints.docker.Host}}')"; \
-	for image in $(LOCAL_IMAGES); do \
-		DOCKER_HOST="$$docker_host" sh infra/local/pull-anonymous.sh "$$docker_bin" "$$image"; \
-	done; \
-	DOCKER_HOST="$$docker_host" sh infra/local/pull-anonymous.sh "$$docker_bin" --platform linux/amd64 "$(CLAMAV_IMAGE)"; \
-	docker compose -f compose.yaml up -d --build --pull never --wait --wait-timeout 300
-
-smoke-local:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	command -v jq >/dev/null 2>&1 || { echo "error: jq is required" >&2; exit 1; }; \
-	sh infra/local/smoke-local.sh
-
-stack-down:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	docker compose -f compose.yaml down --volumes --remove-orphans
 
 ci-source-identity:
 	@set -eu; \

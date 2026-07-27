@@ -14,9 +14,9 @@ zone is removed wholesale, so SaaS modules importing each other is not drift.
 The boundary that must hold from Stage 0 onward is that the keep side —
 nipo_local and the reuse closure itself — never depends on the zone.
 
-``services/api/artifacts/__init__.py`` is deliberately not audited: it still
-re-exports ``PostgresArtifactStore`` until the Stage 2 same-commit pruning
-drops that name together with the postgres modules.
+``services/api/artifacts/__init__.py`` is audited alongside the closure
+modules: the Stage 2 pruning dropped its ``PostgresArtifactStore`` re-export
+together with the postgres modules, so any zone import there is drift.
 """
 
 from __future__ import annotations
@@ -70,13 +70,7 @@ and ``signing`` (pulled in through ``service``), per the Stage 0 acceptance.
 
 DELETION_SCHEDULED_MODULES: Final = (
     "services.api.dry_lab_fixture",
-    "services.api.persistence",
     "services.api.upload",
-    "services.api.migrations",
-    "services.api.artifacts.composition",
-    "services.api.artifacts.http",
-    "services.api.artifacts.scope_resolver",
-    "services.api.artifacts.postgres_*",
     "services.local",
     "services.worker",
 )
@@ -216,7 +210,8 @@ def _iter_audited_files(root: Path) -> Iterator[Path]:
         root: Repository root containing the audited trees.
 
     Yields:
-        Python files under the audited roots plus each closure module file.
+        Python files under the audited roots plus the closure package
+        ``__init__`` and each closure module file.
     """
     for relative_root in AUDITED_PACKAGE_ROOTS:
         base = root / relative_root
@@ -227,7 +222,7 @@ def _iter_audited_files(root: Path) -> Iterator[Path]:
                 if "__pycache__" not in path.parts
             )
     artifacts = root / _ARTIFACTS_ROOT
-    for name in _CLOSURE_MODULE_NAMES:
+    for name in ("__init__", *_CLOSURE_MODULE_NAMES):
         candidate = artifacts / f"{name}.py"
         if candidate.is_file():
             yield candidate

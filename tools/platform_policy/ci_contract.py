@@ -217,9 +217,6 @@ class CiJob(StrEnum):
     OPENAPI = "openapi"
     PROTOCOL_CONTRACTS = "protocol-contracts"
     ARTIFACT_CONTRACTS = "artifact-contracts"
-    LOCAL_CONFIG = "local-config"
-    MIGRATIONS = "migrations"
-    RLS = "rls"
     UPLOAD = "upload"
     ARTIFACTS = "artifacts"
     SCIENCE = "science"
@@ -506,7 +503,7 @@ class CiCatalogJob(BaseModel):
 
 
 class CiControlCatalog(BaseModel):
-    """Canonical 28-job catalog resolved from an independent authority."""
+    """Canonical full-job catalog resolved from an independent authority."""
 
     model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="forbid")
 

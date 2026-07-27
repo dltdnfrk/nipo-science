@@ -28,13 +28,7 @@ _CLOSURE_MODULE_NAMES = (
 
 _DELETION_FILES = (
     "services/api/dry_lab_fixture.py",
-    "services/api/persistence/__init__.py",
     "services/api/upload/__init__.py",
-    "services/api/migrations/__init__.py",
-    "services/api/artifacts/composition.py",
-    "services/api/artifacts/http.py",
-    "services/api/artifacts/scope_resolver.py",
-    "services/api/artifacts/postgres_store.py",
     "services/local/__init__.py",
     "services/worker/__init__.py",
 )
@@ -55,7 +49,7 @@ def _write_minimal_repo(tmp_path: Path) -> None:
 
 
 def test_unit_current_repository_satisfies_quarantine() -> None:
-    # Given: the real repository tree at Stage 1 (hosted application plane retired).
+    # Given: the real repository tree at Stage 2 (hosted persistence plane retired).
 
     # When: the quarantine check scans it.
     violations = scan(REPO_ROOT)
@@ -111,16 +105,16 @@ def test_unit_saas_zone_internal_imports_are_allowed(tmp_path: Path) -> None:
     [
         "from services.api.dry_lab_fixture import run_server\n",
         "import services.api.upload\n",
-        "from services.api.artifacts import postgres_store\n",
+        "from services.api import upload\n",
         "import services.local.scanner\n",
-        "from services.api.persistence import auth_sessions\n",
+        "import services.worker.dry_lab_vertical\n",
     ],
     ids=(
         "from-module",
         "plain-import",
         "package-alias",
         "services-local",
-        "persistence",
+        "services-worker",
     ),
 )
 def test_security_keep_side_saas_import_is_rejected(
@@ -149,7 +143,7 @@ def test_security_closure_module_importing_saas_module_is_rejected(
     _write(
         tmp_path,
         "services/api/artifacts/service.py",
-        "from .postgres_store import PostgresArtifactStore\n",
+        "from ..upload import IngestionService\n",
     )
 
     # When: the quarantine check scans the tree.
@@ -158,7 +152,7 @@ def test_security_closure_module_importing_saas_module_is_rejected(
     # Then: the closure drift is detected.
     assert violations == (
         "saas-quarantine-import:services/api/artifacts/service.py:"
-        "services.api.artifacts.postgres_store",
+        "services.api.upload",
     )
 
 

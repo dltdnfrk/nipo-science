@@ -1,20 +1,19 @@
 # Nipo Science
 
-The current foundation establishes an isolated monorepo, reproducible toolchain,
-shared Python/TypeScript contracts, local services, the PostgreSQL persistence
-schema, and a test-principal Korean Artifact inspection slice. Production public
-provider connection and OAuth surfaces remain gated to later implementation
-waves; production database sessions and qualified provider Run dispatch are
-already wired through their restricted service boundaries.
+The repository is migrating to the SPEC-v0.5 local-first single-user science
+workbench. The current tree keeps the isolated monorepo, reproducible
+toolchain, shared Python/TypeScript contracts, the deterministic science
+package, the artifact reuse closure, and the nipo_local workbench
+(`apps/local`), while the hosted multi-tenant application and persistence
+planes are being retired in staged deletions (ADR-0011).
 
 ## Skeleton
 
 - `apps/web`: Korean product shell and isolated test fixtures
-- `services/api`: API service boundary, local stub, and persistence migrations
+- `services/api`: staged-retirement SaaS zone plus the artifact reuse closure
 - `services/worker`: worker service boundary and local stub
 - `packages/contracts`: shared interface contracts
 - `packages/science`: shared scientific domain package
-- `infra`: deployment and data-service configuration
 - `tests`: cross-project and boundary tests
 - `docs`: project documentation
 - `tools`: target-local developer tooling
@@ -25,13 +24,8 @@ repository references or writes to sibling repositories.
 ## Toolchain decision
 
 The reproducible pins are Node 24.17.0, pnpm 11.12.0, Python 3.12.13, and uv
-0.11.28. PostgreSQL 18.4 is the current local data-service baseline. Next.js 16.2.10
-and React 19.2.7 are reserved for the later web bootstrap and are deliberately
-not dependencies in Wave 0.
-
-The 2026-07-13 official-stack review superseded the plan's earlier pnpm 10 and
-PostgreSQL 16 examples. The plan, normative v0.4 specification, and this target
-now agree on pnpm 11.12.0 and PostgreSQL 18.4.
+0.11.28. Next.js 16.2.10 and React 19.2.7 are reserved for the later web
+bootstrap and are deliberately not dependencies in Wave 0.
 
 The `0.0.0` values in the private Node and non-package Python manifests are an
 intentional non-release sentinel, not the product or deployment version. Release,
@@ -58,29 +52,6 @@ Run `make test-boundaries` to execute the standard-library boundary tests and
 then scan the real project root, using the local virtual environment when it is
 available.
 
-## Local Docker stack
-
-Run `make stack-up`, `make smoke-local`, and `make stack-down` in that order to
-build, verify, and remove the local stack. Published service ports bind only to
-`127.0.0.1` and remain overrideable through the `SWB_*_PORT` variables.
-
-The browser-facing app origin is `http://localhost:53000`; the isolated Artifact
-origin is `http://127.0.0.1:59000`. These resolvable loopback hosts require no
-`/etc/hosts` entries and keep the host-only app cookie outside the Artifact
-origin. `COOKIE_DOMAIN` remains empty.
-
-## Persistence verification
-
-Run `make test-migrations` for empty and seeded forward/backward/forward coverage,
-and `make test-rls` for live PostgreSQL tenant and integrity attacks. Each target
-uses a process-specific Compose project and dynamically assigned loopback port,
-then removes its containers, network, and volume in a guaranteed cleanup path.
-
-The signed principal adapter is enabled only in tests. Both its verified claim and
-database RLS require an active `(org_id, user_id)` membership. Public API routes
-remain disabled until production F01 authentication is implemented; the test
-principal is not a production authentication fallback.
-
 ## Scientific upload ingestion
 
 Run `make test-upload` to verify the quarantine-to-clean ingestion boundary. The
@@ -99,7 +70,7 @@ immutable, and every rejection invokes request-atomic removal.
 
 ## Immutable Artifact Versions
 
-Run `make test-artifacts` to verify the upload-to-Artifact persistence boundary.
+Run `make test-artifacts` to verify the artifact reuse closure.
 Artifact IDs and Version IDs are server-generated UUIDv7 values. Version saves
 use `base_version_no` compare-and-swap, derive tenant-private object keys only
 from organization, Project, and SHA-256, retain immutable producer/environment/
@@ -119,13 +90,10 @@ millisecond expiry. Minimum-duration deadlines round upward while an independent
 hard cap rounds `now + 10 minutes` downward, so a 1 ms request is not shortened
 and no token exceeds ten minutes. Redemption holds the Project row lock across
 archive authorization and blob read. Expiry, token tampering, checksum mismatch,
-foreign scope, and archived Projects fail closed. The durable adapter commits CAS metadata
-and immutable lineage in PostgreSQL, enforces same-Project composite keys and the
-current requester's execution scope, and stores bytes below an owner-private
-content-addressed root. Project/Artifact locks serialize archive and CAS changes.
-Blobs are fsynced before atomic publication, while filesystem or metadata failure
-compensates unreferenced content under a per-address database lock. The
-deterministic in-memory adapter remains for isolated tests.
+foreign scope, and archived Projects fail closed. The filesystem blob store
+fsyncs bytes below a private content-addressed root before atomic publication,
+and the deterministic in-memory adapter backs isolated tests; the retired
+hosted PostgreSQL adapter is gone with the persistence plane.
 
 ## Deterministic Dry-Lab Science
 
@@ -161,12 +129,3 @@ acceptance surface, not the production identity or product UI delivered in
 later waves. Start `services.api.dry_lab_fixture.run_server()` to serve the
 accessible Korean browser fixture from `apps/web/g002-fixture.html`.
 
-The authenticated ProductServer journey is also an explicit process-local
-browser fixture. `ProductDryLabService` can be composed only with
-`authenticated_fixture=True`; a normal server starts without demo identities,
-Runs, or Artifacts. Its reload and multi-Run checks are UI/API acceptance
-evidence, not PostgreSQL restart or production persistence evidence. Durable
-Artifact creation, Version reads, and downloads now use the production
-composition documented above. Production Run, approval, execution, Review, and
-Export durability remains bound to the normalized PostgreSQL graph and still
-requires its own principal-scoped service composition before release.

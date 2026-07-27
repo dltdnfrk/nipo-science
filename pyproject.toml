@@ -5,14 +5,11 @@ description = "Scientific workbench services and domain packages"
 readme = "README.md"
 requires-python = "==3.12.13"
 dependencies = [
-  "alembic==1.18.5",
-  "asyncpg==0.31.0",
   "cryptography==49.0.0",
   "fastapi==0.139.0",
   "pillow==12.3.0",
   "pydantic==2.13.4",
   "pypdf==6.14.2",
-  "sqlalchemy[asyncio]==2.0.51",
 ]
 
 [dependency-groups]
@@ -80,11 +77,6 @@ unfixable = []
 "packages/contracts/python/science_workbench_contracts/openapi_validator.py" = ["C901", "PLR0912", "D"]
 "packages/contracts/python/tests/*.py" = ["S101", "ARG", "PLR2004", "SLF001", "D"]
 "packages/contracts/python/validate_openapi.py" = ["D", "T201"]
-"services/api/migrations/**/*.py" = ["D", "S608"]
-"services/api/migrations/*.py" = ["D", "S608"]
-"services/api/persistence/principal.py" = ["TC001"]
-"services/api/tests/persistence/**/*.py" = ["D", "S101", "S603", "S607", "S608", "PLR2004"]
-"services/api/tests/persistence/*.py" = ["D", "S101", "S603", "S607", "S608", "PLR2004"]
 "tests/upload/fixtures.py" = ["PLR0913"]
 "apps/local/tests/**/*.py" = ["S101", "ARG", "PLR2004", "SLF001", "D", "INP001"]
 "apps/local/tests/*.py" = ["S101", "S603", "S607", "ARG", "PLR2004", "SLF001", "D", "INP001"]

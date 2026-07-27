@@ -1118,7 +1118,7 @@ def test_canonical_fixture_finalizes_and_verifies_document(
     document = canonical_bytes(envelope)
     payload = verify_finalized_release_document(document, trust=canonical_fixture.trust)
     assert payload.receipt.outcome == "incomplete"
-    assert len(payload.receipt.controls) == 25
+    assert len(payload.receipt.controls) == len(CiJob)
     assert (
         len(
             {

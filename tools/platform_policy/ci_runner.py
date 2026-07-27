@@ -1742,13 +1742,6 @@ def ci_commands(root: Path) -> tuple[CiCommand, ...]:
             (*make, "test-artifact-contracts"),
             CountKind.PYTEST,
         ),
-        CiCommand(
-            CiJob.LOCAL_CONFIG,
-            (*make, "test-local-config"),
-            CountKind.PYTEST,
-        ),
-        CiCommand(CiJob.MIGRATIONS, (*make, "test-migrations"), CountKind.PYTEST),
-        CiCommand(CiJob.RLS, (*make, "test-rls"), CountKind.PYTEST),
         CiCommand(CiJob.UPLOAD, (*make, "test-upload"), CountKind.PYTEST),
         CiCommand(CiJob.ARTIFACTS, (*make, "test-artifacts"), CountKind.PYTEST),
         CiCommand(CiJob.SCIENCE, (*make, "test-science"), CountKind.PYTEST),

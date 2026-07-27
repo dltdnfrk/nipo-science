@@ -84,11 +84,11 @@ bytes that fail verification.
 
 Execution ownership on `commit_version` and `attach_session`
 ------------------------------------------------------------
-The durable execution-ownership walk lives in
-`services/api/artifacts/postgres_operations.references_valid`, on the *commit*
-path, and it goes version -> execution -> run -> session and on into
-`provider_connections`. The durable `attach_session` has no such check at all;
-it validates a live same-Project Session and a same-Project Version, which this
+The retired hosted adapter ran its durable execution-ownership walk
+(`references_valid`) on the *commit* path, going version -> execution -> run
+-> session and on into `provider_connections`. Its durable `attach_session`
+had no such check at all;
+it validated a live same-Project Session and a same-Project Version, which this
 module also does.
 
 `commit_version` binds `EXECUTION_OWNED`: the execution named by
@@ -3404,7 +3404,7 @@ class LocalArtifactStore:
     ) -> bool:
         """Verify every reference and derived field one Version asserts.
 
-        Named after `postgres_operations.references_valid` because it answers
+        Named after the retired hosted adapter's `references_valid` because it
         the same question at the same point on the commit path: the producing
         execution must resolve in this exact tenant and Project, every input
         Version must resolve in this Project, and the address, size, and

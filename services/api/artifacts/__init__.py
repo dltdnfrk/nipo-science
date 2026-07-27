@@ -1,4 +1,4 @@
-"""Tenant-safe immutable Artifact Version service."""
+"""Single-user immutable Artifact Version service (local reuse closure)."""
 
 from .blob_store import PrivateBlobStore
 from .file_recovery import FileArtifactRecovery
@@ -15,7 +15,6 @@ from .models import (
     VersionDraft,
     WatcherClaim,
 )
-from .postgres_store import PostgresArtifactStore
 from .recovery import ArtifactRecovery, ArtifactRecoveryError
 from .runtime import SystemClock, Uuid7Factory
 from .service import ArtifactService
@@ -39,7 +38,6 @@ __all__ = [
     "InMemoryArtifactRecovery",
     "InMemoryArtifactStore",
     "OutputWatcher",
-    "PostgresArtifactStore",
     "PrivateBlobStore",
     "SessionArtifactLink",
     "SignedDownload",

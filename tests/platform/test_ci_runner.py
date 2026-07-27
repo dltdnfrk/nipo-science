@@ -33,7 +33,6 @@ from tools.platform_policy.ci_contract import (
 )
 from tools.platform_policy.ci_paths import (
     G002_ARTIFACT_PYTHON_PATHS,
-    G002_PYTHON_PATHS,
     G002_UPLOAD_PYTHON_PATHS,
     G003_SCIENCE_PYTHON_PATHS,
     G005_LOCAL_PYTHON_PATHS,
@@ -1109,9 +1108,6 @@ def test_contract_ci_commands_execute_repository_gates_without_recursion(
         CiJob.OPENAPI: "test-openapi",
         CiJob.PROTOCOL_CONTRACTS: "test-protocol-contracts",
         CiJob.ARTIFACT_CONTRACTS: "test-artifact-contracts",
-        CiJob.LOCAL_CONFIG: "test-local-config",
-        CiJob.MIGRATIONS: "test-migrations",
-        CiJob.RLS: "test-rls",
         CiJob.UPLOAD: "test-upload",
         CiJob.ARTIFACTS: "test-artifacts",
         CiJob.SCIENCE: "test-science",
@@ -1172,9 +1168,6 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
         "tools/architecture_evidence.py",
         "tools/architecture_manifest.py",
         "tests/test_architecture.py",
-        "services/api/migrations",
-        "services/api/persistence",
-        "services/api/tests/persistence",
         "services/api/upload",
         "tests/upload",
         "services/api/artifacts",
@@ -1184,12 +1177,6 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
         "apps/local",
         "tests/e2e/local_workbench_fixture.py",
     }
-    integrated_g002 = {
-        "services/api/migrations",
-        "services/api/persistence",
-        "services/api/tests/persistence",
-    }
-    assert integrated_g002 == set(G002_PYTHON_PATHS)
     integrated_upload = {"services/api/upload", "tests/upload"}
     assert integrated_upload == set(G002_UPLOAD_PYTHON_PATHS)
     integrated_artifacts = {"services/api/artifacts", "tests/artifacts"}
@@ -1208,7 +1195,6 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
     assert lint_paths == expected_paths
     assert typecheck_paths == expected_paths
     for paths in (lint_paths, typecheck_paths):
-        assert integrated_g002 <= paths
         assert integrated_upload <= paths
         assert integrated_artifacts <= paths
         assert integrated_science <= paths

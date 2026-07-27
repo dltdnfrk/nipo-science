@@ -33,12 +33,6 @@ G001_PYTHON_PATHS: Final = (
     "tests/test_architecture.py",
 )
 
-G002_PYTHON_PATHS: Final = (
-    "services/api/migrations",
-    "services/api/persistence",
-    "services/api/tests/persistence",
-)
-
 G002_UPLOAD_PYTHON_PATHS: Final = (
     "services/api/upload",
     "tests/upload",
@@ -62,7 +56,6 @@ G005_LOCAL_PYTHON_PATHS: Final = (
 
 RELEASE_PYTHON_PATHS: Final = (
     G001_PYTHON_PATHS
-    + G002_PYTHON_PATHS
     + G002_UPLOAD_PYTHON_PATHS
     + G002_ARTIFACT_PYTHON_PATHS
     + G003_SCIENCE_PYTHON_PATHS
