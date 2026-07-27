@@ -2726,6 +2726,47 @@ def test_a_version_this_run_did_not_publish_is_refused(
     }
 
 
+def test_product_export_pack_contains_required_members_via_http(
+    exportable: tuple[Harness, str, str],
+) -> None:
+    """AC-L12 over the product path: produce, download, and check every member.
+
+    The pack must carry the selected CSV, PNG, Markdown, and ledger plus the
+    manifest, checksums, provenance, ActionPlan, pinned ResearchIntent, and
+    Review status — observed through HTTP produce and a ticket download, not
+    through the exporting modules.
+    """
+    harness, project_id, run_id = exportable
+    pinned = _pinned_ids(_plan(harness, project_id, run_id))
+    pack = _produce(harness, project_id, run_id, pinned).payload()
+    pack_id = str(pack["pack_id"])
+    url = str(_mint(harness, project_id, pack_id)["url"])
+
+    downloaded = harness.send(Call(path=url, omit_token=True))
+
+    assert downloaded.status == 200
+    manifest = _verify_archive(downloaded.body)
+    with zipfile.ZipFile(io.BytesIO(downloaded.body)) as opened:
+        names = sorted(opened.namelist())
+    assert names == [
+        "action-plan.json",
+        "artifacts/analysis-report.md",
+        "artifacts/evidence-ledger.json",
+        "artifacts/hypothesis-table.csv",
+        "artifacts/spectrum-plot.png",
+        "checksums.sha256",
+        "environment.json",
+        "manifest.json",
+        "provenance.json",
+        "research-intent.json",
+        "review.json",
+        "run-record.json",
+        "scientific-input.json",
+    ]
+    assert "research_intent_sha256" in manifest
+    assert as_dict(manifest["disclosures"])["execution_isolation"] == "in_process"
+
+
 def test_a_pack_verifies_from_its_own_bytes_and_carries_no_credential(
     exportable: tuple[Harness, str, str],
 ) -> None:

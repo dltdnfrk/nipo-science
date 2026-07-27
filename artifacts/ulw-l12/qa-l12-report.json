@@ -1,0 +1,417 @@
+{
+  "kind": "api-test-report",
+  "story": "L12 Export surface + docs flip",
+  "goal": "G001",
+  "lane": "ultragoal-red-team-qa-l12",
+  "agent": "8-QaL12R2",
+  "priorAgent": "7-QaL12",
+  "base": "main@6351f32",
+  "verdict": "pass",
+  "summary": {
+    "e2eNamedNodeRuns": "pass",
+    "adversarialProbes": "pass",
+    "docsHonesty": "pass",
+    "namedNodePassCount": 73,
+    "probePassCount": 4,
+    "blockerCount": 0
+  },
+  "contractCoverage": [
+    {
+      "id": "cc-acl12-members",
+      "contractRef": "AC-L12",
+      "obligation": "Pack contains selected CSV, PNG, Markdown, ledger, manifest, checksums, provenance, ActionPlan, pinned ResearchIntent digest, and Review status",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-http-members", "se-pack-members"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12-verify",
+      "contractRef": "AC-L12",
+      "obligation": "Pack verifies independently from the pack alone (checksums + entry digests recomputed)",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-http-verify", "se-pack-verify"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-absolute",
+      "contractRef": "AC-L12-B:absolute-or-drive-qualified",
+      "obligation": "Refuse absolute or drive-qualified entry paths rather than sanitizing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-hostile-paths"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-backslash",
+      "contractRef": "AC-L12-B:backslash",
+      "obligation": "Refuse backslash path segments rather than sanitizing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-hostile-paths"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-dot-segments",
+      "contractRef": "AC-L12-B:dot-or-dotdot-segment",
+      "obligation": "Refuse '.' or '..' path segments rather than sanitizing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-hostile-paths"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-trailing-dot",
+      "contractRef": "AC-L12-B:segment-ending-in-dot",
+      "obligation": "Refuse path segments ending in a trailing dot rather than sanitizing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-hostile-paths"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-reserved-device",
+      "contractRef": "AC-L12-B:reserved-device-name",
+      "obligation": "Refuse reserved device names (AUX/CON/NUL/COM/LPT) rather than sanitizing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-hostile-paths"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-link-entry",
+      "contractRef": "AC-L12-B:link-entry",
+      "obligation": "Refuse link entries (symlink/hardlink at source or destination) rather than following",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-link-refusals"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-nfkc-collision",
+      "contractRef": "AC-L12-B:nfkc-casefold-collision",
+      "obligation": "Refuse NFKC-casefold path collisions rather than sanitizing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-normalize-collisions", "se-hostile-paths"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-dir-prefix",
+      "contractRef": "AC-L12-B:directory-prefix-collision",
+      "obligation": "Refuse directory-prefix path collisions rather than sanitizing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-dir-prefix"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-reserved-root",
+      "contractRef": "AC-L12-B:reserved-pack-root",
+      "obligation": "Refuse reserved pack-root member names rather than sanitizing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-hostile-paths"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl12b-unsorted",
+      "contractRef": "AC-L12-B:unsorted-selection",
+      "obligation": "Refuse an unsorted selection rather than sanitizing at the exporting contract (AC-L12-B / SPEC §9); route presentation-order canonicalization is separately disclosed in SPEC §14",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-unsorted-split"],
+      "adversarialCaseRefs": [],
+      "notes": "Claim boundary post-fix: AC-L12-B unsorted refuse is enforced and tested at the exporting contract (exportpack selection_unsorted / test_an_unsorted_selection_is_refused). SPEC §14 no longer claims clause-for-clause AC-L12-B over the HTTP product path; it states every AC-L12-B refusal is verified at the exporting contract (which the route inherits for path/link/collision/selection/credential refusals) and that the route itself additionally refuses non-pinned/duplicate/empty and canonicalizes only presentation order of the pinned set. HTTP test_an_unsorted_selection_produces_the_canonical_sorted_manifest therefore matches the disclosed route boundary, not a silent sanitize of an AC-L12-B clause."
+    },
+    {
+      "id": "cc-acl12b-nonunique",
+      "contractRef": "AC-L12-B:non-unique-selection",
+      "obligation": "Refuse non-unique / duplicate selection rather than collapsing",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-selection-refusals"],
+      "adversarialCaseRefs": ["adv-c-duplicate-pin"]
+    },
+    {
+      "id": "cc-acl12b-selection-mismatch",
+      "contractRef": "AC-L12-B:selection-unequal-to-entries",
+      "obligation": "Refuse selection unequal to exported entries / not pinned to run",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-selection-refusals", "se-foreign-version"],
+      "adversarialCaseRefs": ["adv-a-smuggle-foreign"]
+    },
+    {
+      "id": "cc-acl12b-credential",
+      "contractRef": "AC-L12-B:credential-material",
+      "obligation": "Refuse credential material in pack; no session token or provider-key-shaped bytes in download",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-credential-refusals", "se-http-no-cred"],
+      "adversarialCaseRefs": ["adv-d-no-secrets-in-bytes"]
+    },
+    {
+      "id": "cc-acl12-http-product",
+      "contractRef": "AC-L12",
+      "obligation": "Product HTTP path: plan → produce → single-use capability download of required members",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-http-members", "se-capability-once"],
+      "adversarialCaseRefs": ["adv-b-cross-pack-ticket"]
+    },
+    {
+      "id": "cc-owner-only",
+      "contractRef": "AC-L12",
+      "obligation": "Export directory and pack members are owner-only modes",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-owner-only"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-docs-l12-flip",
+      "contractRef": "AC-L12",
+      "obligation": "SPEC §14 + requirements.yaml may claim L12 implemented/verified only when backed by tests run",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-unsorted-split"],
+      "adversarialCaseRefs": [],
+      "notes": "L12 flip backed by prior full matrix (members, verify, product path, AC-L12-B package clauses) plus recheck log. SPEC §14 claim boundary now matches behavior: AC-L12 HTTP product path; AC-L12-B clause-for-clause at exporting contract; route-own refusals and presentation-order canonicalize disclosed. requirements.yaml implemented_and_verified includes L12; not_implemented is [L02, L03, L10]; contracts_present_but_unreachable empty."
+    }
+  ],
+  "surfaceEvidence": [
+    {
+      "id": "se-hostile-paths",
+      "contractRef": "AC-L12-B",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_exportpack.py::test_a_hostile_entry_path_refuses_the_whole_pack (absolute/drive-qualified/backslash/dot-dotdot/trailing-dot/reserved-device/reserved-root/collision + empty/control/too-long)",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/exportpack-full-matrix.log"]
+    },
+    {
+      "id": "se-normalize-collisions",
+      "contractRef": "AC-L12-B:nfkc-casefold-collision",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_exportpack.py::test_two_paths_that_normalize_together_refuse_the_whole_pack",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/exportpack-full-matrix.log"]
+    },
+    {
+      "id": "se-dir-prefix",
+      "contractRef": "AC-L12-B:directory-prefix-collision",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_exportpack.py::test_an_entry_that_is_a_directory_prefix_of_another_is_refused",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/exportpack-full-matrix.log"]
+    },
+    {
+      "id": "se-link-refusals",
+      "contractRef": "AC-L12-B:link-entry",
+      "surface": "api",
+      "invocation": "pytest symlink/hardlink/write-through-link nodes in test_exportpack.py",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/exportpack-full-matrix.log"]
+    },
+    {
+      "id": "se-selection-refusals",
+      "contractRef": "AC-L12-B",
+      "surface": "api",
+      "invocation": "pytest package selection refusals (unsorted/repeated/empty/mismatch) + HTTP empty/duplicate/foreign",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l12/logs/exportpack-full-matrix.log",
+        "artifacts/ulw-l12/logs/api-full-matrix.log"
+      ]
+    },
+    {
+      "id": "se-credential-refusals",
+      "contractRef": "AC-L12-B:credential-material",
+      "surface": "api",
+      "invocation": "pytest test_no_credential_material_reaches_a_pack + sealed/signing-key/env-provider-key refuse nodes",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/exportpack-full-matrix.log"]
+    },
+    {
+      "id": "se-owner-only",
+      "contractRef": "AC-L12",
+      "surface": "api",
+      "invocation": "pytest test_every_written_member_is_a_regular_owner_only_file + test_the_export_directory_and_its_packs_are_owner_only",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l12/logs/exportpack-full-matrix.log",
+        "artifacts/ulw-l12/logs/api-full-matrix.log"
+      ]
+    },
+    {
+      "id": "se-capability-once",
+      "contractRef": "AC-L12",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_a_capability_downloads_the_pack_bytes_exactly_once",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/api-full-matrix.log"]
+    },
+    {
+      "id": "se-http-members",
+      "contractRef": "AC-L12",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_product_export_pack_contains_required_members_via_http",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/api-full-matrix.log"]
+    },
+    {
+      "id": "se-http-verify",
+      "contractRef": "AC-L12",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_a_pack_verifies_from_its_own_bytes_and_carries_no_credential",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/api-full-matrix.log"]
+    },
+    {
+      "id": "se-http-no-cred",
+      "contractRef": "AC-L12-B:credential-material",
+      "surface": "api",
+      "invocation": "pytest session-credential-required + no-credential-in-pack HTTP nodes",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/api-full-matrix.log"]
+    },
+    {
+      "id": "se-foreign-version",
+      "contractRef": "AC-L12-B:selection-unequal-to-entries",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_a_version_this_run_did_not_publish_is_refused",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/api-full-matrix.log"]
+    },
+    {
+      "id": "se-pack-members",
+      "contractRef": "AC-L12",
+      "surface": "api",
+      "invocation": "pytest package member/provenance/review/intent nodes in test_exportpack.py",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/exportpack-full-matrix.log"]
+    },
+    {
+      "id": "se-pack-verify",
+      "contractRef": "AC-L12",
+      "surface": "api",
+      "invocation": "pytest independent-verify + external-checksum + checksums-cover-every-member nodes",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/exportpack-full-matrix.log"]
+    },
+    {
+      "id": "se-unsorted-split",
+      "contractRef": "AC-L12-B:unsorted-selection",
+      "surface": "api",
+      "invocation": "pytest package test_an_unsorted_selection_is_refused (exporting-contract refuse) vs HTTP test_an_unsorted_selection_produces_the_canonical_sorted_manifest (route presentation-order canonicalize); recheck under docs-honesty-recheck.log",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l12/logs/exportpack-full-matrix.log",
+        "artifacts/ulw-l12/logs/api-full-matrix.log",
+        "artifacts/ulw-l12/logs/unsorted-surface-split.log",
+        "artifacts/ulw-l12/logs/docs-honesty-recheck.log"
+      ],
+      "notes": "Intentional dual-surface behavior, not a failure: package refuses unsorted (AC-L12-B at exporting contract); HTTP canonicalizes presentation order only (disclosed in SPEC §14). Spot-run 2 passed."
+    }
+  ],
+  "adversarialCases": [
+    {
+      "id": "adv-a-smuggle-foreign",
+      "contractRef": "AC-L12-B:selection-unequal-to-entries",
+      "scenario": "POST export body with partial pinned set plus a non-selected foreign version id",
+      "expectedBehavior": "400 export_selection_rejected / selection_not_pinned_to_run; no pack written",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/probes-adversarial.log", "artifacts/ulw-l12/probes_test.py"]
+    },
+    {
+      "id": "adv-b-cross-pack-ticket",
+      "contractRef": "AC-L12",
+      "scenario": "Double-produce two packs; present pack A download ticket against pack B content URL",
+      "expectedBehavior": "401 download_ticket_invalid; original A ticket remains unspent and serves only A bytes",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/probes-adversarial.log", "artifacts/ulw-l12/probes_test.py"]
+    },
+    {
+      "id": "adv-c-duplicate-pin",
+      "contractRef": "AC-L12-B:non-unique-selection",
+      "scenario": "Full pinned selection plus a duplicate of one pinned id",
+      "expectedBehavior": "400 export_selection_rejected / selection_duplicate",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/probes-adversarial.log", "artifacts/ulw-l12/probes_test.py"]
+    },
+    {
+      "id": "adv-d-no-secrets-in-bytes",
+      "contractRef": "AC-L12-B:credential-material",
+      "scenario": "Store provider canary key then download pack; scan bytes for session token and provider-key shapes",
+      "expectedBehavior": "Downloaded zip verifies; contains neither session token nor provider-key-shaped strings",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l12/logs/probes-adversarial.log", "artifacts/ulw-l12/probes_test.py"]
+    }
+  ],
+  "blockers": [],
+  "resolvedBlockers": [
+    {
+      "id": "blk-unsorted-http-sanitize",
+      "severity": "contract",
+      "contractRef": "AC-L12-B:unsorted-selection",
+      "title": "Resolved by SPEC §14 claim-boundary reword (no product behavior change)",
+      "detail": "Prior fail treated §14 as claiming AC-L12-B clause-for-clause over the HTTP product path while HTTP sorted presentation order. Reworded SPEC §14 scopes AC-L12-B refusals to the exporting contract (route inherits path/link/collision/selection/credential refusals) and explicitly states the route additionally refuses non-pinned/duplicate/empty and canonicalizes only presentation order. Package refuse + HTTP canonicalize both reconfirmed by spot-run (docs-honesty-recheck.log). Full prior matrix logs remain valid.",
+      "resolution": "docs-claim-boundary-fix",
+      "evidenceRefs": [
+        "artifacts/ulw-l12/logs/docs-honesty-recheck.log",
+        "artifacts/ulw-l12/logs/unsorted-surface-split.log",
+        "artifacts/ulw-l12/logs/api-full-matrix.log",
+        "artifacts/ulw-l12/logs/exportpack-full-matrix.log"
+      ]
+    }
+  ],
+  "docsHonesty": {
+    "checked": [
+      "docs/spec/SPEC-v0.5.md §9 Export Pack",
+      "docs/spec/SPEC-v0.5.md §14 Conformance status (reworded L12 sentence)",
+      "docs/requirements/requirements.yaml conformance.implemented_and_verified includes L12",
+      "docs/requirements/requirements.yaml AC-L12 / AC-L12-B statements"
+    ],
+    "backedClaims": [
+      "L12 reachable product surface (plan/produce/list/capability download)",
+      "AC-L12 required members via HTTP product path",
+      "Independent verify from pack alone",
+      "AC-L12-B hostile paths, collisions, links, reserved roots, credentials, non-unique selection, selection mismatch, unsorted selection at exporting contract",
+      "SPEC §14 route presentation-order canonicalization disclosed and locked by named HTTP test",
+      "Owner-only export directory/members",
+      "conformance.not_implemented no longer lists L12; contracts_present_but_unreachable empty"
+    ],
+    "mismatches": [],
+    "nonBlockerNotes": [
+      "§14 still lists 'ActionPlan half of L04' as not implemented while AC-L12 requires ActionPlan in pack — pack does include action-plan.json from the approved plan used by the chain; L04 partial is product-surface ActionPlan UX, not the L12 pack member. Not flagged as L12 blocker.",
+      "Package-level AC-L12-B unsorted refuse is real and tested; HTTP presentation-order canonicalize is the disclosed route boundary, not an overstated AC-L12-B HTTP claim."
+    ],
+    "recheck": {
+      "command": "PYTHONPATH=\"apps/local:packages/science:.\" PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest apps/local/tests/test_exportpack.py::test_an_unsorted_selection_is_refused apps/local/tests/test_api.py::test_an_unsorted_selection_produces_the_canonical_sorted_manifest -q",
+      "result": "2 passed",
+      "log": "artifacts/ulw-l12/logs/docs-honesty-recheck.log",
+      "claimBoundary": "AC-L12-B unsorted refuse @ exporting contract; HTTP presentation-order canonicalize disclosed in SPEC §14; L12 implemented/verified claim backed"
+    }
+  },
+  "runs": {
+    "exportpackFullMatrix": {
+      "command": "pytest -v exportpack hostile/selection/credential/member/verify named nodes",
+      "result": "61 passed",
+      "log": "artifacts/ulw-l12/logs/exportpack-full-matrix.log",
+      "note": "prior matrix retained; no product code change"
+    },
+    "apiFullMatrix": {
+      "command": "pytest -v api product export named nodes",
+      "result": "12 passed",
+      "log": "artifacts/ulw-l12/logs/api-full-matrix.log",
+      "note": "prior matrix retained; no product code change"
+    },
+    "adversarialProbes": {
+      "command": "pytest -v artifacts/ulw-l12/probes_test.py",
+      "result": "4 passed",
+      "log": "artifacts/ulw-l12/logs/probes-adversarial.log",
+      "note": "prior matrix retained; no product code change"
+    },
+    "docsHonestyRecheck": {
+      "command": "pytest package unsorted refuse + HTTP presentation-order canonicalize named nodes",
+      "result": "2 passed",
+      "log": "artifacts/ulw-l12/logs/docs-honesty-recheck.log"
+    }
+  },
+  "artifactRefs": [
+    "artifacts/ulw-l12/qa-l12-report.json",
+    "artifacts/ulw-l12/probes_test.py",
+    "artifacts/ulw-l12/logs/exportpack-full-matrix.log",
+    "artifacts/ulw-l12/logs/api-full-matrix.log",
+    "artifacts/ulw-l12/logs/probes-adversarial.log",
+    "artifacts/ulw-l12/logs/exportpack-acl12b.log",
+    "artifacts/ulw-l12/logs/api-acl12-product.log",
+    "artifacts/ulw-l12/logs/exportpack-acl12-members.log",
+    "artifacts/ulw-l12/logs/unsorted-selection-split.log",
+    "artifacts/ulw-l12/logs/unsorted-surface-split.log",
+    "artifacts/ulw-l12/logs/docs-honesty-recheck.log"
+  ]
+}

@@ -1,0 +1,11 @@
+..                                                                       [100%]
+2 passed in 0.31s
+..                                                                       [100%]
+2 passed in 0.32s
+
+--- claim boundary recheck ---
+SPEC §14 L12 sentence scopes AC-L12-B clause-for-clause to exporting contract; route inherits path/link/collision/selection/credential refusals; route additionally refuses non-pinned/duplicate/empty and canonicalizes presentation order only.
+requirements.yaml: L12 in implemented_and_verified; not_implemented=[L02,L03,L10]; AC-L12-B unsorted refuse is package-level (exporting contract).
+spot-run: package refuse + HTTP presentation-order canonicalize both pass (see above).
+prior matrix logs remain valid (no product code change): exportpack-full-matrix, api-full-matrix, unsorted-surface-split, probes-adversarial.
+verdict: docs-honesty pass; blk-unsorted-http-sanitize resolved by SPEC reword claim-boundary fix.

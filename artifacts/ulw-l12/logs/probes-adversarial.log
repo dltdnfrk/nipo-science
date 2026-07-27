@@ -1,0 +1,14 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/nipo-gjc/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/nipo-gjc
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 4 items
+
+artifacts/ulw-l12/probes_test.py::test_probe_a_smuggled_non_selected_version_id_is_refused PASSED [ 25%]
+artifacts/ulw-l12/probes_test.py::test_probe_b_double_produce_then_download_with_other_pack_ticket_is_invalid PASSED [ 50%]
+artifacts/ulw-l12/probes_test.py::test_probe_c_selection_with_duplicate_of_a_pinned_id_is_refused PASSED [ 75%]
+artifacts/ulw-l12/probes_test.py::test_probe_d_downloaded_pack_bytes_carry_neither_session_token_nor_provider_key PASSED [100%]
+
+============================== 4 passed in 0.39s ===============================
