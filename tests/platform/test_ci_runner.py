@@ -33,7 +33,6 @@ from tools.platform_policy.ci_contract import (
 )
 from tools.platform_policy.ci_paths import (
     G002_ARTIFACT_PYTHON_PATHS,
-    G002_UPLOAD_PYTHON_PATHS,
     G003_SCIENCE_PYTHON_PATHS,
     G005_LOCAL_PYTHON_PATHS,
 )
@@ -745,9 +744,9 @@ def test_parent_executes_exact_bound_requirement_case(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     provisional = CiRequirementCaseBinding.model_construct(
-        requirement_id="F01",
+        requirement_id="L01",
         job=CiJob.PLATFORM_TESTS,
-        case_id="case-F01",
+        case_id="case-L01",
         source_path=source_path.name,
         source_sha256=hashlib.sha256(source_path.read_bytes()).hexdigest(),
         test_path=test_path.name,
@@ -777,7 +776,7 @@ def test_parent_executes_exact_bound_requirement_case(tmp_path: Path) -> None:
     )
 
     verify_ci_requirement_case_output(raw_output, (binding,))
-    assert result.requirement_ids == ("F01",)
+    assert result.requirement_ids == ("L01",)
     assert result.attachment_sha256 == (binding.observation_sha256,)
     assert result.execution_attestation is not None
     assert result.execution_attestation.attachment_sha256 == (
@@ -805,9 +804,9 @@ def test_parent_rejects_changed_requirement_case_files(
         encoding="utf-8",
     )
     provisional = CiRequirementCaseBinding.model_construct(
-        requirement_id="F01",
+        requirement_id="L01",
         job=CiJob.PLATFORM_TESTS,
-        case_id="case-F01",
+        case_id="case-L01",
         source_path=source_path.name,
         source_sha256=hashlib.sha256(source_path.read_bytes()).hexdigest(),
         test_path=test_path.name,
@@ -1057,7 +1056,7 @@ def test_source_tree_identity_binds_ci_contract_but_ignores_ci_runtime_output(
         assert source_tree_identity(tmp_path) == baseline
         runtime_output.unlink()
 
-    generated = tmp_path / ".ci/generated/openapi-catalog.json"
+    generated = tmp_path / ".ci/generated/derived-contract.json"
     generated.parent.mkdir(parents=True, exist_ok=True)
     _ = generated.write_text("generated contract")
     assert source_tree_identity(tmp_path) != baseline
@@ -1105,15 +1104,11 @@ def test_contract_ci_commands_execute_repository_gates_without_recursion(
         CiJob.BOUNDARIES: "test-boundaries",
         CiJob.SPEC: "verify-spec",
         CiJob.ARCHITECTURE: "verify-architecture",
-        CiJob.OPENAPI: "test-openapi",
         CiJob.PROTOCOL_CONTRACTS: "test-protocol-contracts",
         CiJob.ARTIFACT_CONTRACTS: "test-artifact-contracts",
-        CiJob.UPLOAD: "test-upload",
         CiJob.ARTIFACTS: "test-artifacts",
         CiJob.SCIENCE: "test-science",
         CiJob.RETENTION: "test-retention",
-        CiJob.GENERATED_DRIFT: "check-generated-contracts",
-        CiJob.DRY_LAB: "test-dry-lab",
         CiJob.LOCAL_WORKBENCH: "test-local-workbench",
     }
 
@@ -1141,9 +1136,6 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
     # Given
     expected_paths = {
         "packages/contracts/python",
-        "tests/test_openapi_contract.py",
-        "services/local",
-        "tests/local_stack",
         "tools/platform_policy",
         "tests/platform",
         "tools/boundary_ast_rules.py",
@@ -1168,8 +1160,6 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
         "tools/architecture_evidence.py",
         "tools/architecture_manifest.py",
         "tests/test_architecture.py",
-        "services/api/upload",
-        "tests/upload",
         "services/api/artifacts",
         "tests/artifacts",
         "packages/science",
@@ -1177,8 +1167,6 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
         "apps/local",
         "tests/e2e/local_workbench_fixture.py",
     }
-    integrated_upload = {"services/api/upload", "tests/upload"}
-    assert integrated_upload == set(G002_UPLOAD_PYTHON_PATHS)
     integrated_artifacts = {"services/api/artifacts", "tests/artifacts"}
     assert integrated_artifacts == set(G002_ARTIFACT_PYTHON_PATHS)
     integrated_science = {"packages/science", "tests/science"}
@@ -1195,7 +1183,6 @@ def test_contract_static_jobs_cover_g001_and_integrated_g002(
     assert lint_paths == expected_paths
     assert typecheck_paths == expected_paths
     for paths in (lint_paths, typecheck_paths):
-        assert integrated_upload <= paths
         assert integrated_artifacts <= paths
         assert integrated_science <= paths
 
@@ -1204,7 +1191,6 @@ def test_extended_release_categories_are_exactly_once_and_non_vacuous(
     tmp_path: Path,
 ) -> None:
     expected_paths: dict[CiJob, str] = {
-        CiJob.DRY_LAB: "test-dry-lab",
         CiJob.LOCAL_WORKBENCH: "test-local-workbench",
         CiJob.SECURITY: "tools.platform_policy.security_gate",
         CiJob.RECOVERY: "tests/platform/test_g005_recovery_contract.py",

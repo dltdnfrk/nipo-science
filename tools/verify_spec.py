@@ -18,12 +18,7 @@ from pathlib import Path
 from typing import Final, Protocol
 
 from tools.spec_contract import (
-    DRY_LAB_CHAIN,
-    EXPECTED_IDS,
-    P0_IDS,
     RV_IDS,
-    SKILL_IDS,
-    STACK,
     V05_DRY_LAB_CHAIN,
     V05_EXPECTED_IDS,
     V05_P0_IDS,
@@ -38,10 +33,9 @@ from tools.spec_contract import (
     child_strs,
     declares_manifest,
     frontmatter_fields,
-    frontmatter_version,
     load_root,
 )
-from tools.spec_runtime import verify_runtime, verify_runtime_v05
+from tools.spec_runtime import verify_runtime_v05
 
 EXPECTED_ARGUMENTS: Final = 2
 
@@ -58,122 +52,6 @@ def write_line(sink: TextSink, message: str) -> None:
     """Write one newline-terminated CLI message to a typed sink."""
     _ = sink.write(f"{message}\n")
 
-
-def verify_contract(manifest_path: Path, spec_path: Path) -> VerificationReport:
-    """Verify all normative manifest invariants and SPEC metadata."""
-    root = load_root(manifest_path)
-    errors: list[str] = []
-    spec = child_map(root, "spec")
-    version = frontmatter_version(spec_path)
-    add_error(version == "0.4" == child_str(spec, "version"), "SPEC version", errors)
-    add_error(child_str(spec, "path") == "docs/spec/SPEC-v0.4.md", "SPEC path", errors)
-    add_error(child_map(root, "stack") == STACK, "required runtime stack", errors)
-    add_error(child_strs(root, "p0_features") == P0_IDS, "P0 F01-F11/F13 IDs", errors)
-
-    verify_runtime(root, errors)
-
-    money = child_map(root, "monetary_semantics")
-    empty_money = child_str(money, "state") == "absent" and all(
-        money.get(key) == []
-        for key in (
-            "schema_fields",
-            "api_operations",
-            "event_fields",
-            "error_codes",
-            "approval_fields",
-            "metrics",
-        )
-    )
-    add_error(empty_money, "zero monetary semantics", errors)
-    tools = child_map(root, "tool_governance")
-    add_error(
-        child_str(tools, "requirement_id") == "F11"
-        and child_strs(tools, "scope") == ("tool_grant", "plan_approval"),
-        "F11 Tool Grant/Plan Approval only",
-        errors,
-    )
-
-    review = child_map(root, "review")
-    add_error(
-        child_str(review, "create_path") == "/reviews"
-        and child_str(review, "get_path") == "/reviews/{id}",
-        "Review API",
-        errors,
-    )
-    add_error(
-        child_strs(review, "create_response") == ("review_id", "run_id", "status")
-        and child_str(review, "run_owner") == "system",
-        "Review lifecycle",
-        errors,
-    )
-    add_error(
-        not child_bool(review, "reviewer_reexecution"),
-        "Reviewer non-reexecution",
-        errors,
-    )
-    capabilities = child_map(review, "reviewer_capabilities")
-    add_error(
-        set(capabilities) == {"runner", "python", "bash", "connector", "artifact_write"}
-        and all(value is False for value in capabilities.values()),
-        "Reviewer capabilities",
-        errors,
-    )
-    compliance = child_map(root, "compliance")
-    add_error(
-        child_str(compliance, "legal_hold_authority") == "compliance_operator"
-        and child_str(compliance, "owner_legal_hold_access") == "read_only",
-        "Compliance Operator authority",
-        errors,
-    )
-    break_glass = child_map(root, "break_glass")
-    add_error(
-        child_str(break_glass, "authority_role")
-        == "internal_security_incident_operator"
-        and child_bool(break_glass, "legal_hold_authority_separate")
-        and not child_bool(break_glass, "standing_access")
-        and child_str(break_glass, "scope") == "least_privilege_resource_and_action"
-        and child_bool(break_glass, "reason_required")
-        and child_bool(break_glass, "approval_required")
-        and child_str(break_glass, "expiry") == "bounded"
-        and child_str(break_glass, "revocation") == "immediate"
-        and child_str(break_glass, "audit") == "immutable_access_log",
-        "bounded break-glass contract",
-        errors,
-    )
-    add_error(
-        child_strs(child_map(root, "skills"), "ids") == SKILL_IDS,
-        "canonical Skill IDs",
-        errors,
-    )
-    add_error(
-        child_strs(child_map(root, "dry_lab"), "ordered_chain") == DRY_LAB_CHAIN,
-        "complete dry-lab chain",
-        errors,
-    )
-    sandbox = child_map(root, "sandbox")
-    add_error(
-        child_str(sandbox, "runtime") == "gvisor"
-        and child_str(sandbox, "enforcement_claim") == "outcome_measured"
-        and sandbox.get("literal_control_claims") == [],
-        "measured gVisor outcomes",
-        errors,
-    )
-    scope = child_map(root, "scope")
-    add_error(
-        child_str(scope, "product_use") == "research_only_non_clinical"
-        and child_str(scope, "clinical_diagnosis") == "forbidden",
-        "research-only scope",
-        errors,
-    )
-    requirement_ids = frozenset(child_map(root, "requirements"))
-    add_error(
-        requirement_ids == EXPECTED_IDS,
-        "exact IDs including AC-F13/AC-F13-B/AC-F13-C/AC-F13-D",
-        errors,
-    )
-    if errors:
-        raise VerificationError(tuple(errors))
-    return VerificationReport(version, len(requirement_ids), len(P0_IDS))
 
 
 def verify_contract_v05(manifest_path: Path, spec_path: Path) -> VerificationReport:
@@ -285,11 +163,7 @@ def main(arguments: list[str]) -> int:
     manifest_path = Path(arguments[0])
     spec_path = Path(arguments[1])
     try:
-        fields = frontmatter_fields(spec_path)
-        if fields.get("version", "").strip('"') == "0.5":
-            report = verify_contract_v05(manifest_path, spec_path)
-        else:
-            report = verify_contract(manifest_path, spec_path)
+        report = verify_contract_v05(manifest_path, spec_path)
     except (
         FileNotFoundError,
         json.JSONDecodeError,

@@ -1,1 +1,0 @@
-"""Hermetic local-stack support."""

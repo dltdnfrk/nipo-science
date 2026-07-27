@@ -4,9 +4,6 @@ from typing import Final
 
 G001_PYTHON_PATHS: Final = (
     "packages/contracts/python",
-    "tests/test_openapi_contract.py",
-    "services/local",
-    "tests/local_stack",
     "tools/platform_policy",
     "tests/platform",
     "tools/boundary_adversarial_cases.py",
@@ -33,11 +30,6 @@ G001_PYTHON_PATHS: Final = (
     "tests/test_architecture.py",
 )
 
-G002_UPLOAD_PYTHON_PATHS: Final = (
-    "services/api/upload",
-    "tests/upload",
-)
-
 G002_ARTIFACT_PYTHON_PATHS: Final = (
     "services/api/artifacts",
     "tests/artifacts",
@@ -56,7 +48,6 @@ G005_LOCAL_PYTHON_PATHS: Final = (
 
 RELEASE_PYTHON_PATHS: Final = (
     G001_PYTHON_PATHS
-    + G002_UPLOAD_PYTHON_PATHS
     + G002_ARTIFACT_PYTHON_PATHS
     + G003_SCIENCE_PYTHON_PATHS
     + G005_LOCAL_PYTHON_PATHS

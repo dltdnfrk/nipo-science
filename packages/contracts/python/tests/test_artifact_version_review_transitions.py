@@ -18,8 +18,6 @@ from science_workbench_contracts.artifact_versions import (
 )
 from science_workbench_contracts.artifacts import ReviewCreate
 from science_workbench_contracts.dry_lab_contract import DryLabRunContract
-from science_workbench_contracts.openapi_semantics import OpenApiDocument
-from science_workbench_contracts.openapi_validator import validate_openapi
 from science_workbench_contracts.reviews_v1 import (
     AppendFindingResolutionCommand,
     FindingResolutionAppended,
@@ -39,7 +37,6 @@ from science_workbench_contracts.reviews_v1 import (
 )
 
 FIXTURE = Path(__file__).parents[2] / "fixtures" / "gs04-dry-lab-contract.json"
-OPENAPI = Path(__file__).parents[2] / "openapi" / "openapi.json"
 
 
 def _contract() -> DryLabRunContract:
@@ -684,25 +681,6 @@ def test_resolution_store_serializes_concurrent_correction_append() -> None:
     rejected = next(result for result in results if not result.ok)
     assert isinstance(rejected, FindingResolutionRejected)
     assert rejected.reason == "event_already_appended"
-
-
-def test_artifact_target_enforces_nested_openapi_review_compatibility() -> None:
-    # Given: canonical OpenAPI and PersistedReview with opaque submission data.
-    raw = OPENAPI.read_text(encoding="utf-8")
-    canonical = OpenApiDocument.model_validate_json(raw)
-    opaque = raw.replace(
-        "#/components/schemas/FindingsSubmission",
-        "#/components/schemas/ReviewFinding",
-        1,
-    )
-
-    # When: semantic validation checks both contracts.
-    canonical_issues = validate_openapi(canonical)
-    opaque_issues = validate_openapi(OpenApiDocument.model_validate_json(opaque))
-
-    # Then: this artifact suite accepts parity and rejects nested schema drift.
-    assert canonical_issues == ()
-    assert "persisted-review-submission" in opaque_issues
 
 
 def test_rejects_submission_before_completion_and_exposes_no_execution_api() -> None:

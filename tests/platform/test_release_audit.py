@@ -80,7 +80,7 @@ def test_audit_is_explicitly_incomplete_with_exact_inventory(tmp_path: Path) -> 
         "independent-code-review",
         "dual-visual-review",
     } <= missing
-    assert "normative-requirement:F01" in missing
+    assert "normative-requirement:L01" in missing
     assert "durable-goal:G002" in missing
     assert "durable-goal:G001" not in missing
     assert first.authority.session_id == "active"

@@ -48,7 +48,7 @@ from .ci_contract import (
 SHA256 = r"^[0-9a-f]{64}$"
 NFR_COUNT = 10
 MIN_FINALIZATION_NONCE_LENGTH: Final = 16
-EXPECTED_REQUIREMENT_COUNT = 84
+EXPECTED_REQUIREMENT_COUNT = 64
 GOAL_STATUSES = frozenset(
     {
         "pending",
@@ -61,7 +61,7 @@ GOAL_STATUSES = frozenset(
     }
 )
 REQUIREMENT_ID_PATTERN = re.compile(
-    r"(?:F\d{2}|AC-[A-Z0-9]+(?:-[A-Z0-9]+)*|SEC\d{2}|NFR\d{2}|GS\d{2}|RV\d{2})"
+    r"(?:L\d{2}|LS\d{2}|LN\d{2}|GL\d{2}|RV\d{2}|AC-[A-Z0-9]+(?:-[A-Z0-9]+)*)"
 )
 MIN_SOAK_SECONDS = 72 * 3600
 MIN_SUCCESS_PERCENT = 99.5
@@ -200,17 +200,13 @@ CI_JOB_CATEGORIES: dict[CiJob, EvidenceCategory] = {
     CiJob.BOUNDARIES: EvidenceCategory.SECURITY,
     CiJob.SPEC: EvidenceCategory.CONTRACT,
     CiJob.ARCHITECTURE: EvidenceCategory.CONTRACT,
-    CiJob.OPENAPI: EvidenceCategory.CONTRACT,
     CiJob.PROTOCOL_CONTRACTS: EvidenceCategory.CONTRACT,
     CiJob.ARTIFACT_CONTRACTS: EvidenceCategory.CONTRACT,
-    CiJob.UPLOAD: EvidenceCategory.INTEGRATION,
     CiJob.ARTIFACTS: EvidenceCategory.INTEGRATION,
     CiJob.SCIENCE: EvidenceCategory.INTEGRATION,
     CiJob.RETENTION: EvidenceCategory.RECOVERY,
-    CiJob.GENERATED_DRIFT: EvidenceCategory.CONTRACT,
     CiJob.SBOM: EvidenceCategory.SECURITY,
     CiJob.SECRET_SCAN: EvidenceCategory.SECURITY,
-    CiJob.DRY_LAB: EvidenceCategory.INTEGRATION,
     CiJob.LOCAL_WORKBENCH: EvidenceCategory.INTEGRATION,
     CiJob.SECURITY: EvidenceCategory.SECURITY,
     CiJob.RECOVERY: EvidenceCategory.RECOVERY,

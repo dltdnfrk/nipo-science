@@ -23,12 +23,10 @@ from tools.platform_policy.ci_contract import (
     CiRunState,
     EvidenceIntegrityError,
     GateResult,
-    GeneratedContract,
     RequiredSecurityCaseBinding,
     RequiredSecurityCatalog,
     SecurityCaseEvidence,
     SecurityEvidenceMapping,
-    StaleGeneratedContractError,
     TaskAttemptBundle,
     ci_catalog_root,
     ci_catalog_source_root,
@@ -41,7 +39,6 @@ from tools.platform_policy.ci_contract import (
     verify_ci_requirement_case_output,
     verify_evidence,
     verify_evidence_files,
-    verify_generated_contract,
 )
 from tools.platform_policy.ci_runner import (
     CiPublicationBinding,
@@ -55,7 +52,6 @@ from tools.platform_policy.release_contract import requirement_ids
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-FIXTURES = Path(__file__).parent.parent / "fixtures" / "ci"
 INJECTED_WRITE_FAILURE = "injected write failure"
 
 
@@ -447,7 +443,7 @@ def test_control_catalog_rejects_missing_duplicate_and_substituted_requirements(
 ):
     jobs = TEST_CONTROL_CATALOG.jobs
     invalid_catalogs = (
-        (*jobs[:-1], jobs[-1].model_copy(update={"requirement_ids": ("AC-F01",)})),
+        (*jobs[:-1], jobs[-1].model_copy(update={"requirement_ids": ("AC-L01",)})),
         (
             jobs[0].model_copy(
                 update={
@@ -1130,9 +1126,9 @@ def test_ci_publication_rejects_unobserved_or_stale_requirement_cases(
         encoding="utf-8",
     )
     provisional = CiRequirementCaseBinding.model_construct(
-        requirement_id="F01",
+        requirement_id="L01",
         job=CiJob.PLATFORM_TESTS,
-        case_id="case-F01",
+        case_id="case-L01",
         source_path=source_path.name,
         source_sha256=hashlib.sha256(source_path.read_bytes()).hexdigest(),
         test_path=test_path.name,
@@ -1152,7 +1148,7 @@ def test_ci_publication_rejects_unobserved_or_stale_requirement_cases(
     jobs = tuple(
         job.model_copy(
             update={
-                "requirement_ids": ("F01",) if job.job is CiJob.PLATFORM_TESTS else ()
+                "requirement_ids": ("L01",) if job.job is CiJob.PLATFORM_TESTS else ()
             }
         )
         for job in UNVERIFIED_TEST_CONTROL_CATALOG.jobs
@@ -1161,12 +1157,12 @@ def test_ci_publication_rejects_unobserved_or_stale_requirement_cases(
         SOURCE_TREE_SHA256,
         jobs,
         (case_binding,),
-        tuple(sorted(ci_contract.TRUSTED_REQUIREMENT_IDS.difference({"F01"}))),
+        tuple(sorted(ci_contract.TRUSTED_REQUIREMENT_IDS.difference({"L01"}))),
     )
     observation = CiRequirementCaseObservation(
-        requirement_id="F01",
+        requirement_id="L01",
         job=CiJob.PLATFORM_TESTS,
-        case_id="case-F01",
+        case_id="case-L01",
         source_path=case_binding.source_path,
         source_sha256=case_binding.source_sha256,
         test_path=case_binding.test_path,
@@ -2201,19 +2197,6 @@ def test_contract_checksum_free_success_text_is_rejected() -> None:
         _ = verify_evidence(records)
 
 
-def test_contract_stale_codegen_fixture_is_rejected(tmp_path: Path) -> None:
-    # Given
-    source = tmp_path / "openapi.json"
-    generated = tmp_path / "types.json"
-    _ = source.write_text('{"paths": {}, "components": {"schemas": {}}}')
-    _ = generated.write_text((FIXTURES / "stale-generated.json").read_text())
-    contract = GeneratedContract.from_paths(source, generated)
-
-    # When / Then
-    with pytest.raises(StaleGeneratedContractError):
-        verify_generated_contract(contract)
-
-
 def test_contract_tampered_evidence_log_is_rejected(tmp_path: Path) -> None:
     # Given
     record = result(CiJob.PLATFORM_TESTS, 1, b"1 passed")
@@ -2254,19 +2237,6 @@ def test_contract_evidence_logs_reject_unsafe_entries_without_blocking(
         verify_evidence_files(tmp_path, (record,))
 
 
-def test_contract_generated_catalog_matches_openapi_source() -> None:
-    # Given
-    root = Path(__file__).parents[2]
-    source = root / "packages/contracts/openapi/openapi.json"
-    generated = root / ".ci/generated/openapi-catalog.json"
-
-    # When
-    contract = GeneratedContract.from_paths(source, generated)
-
-    # Then
-    verify_generated_contract(contract)
-
-
 def test_checked_in_ci_catalog_matches_runtime_and_normative_authorities() -> None:
     root = Path(__file__).parents[2]
     catalog = load_checked_in_ci_catalog(root / ".ci/ci-contract.json")
@@ -2283,7 +2253,7 @@ def test_checked_in_ci_catalog_matches_runtime_and_normative_authorities() -> No
     assert set(verified) == set(CiJob)
     assert mapped_requirements == ()
     assert set(catalog.unverified_requirement_ids) == set(expected_requirements)
-    assert set(security.control_ids) == {f"T{number:02d}" for number in range(7, 14)}
+    assert set(security.control_ids) == {f"T{number:02d}" for number in range(9, 14)}
 
 
 def security_catalog_authority(catalog_id: str) -> RequiredSecurityCatalog:

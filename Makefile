@@ -17,12 +17,7 @@ NODE_MODULES := $(ROOT)/node_modules
 CONTRACT_NODE_MODULES := $(ROOT)/packages/contracts/node_modules
 
 
-# SPEC-v0.5 verifier inputs. Overridable so the Stage 3 re-anchor to canonical
-# docs/requirements/requirements.yaml is a make-argument change, not a code change.
-SPEC_V05_MANIFEST ?= $(ROOT)/docs/requirements/requirements-v0.5.yaml
-SPEC_V05_SPEC ?= $(ROOT)/docs/spec/SPEC-v0.5.md
-
-.PHONY: bootstrap lint-contracts typecheck-contracts test-openapi test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-spec-v05 verify-architecture test-upload test-artifacts test-science test-dry-lab test-local-workbench check-quarantine ci-source-identity ci-validate ci-local test-retention check-generated-contracts test-security
+.PHONY: bootstrap lint-contracts typecheck-contracts test-protocol-contracts test-artifact-contracts test-boundaries verify-spec verify-architecture test-artifacts test-science test-local-workbench check-quarantine ci-source-identity ci-validate ci-local test-retention test-security
 
 bootstrap:
 	@set -eu; \
@@ -61,22 +56,14 @@ bootstrap:
 lint-contracts:
 	@set -eu; \
 	cd "$(ROOT)"; \
-	"$(VENV)/bin/ruff" check packages/contracts/python tests/test_openapi_contract.py; \
+	"$(VENV)/bin/ruff" check packages/contracts/python; \
 	MISE_DATA_DIR="$(MISE_DATA_DIR)" MISE_CACHE_DIR="$(MISE_CACHE_DIR)" MISE_CONFIG_DIR="$(MISE_CONFIG_DIR)" MISE_STATE_DIR="$(MISE_STATE_DIR)" MISE_CONFIG_FILE="$(MISE_CONFIG_FILE)" MISE_CEILING_PATHS="$(ROOT_PARENT)" mise exec -- pnpm contracts:lint
 
 typecheck-contracts:
 	@set -eu; \
 	cd "$(ROOT)"; \
-	"$(VENV)/bin/basedpyright" packages/contracts/python tests/test_openapi_contract.py; \
+	"$(VENV)/bin/basedpyright" packages/contracts/python; \
 	MISE_DATA_DIR="$(MISE_DATA_DIR)" MISE_CACHE_DIR="$(MISE_CACHE_DIR)" MISE_CONFIG_DIR="$(MISE_CONFIG_DIR)" MISE_STATE_DIR="$(MISE_STATE_DIR)" MISE_CONFIG_FILE="$(MISE_CONFIG_FILE)" MISE_CEILING_PATHS="$(ROOT_PARENT)" mise exec -- pnpm contracts:typecheck
-
-test-openapi:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/python" -m unittest tests.test_openapi_contract -v; \
-	PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" packages/contracts/python/tests -v; \
-	MISE_DATA_DIR="$(MISE_DATA_DIR)" MISE_CACHE_DIR="$(MISE_CACHE_DIR)" MISE_CONFIG_DIR="$(MISE_CONFIG_DIR)" MISE_STATE_DIR="$(MISE_STATE_DIR)" MISE_CONFIG_FILE="$(MISE_CONFIG_FILE)" MISE_CEILING_PATHS="$(ROOT_PARENT)" mise exec -- pnpm contracts:test; \
-	$(MAKE) lint-contracts typecheck-contracts
 
 test-protocol-contracts:
 	@set -eu; \
@@ -87,8 +74,10 @@ test-protocol-contracts:
 		packages/contracts/python/tests/test_run_execution_protocol.py \
 		packages/contracts/python/tests/test_approval_protocol.py \
 		packages/contracts/python/tests/test_approval_security_protocol.py \
-		packages/contracts/python/tests/test_sse_runtime_protocol.py -v; \
-	MISE_DATA_DIR="$(MISE_DATA_DIR)" MISE_CACHE_DIR="$(MISE_CACHE_DIR)" MISE_CONFIG_DIR="$(MISE_CONFIG_DIR)" MISE_STATE_DIR="$(MISE_STATE_DIR)" MISE_CONFIG_FILE="$(MISE_CONFIG_FILE)" MISE_CEILING_PATHS="$(ROOT_PARENT)" mise exec -- pnpm exec vitest run --dir packages/contracts/tests protocols.test.ts; \
+		packages/contracts/python/tests/test_sse_runtime_protocol.py \
+		packages/contracts/python/tests/test_run_event_immutability.py \
+		packages/contracts/python/tests/test_contract_models.py -v; \
+	MISE_DATA_DIR="$(MISE_DATA_DIR)" MISE_CACHE_DIR="$(MISE_CACHE_DIR)" MISE_CONFIG_DIR="$(MISE_CONFIG_DIR)" MISE_STATE_DIR="$(MISE_STATE_DIR)" MISE_CONFIG_FILE="$(MISE_CONFIG_FILE)" MISE_CEILING_PATHS="$(ROOT_PARENT)" mise exec -- pnpm exec vitest run --dir packages/contracts/tests protocols.test.ts run-event-immutability.test.ts; \
 	"$(VENV)/bin/ruff" check packages/contracts/python/science_workbench_contracts/protocols packages/contracts/python/tests/protocol_fixtures.py packages/contracts/python/tests/test_*protocol*.py; \
 	"$(VENV)/bin/basedpyright" packages/contracts/python/science_workbench_contracts/protocols packages/contracts/python/tests/protocol_fixtures.py packages/contracts/python/tests/test_*protocol*.py; \
 	MISE_DATA_DIR="$(MISE_DATA_DIR)" MISE_CACHE_DIR="$(MISE_CACHE_DIR)" MISE_CONFIG_DIR="$(MISE_CONFIG_DIR)" MISE_STATE_DIR="$(MISE_STATE_DIR)" MISE_CONFIG_FILE="$(MISE_CONFIG_FILE)" MISE_CEILING_PATHS="$(ROOT_PARENT)" mise exec -- pnpm exec biome check packages/contracts/src/protocols packages/contracts/tests/protocols.test.ts; \
@@ -119,15 +108,7 @@ verify-spec:
 	cd "$(ROOT)"; \
 	if [ -x "$(VENV)/bin/python" ]; then python="$(VENV)/bin/python"; else python="$$(command -v python3)"; fi; \
 	PYTHONDONTWRITEBYTECODE=1 "$$python" -m unittest discover -s "$(ROOT)/tools/tests" -p "test_verify_spec.py" -v; \
-	PYTHONDONTWRITEBYTECODE=1 "$$python" -m tools.verify_spec "$(ROOT)/docs/requirements/requirements.yaml" "$(ROOT)/docs/spec/SPEC-v0.4.md"; \
-	PYTHONDONTWRITEBYTECODE=1 "$$python" -m tools.verify_spec "$(SPEC_V05_MANIFEST)" "$(SPEC_V05_SPEC)"
-
-verify-spec-v05:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	if [ -x "$(VENV)/bin/python" ]; then python="$(VENV)/bin/python"; else python="$$(command -v python3)"; fi; \
-	PYTHONDONTWRITEBYTECODE=1 "$$python" -m unittest discover -s "$(ROOT)/tools/tests" -p "test_verify_spec.py" -v; \
-	PYTHONDONTWRITEBYTECODE=1 "$$python" -m tools.verify_spec "$(SPEC_V05_MANIFEST)" "$(SPEC_V05_SPEC)"
+	PYTHONDONTWRITEBYTECODE=1 "$$python" -m tools.verify_spec "$(ROOT)/docs/requirements/requirements.yaml" "$(ROOT)/docs/spec/SPEC-v0.5.md"
 
 verify-architecture:
 	@set -eu; \
@@ -135,13 +116,6 @@ verify-architecture:
 	if [ -x "$(VENV)/bin/python" ]; then python="$(VENV)/bin/python"; else python="$$(command -v python3)"; fi; \
 	PYTHONDONTWRITEBYTECODE=1 "$$python" -m unittest discover -s "$(ROOT)/tests" -p "test_architecture.py" -v; \
 	PYTHONDONTWRITEBYTECODE=1 "$$python" "$(ROOT)/tools/verify_architecture.py" "$(ROOT)/docs/architecture"
-
-test-upload:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	PYTHONPATH="$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" tests/upload tests/local_stack/test_scanner.py -v; \
-	"$(VENV)/bin/ruff" check services/api/upload tests/upload services/local/scanner.py tests/local_stack/test_scanner.py; \
-	PYTHONPATH="$(ROOT)" "$(VENV)/bin/basedpyright" services/api/upload tests/upload services/local/scanner.py tests/local_stack/test_scanner.py
 
 test-artifacts:
 	@set -eu; \
@@ -158,12 +132,6 @@ test-science:
 	"$(VENV)/bin/ruff" check packages/science tests/science; \
 	PYTHONPATH="$(ROOT)/packages/science:$(ROOT)" \
 		"$(VENV)/bin/basedpyright" packages/science tests/science
-test-dry-lab:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	PYTHONPATH="$(ROOT)/packages/science:$(ROOT)" PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/pytest" tests/g002 -v; \
-	"$(VENV)/bin/ruff" check packages/science/science_workbench_science/vertical.py services/worker/dry_lab_vertical.py services/worker/__init__.py services/api/dry_lab_fixture.py tests/g002; \
-	PYTHONPATH="$(ROOT)/packages/science:$(ROOT)" "$(VENV)/bin/basedpyright" packages/science/science_workbench_science/vertical.py services/worker/dry_lab_vertical.py services/worker/__init__.py services/api/dry_lab_fixture.py tests/g002
 
 check-quarantine:
 	@set -eu; \
@@ -206,8 +174,3 @@ test-retention:
 	PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/python" -m pytest tests/platform/test_retention.py -v; \
 	"$(VENV)/bin/ruff" check tools/platform_policy/models.py tools/platform_policy/retention.py tests/platform/test_retention.py; \
 	"$(VENV)/bin/basedpyright" tools/platform_policy/models.py tools/platform_policy/retention.py tests/platform/test_retention.py
-
-check-generated-contracts:
-	@set -eu; \
-	cd "$(ROOT)"; \
-	PYTHONDONTWRITEBYTECODE=1 "$(VENV)/bin/python" -m tools.platform_policy.static_checks drift-scan "$(ROOT)"

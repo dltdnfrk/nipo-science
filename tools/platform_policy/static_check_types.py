@@ -15,7 +15,6 @@ class StaticMode(StrEnum):
 
     SBOM = "sbom"
     SECRET_SCAN = "secret-scan"  # noqa: S105 -- A mode label, never a credential.
-    DRIFT_SCAN = "drift-scan"
 
 
 class StaticCheckCode(StrEnum):

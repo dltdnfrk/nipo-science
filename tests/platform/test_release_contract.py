@@ -1127,7 +1127,7 @@ def test_canonical_fixture_finalizes_and_verifies_document(
                 for item in control.requirement_ids
             }
         )
-        == 84
+        == 64
     )
     assert (
         len({item for control in payload.receipt.controls for item in control.goal_ids})
@@ -1526,7 +1526,7 @@ def test_control_logs_external_bindings_and_sanitization_are_rederived(
         _ = canonical_fixture.finalizer.finalize(forged_receipt)
 
     external = canonical_fixture.receipt.external_evidence[0].model_copy(
-        update={"requirement_ids": ("F01",), "seal": None}
+        update={"requirement_ids": ("L01",), "seal": None}
     )
     external = external.model_copy(
         update={

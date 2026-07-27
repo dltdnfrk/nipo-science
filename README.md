@@ -11,7 +11,6 @@ planes are being retired in staged deletions (ADR-0011).
 
 - `apps/web`: Korean product shell and isolated test fixtures
 - `services/api`: staged-retirement SaaS zone plus the artifact reuse closure
-- `services/worker`: worker service boundary and local stub
 - `packages/contracts`: shared interface contracts
 - `packages/science`: shared scientific domain package
 - `tests`: cross-project and boundary tests
@@ -44,29 +43,13 @@ then runs `uv sync --locked` into the exact-Python `.venv` and
 project-local pnpm store under `.tools/pnpm`. Both lockfiles are required and
 are never rewritten by bootstrap.
 
-Bootstrap is idempotent. After it completes, `make test-openapi` runs the shared
-OpenAPI, Python/Pydantic, and TypeScript/Zod contract gates without any separate
-dependency-install step.
+Bootstrap is idempotent. After it completes, `make test-protocol-contracts` and
+`make test-artifact-contracts` run the shared Python/Pydantic and
+TypeScript/Zod contract gates without any separate dependency-install step.
 
 Run `make test-boundaries` to execute the standard-library boundary tests and
 then scan the real project root, using the local virtual environment when it is
 available.
-
-## Scientific upload ingestion
-
-Run `make test-upload` to verify the quarantine-to-clean ingestion boundary. The
-pipeline allows PDF, PNG, JPEG, TIFF, CSV, TSV, JSON, macro-free tabular XLSX,
-TXT, and Markdown only. XLSX accepts standard styles, shared strings, themes,
-calculation chains, and document properties while rejecting active/external parts;
-requires extension, declared MIME, and decoded structure to agree; and rejects
-archives, embedded archive polyglots, undeclared or corrupt OOXML parts, external
-relationships, malware, and scanner failures. Limits are 50 MiB per file, 100 MiB
-per request, 10 files, 8,192 lazy transport chunks per file, 200 PDF pages, and 50
-megapixels; individual XLSX data XML parts are limited to 16 MiB. Every object
-key and store operation is bound to the authenticated
-organization, project, and requester scope. Agent reads are denied until the
-request is scanned, fully decoded, and atomically promoted; clean bytes are
-immutable, and every rejection invokes request-atomic removal.
 
 ## Immutable Artifact Versions
 
@@ -110,22 +93,3 @@ lineage, or a dimensionally incompatible wavelength unit produce
 `insufficient_data`; malformed numeric shapes, unrepresentable derived arithmetic,
 and invalid Unicode scalar data produce `invalid_data`. Neither path imputes
 hidden values, collapses nonfinite evidence values, or emits a diagnostic verdict.
-
-## Deterministic Dry-Lab Fixture Vertical
-
-Run `make test-dry-lab` to verify the live loopback fixture. The ordered flow
-validates a calibrated CSV upload and complete human-authored ResearchIntent,
-freezes both into the ActionPlan digest, consumes one approval, runs a fixed
-normalizer in an isolated Python child, emits immutable CSV, PNG, Markdown,
-evidence-ledger, and provenance artifacts, persists a read-only hash Review,
-creates a safe relative-path Export receipt, and records runtime cleanup. The
-ResearchIntent and its digest remain bound through approval, provenance, Review,
-and Export; a missing or incomplete intent is rejected before planning.
-
-The fixture rejects malformed or uncalibrated data, unsafe paths, network and
-package-install requests, stale leases, approval replay, cancellation, and
-Kernel loss without retrying side effects. It is a bounded research-only
-acceptance surface, not the production identity or product UI delivered in
-later waves. Start `services.api.dry_lab_fixture.run_server()` to serve the
-accessible Korean browser fixture from `apps/web/g002-fixture.html`.
-

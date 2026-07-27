@@ -1,0 +1,321 @@
+{
+  "schema_version": "1.0",
+  "spec": {
+    "document_id": "FS-SPEC-001",
+    "version": "0.4",
+    "status": "normative",
+    "path": "docs/spec/SPEC-v0.4.md"
+  },
+  "stack": {
+    "node": "24.17.0",
+    "pnpm": "11.12.0",
+    "python": "3.12.13",
+    "uv": "0.11.28",
+    "postgresql": "18.4"
+  },
+  "scope": {
+    "product_use": "research_only_non_clinical",
+    "clinical_diagnosis": "forbidden",
+    "patient_care_decisions": "forbidden",
+    "regulated_pathogen_procedure_automation": "forbidden"
+  },
+  "p0_features": [
+    "F01", "F02", "F03", "F04", "F05", "F06",
+    "F07", "F08", "F09", "F10", "F11", "F13"
+  ],
+  "provider_runtime": {
+    "adapter_contract": "AgentRuntimeAdapter",
+    "connection_entity": "provider_connections",
+    "connection_owner": "requester_user_id",
+    "auth_mode": "official_subscription_oauth",
+    "run_selection": "explicit_provider_connection_id",
+    "required_default": "openai_codex",
+    "required_runtimes": ["openai_codex"],
+    "automatic_fallback": "forbidden",
+    "forbidden_auth": ["api_key", "byok", "unofficial_token", "browser_cookie_reuse"],
+    "qualification": {
+      "issuer": "external_unix_socket_authority",
+      "signing_material_in_runtime": false,
+      "verification": "deployment_public_key_set",
+      "verification_key_retention": "permanent_or_archive_verifier_for_all_immutable_receipts",
+      "history": "append_only_signed_receipts",
+      "legacy_history": "append_only_unverified_non_authoritative",
+      "publication": "ordered_profile_then_receipt_then_database_adoption_not_an_atomic_triple",
+      "adoption_failure": "sidecars_remain_non_authoritative_without_database_receipt_or_pointer",
+      "adoption_snapshot": "cas_rechecks_runtime_home_account_models_selected_model_health_created_at_revision_and_subject",
+      "runtime_policy": {
+        "production": "deployment_supplied_protected_exact_platform_policy_file_pinned_by_sha256",
+        "checked_in_darwin_policy": "development_and_test_example_only"
+      },
+      "processes": {
+        "authority": "external_signer_without_database_credential",
+        "adopter": "dedicated_qualification_login_only",
+        "dispatcher": "dedicated_dispatcher_login_only",
+        "cleanup": "dedicated_cleanup_login_only_never_resident_in_app_or_provider_runtime"
+      },
+      "adoption_roles": {
+        "login": "deployment_managed_dedicated_noinherit_login",
+        "database": "science_workbench_qualification",
+        "database_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"]
+      },
+      "dispatch_roles": {
+        "login": "deployment_managed_dedicated_noinherit_login",
+        "database": "science_workbench_dispatcher",
+        "database_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"]
+      },
+      "cleanup_roles": {
+        "login": "deployment_managed_dedicated_noinherit_login",
+        "database": "science_workbench_provider_cleanup",
+        "database_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"],
+        "scope": "fixed_cross_tenant_due_cleanup_only",
+        "direct_table_access": "forbidden",
+        "database_interface": "four_fixed_security_definer_functions_for_bounded_due_candidates_exact_due_validation_and_two_completion_mutations"
+      },
+      "ordinary_application": {
+        "receipt_or_current_pointer_mutation": "forbidden",
+        "run_insert": "forbidden"
+      },
+      "migration": {
+        "remediation_revision": "0004_provider_security",
+        "fresh_upgrade_bare_healthy": "archive_as_legacy_unverified_then_normalize_to_pending",
+        "stamped_0003_missing_evidence": "preserve_pending_without_fabrication_and_require_backup_remediation"
+      },
+      "run_binding": "exact_current_receipt_runtime_identity_and_selected_model",
+      "failure_policy": "fail_closed"
+    },
+    "verification": {
+      "authority_and_restart": "tests/g004/test_provider_live_capture.py",
+      "receipt_contract": "tests/g004/test_provider_qualification.py",
+      "migration_and_roles": "services/api/tests/persistence/test_upgrade_migrations.py",
+      "rls_forgery": "services/api/tests/persistence/test_rls_contracts.py",
+      "code_path_status": "verified_by_repository_gates",
+      "external_live_status": "release_blocked_until_fresh_deployment_qualification_succeeds"
+    },
+    "adapters": {
+      "openai_codex": {
+        "tier": "required",
+        "launch_default": true,
+        "activation": "live_qualification_required",
+        "failure_policy": "release_blocked"
+      },
+      "anthropic_claude_code": {
+        "tier": "optional",
+        "launch_default": false,
+        "activation": "fail_closed_live_qualification",
+        "failure_policy": "disabled"
+      },
+      "xai_grok_build": {
+        "tier": "optional",
+        "launch_default": false,
+        "activation": "fail_closed_live_qualification",
+        "failure_policy": "disabled"
+      },
+      "moonshot_kimi_code": {
+        "tier": "optional",
+        "launch_default": false,
+        "activation": "fail_closed_live_qualification",
+        "failure_policy": "disabled"
+      },
+      "zai_glm": {
+        "tier": "unsupported",
+        "launch_default": false,
+        "activation": "disabled",
+        "reason": "unsupported_auth",
+        "connect_action": "unavailable"
+      }
+    }
+  },
+  "monetary_semantics": {
+    "state": "absent",
+    "schema_fields": [],
+    "api_operations": [],
+    "event_fields": [],
+    "error_codes": [],
+    "approval_fields": [],
+    "metrics": []
+  },
+  "tool_governance": {
+    "requirement_id": "F11",
+    "scope": ["tool_grant", "plan_approval"],
+    "effects": ["allow", "ask", "deny"],
+    "approval_binding": [
+      "org_id", "run_id", "requester_id", "tool", "arguments_hash",
+      "network_scope", "secret_scope", "research_intent_sha256", "expires_at"
+    ],
+    "single_use": true
+  },
+  "review": {
+    "create_path": "/reviews",
+    "get_path": "/reviews/{id}",
+    "create_response": ["review_id", "run_id", "status"],
+    "run_owner": "system",
+    "states": ["queued", "running", "completed", "failed"],
+    "persisted": true,
+    "input_pinning": "immutable_versions_and_execution_refs",
+    "reviewer_reexecution": false,
+    "reviewer_capabilities": {
+      "runner": false,
+      "python": false,
+      "bash": false,
+      "connector": false,
+      "artifact_write": false
+    },
+    "findings_submission": "exactly_once"
+  },
+  "compliance": {
+    "legal_hold_authority": "compliance_operator",
+    "role_scope": "internal_separate_from_owner_member",
+    "owner_legal_hold_access": "read_only",
+    "hold_log": "append_only_actor_authority_reason_timestamp"
+  },
+  "break_glass": {
+    "authority_role": "internal_security_incident_operator",
+    "legal_hold_authority_separate": true,
+    "standing_access": false,
+    "scope": "least_privilege_resource_and_action",
+    "reason_required": true,
+    "approval_required": true,
+    "expiry": "bounded",
+    "revocation": "immediate",
+    "audit": "immutable_access_log"
+  },
+  "skills": {
+    "ids": ["literature-review", "source-attribution", "probe-diagnostic"]
+  },
+  "dry_lab": {
+    "ordered_chain": [
+      "scientific_input",
+      "research_intent",
+      "immutable_action_plan",
+      "isolated_python",
+      "csv",
+      "png",
+      "markdown",
+      "ledger",
+      "provenance",
+      "persisted_review",
+      "export"
+    ],
+    "action_plan_approval_required": true,
+    "research_intent": {
+      "approval_binding": "full_canonical_digest",
+      "canonicalization": "sorted_keys_compact_nfc_utf8",
+      "data_origins": ["observed", "synthetic", "mixed"],
+      "fields": [
+        "question", "rationale", "intended_benefit", "success_criteria",
+        "constraints", "stop_conditions", "research_mode", "data_origin"
+      ],
+      "research_modes": ["ai_for_science", "copilot", "bounded_agentic"],
+      "optional_references": "explicit_null_when_absent",
+      "synthetic_data": "distinct_generator_and_validator_required"
+    },
+    "python_deterministic": true,
+    "artifact_versions_immutable": true,
+    "export_pins_versions": true
+  },
+  "sandbox": {
+    "runtime": "gvisor",
+    "enforcement_claim": "outcome_measured",
+    "required_outcomes": [
+      "non_root_identity_observed",
+      "read_only_root_write_denied",
+      "default_egress_and_metadata_denied",
+      "resource_limits_enforced",
+      "cross_run_namespace_access_denied",
+      "credential_mount_absent",
+      "runtime_class_confirmed"
+    ],
+    "literal_control_claims": []
+  },
+  "requirements": {
+    "F01": {"kind": "feature", "priority": "P0", "statement": "Magic-link authentication, one active organization membership, and expiring same-origin sessions."},
+    "F02": {"kind": "feature", "priority": "P0", "statement": "Tenant-scoped Project create, read, update, and archive."},
+    "F03": {"kind": "feature", "priority": "P0", "statement": "Persistent Session history, listing, resume, and archive."},
+    "F04": {"kind": "feature", "priority": "P0", "statement": "Transactional Run events with SSE replay and terminal recovery."},
+    "F05": {"kind": "feature", "priority": "P0", "statement": "Isolated deterministic Python execution with bounded Session Kernel lifetime."},
+    "F06": {"kind": "feature", "priority": "P0", "statement": "Immutable checksummed Artifact Versions and dependency provenance."},
+    "F07": {"kind": "feature", "priority": "P0", "statement": "Validated Project-scoped Skill loading for the three canonical Skill IDs."},
+    "F08": {"kind": "feature", "priority": "P0", "statement": "PubMed and OpenAlex connectors preserve source identifiers, retrieval time, and partial failures."},
+    "F09": {"kind": "feature", "priority": "P0", "statement": "Persisted Reviewer v1 verifies pinned evidence without re-execution."},
+    "F10": {"kind": "feature", "priority": "P0", "statement": "Version-pinned reproducible Export Pack with manifest and checksums."},
+    "F11": {"kind": "feature", "priority": "P0", "statement": "Project Tool Grant and immutable Plan Approval bound to a complete ResearchIntent only."},
+    "F13": {"kind": "feature", "priority": "P0", "statement": "F13 protects application Connector and Broker credentials; provider OAuth connections are a separate requester-owned domain."},
+
+    "AC-F01": {"kind": "acceptance", "priority": "release", "statement": "A new email consumes one 15-minute magic link, creates one organization, and replay returns 410."},
+    "AC-F01-B": {"kind": "acceptance", "priority": "release", "statement": "An invited email joins the invited organization without creating another."},
+    "AC-F01-C": {"kind": "acceptance", "priority": "release", "statement": "Logout or absolute expiry revokes the cookie and protected APIs return 401."},
+    "AC-F01-D": {"kind": "acceptance", "priority": "release", "statement": "Ownership transfer preserves one Owner and last-Owner deletion returns 409."},
+    "AC-F01-E": {"kind": "acceptance", "priority": "release", "statement": "A second active organization invitation returns 409 without mutation."},
+    "AC-F02": {"kind": "acceptance", "priority": "release", "statement": "Project mutations persist and cross-tenant access returns non-disclosing 404."},
+    "AC-F03": {"kind": "acceptance", "priority": "release", "statement": "Resumed Session history is ordered and can start a new Run."},
+    "AC-F04": {"kind": "acceptance", "priority": "release", "statement": "Reconnect replays ordered events after Last-Event-ID without creating a second Run."},
+    "AC-F04-B": {"kind": "acceptance", "priority": "release", "statement": "Expired event history returns 410 and GET Run recovers the terminal result."},
+    "AC-F05": {"kind": "acceptance", "priority": "release", "statement": "Two Runs share allowed Kernel variables; idle loss removes variables but retains Artifacts."},
+    "AC-F05-B": {"kind": "acceptance", "priority": "release", "statement": "Ungrantable network, metadata, and secret access are denied and audited."},
+    "AC-F06": {"kind": "acceptance", "priority": "release", "statement": "Saving from Version 1 creates Version 2 while Version 1 checksum remains unchanged."},
+    "AC-F06-B": {"kind": "acceptance", "priority": "release", "statement": "A stale base version returns 409 without overwrite."},
+    "AC-F07": {"kind": "acceptance", "priority": "release", "statement": "All three canonical Skills validate content, kernel, connector, tool, network, and secret declarations."},
+    "AC-F08": {"kind": "acceptance", "priority": "release", "statement": "Literature retrieval stores identifiers, timestamps, and calls while one connector failure preserves partial results."},
+    "AC-F09": {"kind": "acceptance", "priority": "release", "statement": "Persisted Review catches DOI, numeric, and figure mismatches without execution capabilities."},
+    "AC-F10": {"kind": "acceptance", "priority": "release", "statement": "Export contains selected CSV, PNG, Markdown, Ledger, manifest, versions, checksums, and no traversal entry."},
+    "AC-F11": {"kind": "acceptance", "priority": "release", "statement": "Every public Run and ActionPlan boundary rejects a missing or incomplete ResearchIntent; an accepted intent changes the plan digest and is pinned through provenance and Export."},
+    "AC-F11-B": {"kind": "acceptance", "priority": "release", "statement": "Tool deny executes zero, ask waits for a digest-bound approval, allow executes with an audited action digest, and wrong actor, expiry, intent mutation, replay, or cross-tenant use is rejected."},
+    "AC-F13": {"kind": "acceptance", "priority": "release", "statement": "Application credentials never appear in UI, API, logs, database plaintext, or durable execution context."},
+    "AC-F13-B": {"kind": "acceptance", "priority": "release", "statement": "Credential rotation and revocation reject old material and emit full lifecycle audit."},
+    "AC-F13-C": {"kind": "acceptance", "priority": "release", "statement": "A scoped Sandbox operation receives only a one-use broker handle and never credential plaintext."},
+    "AC-F13-D": {"kind": "acceptance", "priority": "release", "statement": "Requester OAuth secrets live only in provider_connections; F13 credentials cannot authenticate AgentRuntimeAdapter and provider OAuth cannot enter F13 APIs."},
+    "AC-PROVIDER-AUTHORITY": {"kind": "acceptance", "priority": "release", "statement": "Provider qualification is accepted only from an externally signed receipt whose private key is absent from the evaluator and runtime; authority, adopter, dispatcher, and cleanup credentials remain separate, and an unknown key, malformed receipt, unavailable authority, wrong subject, or credential-role mismatch fails closed."},
+    "AC-PROVIDER-RUN-BINDING": {"kind": "acceptance", "priority": "release", "statement": "The ordinary application role cannot insert a Run; the dedicated dispatcher atomically persists every model-backed Run with the exact current immutable qualification receipt, connection revision, selected model, profile, runtime version, and executable digest, and that history survives qualification refresh and process restart."},
+    "AC-PROVIDER-MIGRATION": {"kind": "acceptance", "priority": "release", "statement": "A fresh upgrade archives every observable unsigned signal including bare healthy state as append-only legacy_unverified evidence before normalization; revision 0004_provider_security converges stale-0003 security state but never fabricates evidence already lost by an older 0003, requires backup remediation for that case, and refuses a downgrade that would destroy signed or legacy history."},
+    "AC-SAFE": {"kind": "acceptance", "priority": "release", "statement": "Clinical, diagnostic, patient-care, or regulated procedural requests stop or remain bounded research support and are audited."},
+    "AC-TENANT": {"kind": "acceptance", "priority": "release", "statement": "Cross-organization Run, SSE, Approval, Artifact, Review, Export, queue, and object access reveals no existence and returns 404 where synchronous."},
+    "AC-COMPLIANCE": {"kind": "acceptance", "priority": "release", "statement": "Research-only and non-clinical notices appear in onboarding and Settings with consent time."},
+    "AC-DATA": {"kind": "acceptance", "priority": "release", "statement": "Deletion completes receipts across DB, objects, exports, queue, cache, and provider copies; tombstones replay after restore and legal holds require Compliance Operator authority."},
+    "AC-NFR": {"kind": "acceptance", "priority": "release", "statement": "NFR01-10, recovery, disaster restore, browser, accessibility, and raw evidence gates pass."},
+
+    "SEC01": {"kind": "security", "priority": "P0", "statement": "PostgreSQL RLS enforces organization isolation."},
+    "SEC02": {"kind": "security", "priority": "P0", "statement": "Private object keys are organization and project scoped."},
+    "SEC03": {"kind": "security", "priority": "P0", "statement": "Download URLs are single-object, authorized, and expire within ten minutes."},
+    "SEC04": {"kind": "security", "priority": "P0", "statement": "F13 credentials use KMS envelope encryption and ciphertext-only storage."},
+    "SEC05": {"kind": "security", "priority": "P0", "statement": "Secrets are absent from API responses, logs, execution input, artifacts, and model context."},
+    "SEC06": {"kind": "security", "priority": "P0", "statement": "gVisor confinement is accepted only by measured non-root, read-only, egress, metadata, resource, namespace, mount, and RuntimeClass outcomes."},
+    "SEC07": {"kind": "security", "priority": "P0", "statement": "Only size, type, extension, and malware-clean uploads become readable."},
+    "SEC08": {"kind": "security", "priority": "P0", "statement": "Tool output remains untrusted data and cannot become system instruction."},
+    "SEC09": {"kind": "security", "priority": "P0", "statement": "Credential, provider connection, access, approval, legal-hold, and export actions are audited."},
+    "SEC10": {"kind": "security", "priority": "P0", "statement": "Operational logs retain 90 days and audit records retain one year unless an authorized hold applies."},
+    "SEC11": {"kind": "security", "priority": "P0", "statement": "State-changing cookie requests enforce CSRF, Origin, Fetch Metadata, rotation, and token hashing."},
+    "SEC12": {"kind": "security", "priority": "P0", "statement": "Upload and export paths reject absolute paths, traversal, links, and normalized collisions."},
+    "SEC13": {"kind": "security", "priority": "P0", "statement": "Connector hosts are fixed HTTPS registry entries and every redirect is SSRF checked."},
+    "SEC14": {"kind": "security", "priority": "P0", "statement": "Structured allowlist logging and redaction protect sensitive data; incident break-glass has no standing access and requires an authorized internal security role, least-privilege scope, reason, approval, bounded expiry, immediate revocation, and immutable access audit."},
+    "SEC15": {"kind": "security", "priority": "P0", "statement": "Authorization changes and archive state prevent new download URLs."},
+    "SEC16": {"kind": "security", "priority": "P0", "statement": "Deletion tombstones are immediate; internal Compliance Operator alone places or releases append-only legal holds."},
+
+    "NFR01": {"kind": "nonfunctional", "priority": "release", "statement": "The prelaunch 72-hour reliability profile demonstrates at least 99.5 percent success and no 15-minute continuous failure."},
+    "NFR02": {"kind": "nonfunctional", "priority": "release", "statement": "Production-like CRUD P95 is at most 500 ms with error rate below one percent."},
+    "NFR03": {"kind": "nonfunctional", "priority": "release", "statement": "Visible provider token P95 is at most three seconds when the runtime reports tokens; status events do not count."},
+    "NFR04": {"kind": "nonfunctional", "priority": "release", "statement": "Sandbox allocation P95 is at most ten seconds."},
+    "NFR05": {"kind": "nonfunctional", "priority": "release", "statement": "Artifact download checksum mismatches are zero."},
+    "NFR06": {"kind": "nonfunctional", "priority": "release", "statement": "Worker restart reconciles queued and running work within five minutes without side-effect replay."},
+    "NFR07": {"kind": "nonfunctional", "priority": "release", "statement": "An Export Pack up to 500 MiB completes within five minutes."},
+    "NFR08": {"kind": "nonfunctional", "priority": "release", "statement": "The core flow is keyboard complete and has zero serious WCAG 2.2 AA automated violations."},
+    "NFR09": {"kind": "nonfunctional", "priority": "release", "statement": "P0 E2E passes on the latest two major Chrome, Edge, and Safari releases."},
+    "NFR10": {"kind": "nonfunctional", "priority": "release", "statement": "PostgreSQL PITR meets RPO 15 minutes and RTO four hours with quarterly restore evidence."},
+
+    "GS01": {"kind": "golden_session", "priority": "release", "statement": "PubMed literature synthesis resolves DOI and emits required evidence columns."},
+    "GS02": {"kind": "golden_session", "priority": "release", "statement": "Reviewer detects source attribution errors."},
+    "GS03": {"kind": "golden_session", "priority": "release", "statement": "Reviewer detects numeric overstatement."},
+    "GS04": {"kind": "golden_session", "priority": "release", "statement": "Probe anomaly analysis separates molecular, optical, and experimental-artifact hypotheses without diagnosis."},
+    "GS05": {"kind": "golden_session", "priority": "release", "statement": "Artifact correction preserves versions and reproducibility history."},
+    "GS06": {"kind": "golden_session", "priority": "release", "statement": "Connector partial failure yields bounded partial results and an explicit error."},
+    "GS07": {"kind": "golden_session", "priority": "release", "statement": "Export manifest and checksums independently verify."},
+    "GS08": {"kind": "golden_session", "priority": "release", "statement": "Prompt injection content is never promoted to instruction."},
+    "GS09": {"kind": "golden_session", "priority": "release", "statement": "Secret plaintext exposure count is zero."},
+    "GS10": {"kind": "golden_session", "priority": "release", "statement": "Cross-organization access count is zero."},
+
+    "RV01": {"kind": "review_rule", "priority": "P0", "statement": "Every numeric claim exists in pinned execution output or source evidence."},
+    "RV02": {"kind": "review_rule", "priority": "P0", "statement": "DOI, PMID, and OpenAlex identifiers resolve and support their claims."},
+    "RV03": {"kind": "review_rule", "priority": "P0", "statement": "Tables and figures match pinned code, input, and output checksums."},
+    "RV04": {"kind": "review_rule", "priority": "P0", "statement": "Evidence level never exceeds the retrieved source level."},
+    "RV05": {"kind": "review_rule", "priority": "P0", "statement": "Output respects research-only, non-clinical, and safety limits."}
+  }
+}

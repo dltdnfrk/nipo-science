@@ -267,8 +267,8 @@ def test_parser_rejects_relabel_swap_omit_and_stale_binding_replay() -> None:
         }
     )
     relabeled = cases.copy()
-    relabeled[0] = relabeled[0].model_copy(update={"threat_id": "T08"})
-    relabeled[1] = relabeled[1].model_copy(update={"threat_id": "T07"})
+    relabeled[0] = relabeled[0].model_copy(update={"threat_id": cases[1].threat_id})
+    relabeled[1] = relabeled[1].model_copy(update={"threat_id": cases[0].threat_id})
 
     for candidate in (changed_source, swapped, relabeled):
         with pytest.raises(EvidenceIntegrityError):

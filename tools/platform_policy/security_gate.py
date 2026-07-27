@@ -41,32 +41,18 @@ class SecurityCase:
 
 SECURITY_CASES: tuple[SecurityCase, ...] = (
     SecurityCase(
-        "T07",
-        "malicious-files-and-archives",
-        "tests/upload/test_ingestion.py::test_ingest_rolls_back_earlier_valid_files_when_later_file_fails",
-        0,
-        1,
-    ),
-    SecurityCase(
-        "T08",
-        "sandbox-escape",
-        "tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_egress_request-egress-requested-0]",
-        0,
-        1,
-    ),
-    SecurityCase(
         "T09",
         "lease-fencing",
-        "tests/g002/test_vertical.py::test_failures_stop_without_execution_artifacts[_stale_lease-stale-lease-0]",
+        "apps/local/tests/test_store.py::test_concurrent_claims_fence_one_produced_execution_id",
         0,
         1,
     ),
     SecurityCase(
         "T10",
         "approval-replay",
-        "tests/g002/test_vertical.py::test_approval_replay_has_no_second_execution_or_retry",
-        0,
-        1,
+        "apps/local/tests/test_store.py::test_a_replayed_approval_is_refused_and_creates_no_execution",
+        2,
+        3,
     ),
     SecurityCase(
         "T11",

@@ -1,6 +1,6 @@
 """SaaS quarantine inventory and import boundary for the local-first cutover.
 
-ADR-0011 retires the hosted multi-tenant service plane in staged deletions
+ADR-0011 retired the hosted multi-tenant service plane in staged deletions
 while ``apps/local`` (nipo_local) keeps reusing a fixed closure of
 ``services.api.artifacts`` modules plus ``packages/science`` and
 ``packages/contracts``. This module declares both inventories declaratively
@@ -9,10 +9,10 @@ a declared closure module disappears from disk, or when a deletion-scheduled
 pattern no longer matches any module (a stale entry means a deletion stage
 landed without updating this inventory in the same commit).
 
-Imports *within* the deletion-scheduled zone are intentionally allowed: the
-zone is removed wholesale, so SaaS modules importing each other is not drift.
-The boundary that must hold from Stage 0 onward is that the keep side —
-nipo_local and the reuse closure itself — never depends on the zone.
+After Stage 3 the deletion-scheduled zone is empty: every hosted module is
+gone and ``services`` holds only the reuse closure. The check keeps guarding
+the closure's presence and rejects any keep-side import of a ``services.api``
+module outside the declared closure (unclassified drift).
 
 ``services/api/artifacts/__init__.py`` is audited alongside the closure
 modules: the Stage 2 pruning dropped its ``PostgresArtifactStore`` re-export
@@ -68,13 +68,12 @@ Includes the indirect ``__init__`` re-export closure (``blob_store``,
 and ``signing`` (pulled in through ``service``), per the Stage 0 acceptance.
 """
 
-DELETION_SCHEDULED_MODULES: Final = (
-    "services.api.dry_lab_fixture",
-    "services.api.upload",
-    "services.local",
-    "services.worker",
-)
-"""Fnmatch patterns over dotted module names scheduled for staged deletion."""
+DELETION_SCHEDULED_MODULES: Final[tuple[str, ...]] = ()
+"""Fnmatch patterns over dotted module names scheduled for staged deletion.
+
+Empty since Stage 3: the hosted zone is fully deleted. A future retirement
+stage repopulates this tuple in the same commit that schedules the deletion.
+"""
 
 AUDITED_PACKAGE_ROOTS: Final = (
     "apps/local",

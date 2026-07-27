@@ -11,7 +11,6 @@
   "scripts": {
     "contracts:lint": "biome check packages/contracts",
     "contracts:typecheck": "tsc -p packages/contracts/tsconfig.json",
-    "contracts:test": "vitest run --dir packages/contracts/tests",
     "test:e2e:local": "playwright test -c tests/e2e/local.config.ts"
   },
   "devDependencies": {

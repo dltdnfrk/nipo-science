@@ -42,90 +42,70 @@ CI_REQUIREMENT_CASE_PREFIX: Final = b"CI_REQUIREMENT_CASE="
 CI_REQUIREMENT_CASE_ERROR: Final = "CI requirement case evidence mismatch"
 TRUSTED_REQUIREMENT_IDS: Final[frozenset[str]] = frozenset(
     (
-        "AC-COMPLIANCE",
-        "AC-DATA",
-        "AC-F01",
-        "AC-F01-B",
-        "AC-F01-C",
-        "AC-F01-D",
-        "AC-F01-E",
-        "AC-F02",
-        "AC-F03",
-        "AC-F04",
-        "AC-F04-B",
-        "AC-F05",
-        "AC-F05-B",
-        "AC-F06",
-        "AC-F06-B",
-        "AC-F07",
-        "AC-F08",
-        "AC-F09",
-        "AC-F10",
-        "AC-F11",
-        "AC-F11-B",
-        "AC-F13",
-        "AC-F13-B",
-        "AC-F13-C",
-        "AC-F13-D",
-        "AC-NFR",
-        "AC-PROVIDER-AUTHORITY",
-        "AC-PROVIDER-MIGRATION",
-        "AC-PROVIDER-RUN-BINDING",
+        "AC-DETERMINISM",
+        "AC-L01",
+        "AC-L02",
+        "AC-L03",
+        "AC-L04",
+        "AC-L05",
+        "AC-L05-B",
+        "AC-L06",
+        "AC-L06-B",
+        "AC-L07",
+        "AC-L07-B",
+        "AC-L08",
+        "AC-L09",
+        "AC-L09-B",
+        "AC-L10",
+        "AC-L11",
+        "AC-L11-B",
+        "AC-L12",
+        "AC-L12-B",
+        "AC-LOCAL",
         "AC-SAFE",
-        "AC-TENANT",
-        "F01",
-        "F02",
-        "F03",
-        "F04",
-        "F05",
-        "F06",
-        "F07",
-        "F08",
-        "F09",
-        "F10",
-        "F11",
-        "F13",
-        "GS01",
-        "GS02",
-        "GS03",
-        "GS04",
-        "GS05",
-        "GS06",
-        "GS07",
-        "GS08",
-        "GS09",
-        "GS10",
-        "NFR01",
-        "NFR02",
-        "NFR03",
-        "NFR04",
-        "NFR05",
-        "NFR06",
-        "NFR07",
-        "NFR08",
-        "NFR09",
-        "NFR10",
+        "GL01",
+        "GL02",
+        "GL03",
+        "GL04",
+        "GL05",
+        "GL06",
+        "GL07",
+        "GL08",
+        "L01",
+        "L02",
+        "L03",
+        "L04",
+        "L05",
+        "L06",
+        "L07",
+        "L08",
+        "L09",
+        "L10",
+        "L11",
+        "L12",
+        "LN01",
+        "LN02",
+        "LN03",
+        "LN04",
+        "LN05",
+        "LN06",
+        "LN07",
+        "LN08",
+        "LS01",
+        "LS02",
+        "LS03",
+        "LS04",
+        "LS05",
+        "LS06",
+        "LS07",
+        "LS08",
+        "LS09",
+        "LS10",
         "RV01",
         "RV02",
         "RV03",
         "RV04",
         "RV05",
-        "SEC01",
-        "SEC02",
-        "SEC03",
-        "SEC04",
-        "SEC05",
-        "SEC06",
-        "SEC07",
-        "SEC08",
-        "SEC09",
-        "SEC10",
-        "SEC11",
-        "SEC12",
-        "SEC13",
-        "SEC14",
-        "SEC15",
-        "SEC16",
     )
 )
 
@@ -214,17 +194,13 @@ class CiJob(StrEnum):
     BOUNDARIES = "boundaries"
     SPEC = "spec"
     ARCHITECTURE = "architecture"
-    OPENAPI = "openapi"
     PROTOCOL_CONTRACTS = "protocol-contracts"
     ARTIFACT_CONTRACTS = "artifact-contracts"
-    UPLOAD = "upload"
     ARTIFACTS = "artifacts"
     SCIENCE = "science"
     RETENTION = "retention"
-    GENERATED_DRIFT = "generated-drift"
     SBOM = "sbom"
     SECRET_SCAN = b"secret-scan".decode()
-    DRY_LAB = "dry-lab"
     LOCAL_WORKBENCH = "local-workbench"
     SECURITY = "security"
     RECOVERY = "recovery"
@@ -867,62 +843,6 @@ class TaskAttemptBundle(BaseModel):
         return self
 
 
-class _PathItem(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
-
-    delete: JsonValue = None
-    get: JsonValue = None
-    patch: JsonValue = None
-    post: JsonValue = None
-    put: JsonValue = None
-
-    def methods(self) -> tuple[str, ...]:
-        result: list[str] = []
-        if self.delete is not None:
-            result.append("delete")
-        if self.get is not None:
-            result.append("get")
-        if self.patch is not None:
-            result.append("patch")
-        if self.post is not None:
-            result.append("post")
-        if self.put is not None:
-            result.append("put")
-        return tuple(result)
-
-
-class _Components(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
-
-    schemas: dict[str, JsonValue]
-
-
-class _OpenApiInput(BaseModel):
-    model_config: ClassVar[ConfigDict] = ConfigDict(frozen=True, extra="allow")
-
-    paths: dict[str, _PathItem]
-    components: _Components
-
-
-@dataclass(frozen=True, slots=True)
-class GeneratedContract:
-    """Expected and checked-in projections of one source contract."""
-
-    source_path: Path
-    generated_path: Path
-    expected: bytes
-    actual: bytes
-
-    @classmethod
-    def from_paths(cls, source_path: Path, generated_path: Path) -> GeneratedContract:
-        """Load both sides of a generated-contract freshness check."""
-        return cls(
-            source_path,
-            generated_path,
-            render_openapi_catalog(source_path),
-            generated_path.read_bytes(),
-        )
-
 
 @dataclass
 class EvidenceIntegrityError(Exception):
@@ -937,17 +857,6 @@ class EvidenceIntegrityError(Exception):
         prefix = "CI evidence" if self.job is None else str(self.job)
         return f"{prefix} {self.issue}"
 
-
-@dataclass(frozen=True, slots=True)
-class StaleGeneratedContractError(Exception):
-    """Rejects checked-in generated data that differs from its source."""
-
-    path: Path
-
-    @override
-    def __str__(self) -> str:
-        """Identify the stale generated path."""
-        return f"generated contract is stale: {self.path}"
 
 
 def _evidence_error(issue: str, job: CiJob | None = None) -> EvidenceIntegrityError:
@@ -1817,11 +1726,6 @@ def rederive_gate_count(record: GateResult, output: bytes) -> None:
         raise _evidence_error(EVIDENCE_REDERIVATION_ERROR, record.job)
 
 
-def verify_generated_contract(contract: GeneratedContract) -> None:
-    """Reject a generated projection unless its exact bytes are current."""
-    if contract.actual != contract.expected:
-        raise StaleGeneratedContractError(contract.generated_path)
-
 
 def task_attempt_root(bundle: TaskAttemptBundle) -> str:
     """Return the canonical root independent of its self-referential field."""
@@ -2372,24 +2276,3 @@ def _read_evidence_file_from_directory(directory_fd: int, name: str) -> bytes:
         raise _evidence_error(EXACT_JOB_LOG_SET_ERROR) from None
     with os.fdopen(file_fd, "rb") as evidence_file:
         return _bounded_descriptor_read(evidence_file.fileno(), EXACT_JOB_LOG_SET_ERROR)
-
-
-def render_openapi_catalog(source_path: Path) -> bytes:
-    """Render deterministic schema names, typed routes, and mock routes."""
-    source = source_path.read_bytes()
-    document = _OpenApiInput.model_validate_json(source)
-    routes = [
-        {"methods": item.methods(), "path": path}
-        for path, item in sorted(document.paths.items())
-    ]
-    catalog = {
-        "mock_routes": [
-            {"method": method, "path": route["path"], "status": 501}
-            for route in routes
-            for method in route["methods"]
-        ],
-        "routes": routes,
-        "schema_names": sorted(document.components.schemas),
-        "source_sha256": hashlib.sha256(source).hexdigest(),
-    }
-    return (json.dumps(catalog, separators=(",", ":"), sort_keys=True) + "\n").encode()

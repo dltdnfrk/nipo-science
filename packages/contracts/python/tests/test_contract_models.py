@@ -1,69 +1,42 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from pydantic import ValidationError
 
-from science_workbench_contracts import ContractRoundTrip
-from science_workbench_contracts.auth import ProjectCreate
 from science_workbench_contracts.runs import (
     ResearchIntent,
     RunCreate,
     research_intent_sha256,
 )
 
-FIXTURE = Path(__file__).parents[2] / "fixtures" / "auth-run-artifact.json"
 
-
-def test_round_trips_auth_run_artifact_fixture() -> None:
-    # Given: representative JSON from authentication through a saved Artifact Version.
-    raw = FIXTURE.read_text(encoding="utf-8")
-
-    # When: Pydantic parses and serializes the shared boundary fixture.
-    parsed = ContractRoundTrip.model_validate_json(raw)
-    reparsed = ContractRoundTrip.model_validate_json(parsed.model_dump_json())
-
-    # Then: semantic IDs and tenant scope survive the round trip.
-    assert reparsed == parsed
-    assert reparsed.run.org_id == reparsed.auth.org_id
-    assert reparsed.artifact_version.producing_run_id == reparsed.run.id
-
-
-@pytest.mark.parametrize("model", [ProjectCreate, RunCreate])
-def test_rejects_client_supplied_org_id(
-    model: type[ProjectCreate | RunCreate],
-) -> None:
+def test_rejects_client_supplied_org_id() -> None:
     # Given: a client request attempting to select its own tenant.
-    fixture = (
-        {"name": "forged", "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab"}
-        if model is ProjectCreate
-        else {
-            "execution_mode": "local_dry_lab",
-            "session_id": "018f47a0-7b9c-7abf-8def-0123456789ab",
-            "prompt": "forged",
-            "input": {
-                "filename": "calibrated.csv",
-                "media_type": "text/csv",
-                "content": "sample,value,calibration\nA,1.0,c1\n",
-            },
-            "research_intent": {
-                "question": "검증할 수 있는가?",
-                "rationale": "재현성을 확인한다.",
-                "intended_benefit": "검증 가능한 기준선을 만든다.",
-                "success_criteria": ["체크섬이 일치한다."],
-                "constraints": ["비임상 연구만 수행한다."],
-                "stop_conditions": ["증거가 없으면 중단한다."],
-                "research_mode": "copilot",
-                "data_origin": "observed",
-            },
-            "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
-        }
-    )
+    fixture = {
+        "execution_mode": "local_dry_lab",
+        "session_id": "018f47a0-7b9c-7abf-8def-0123456789ab",
+        "prompt": "forged",
+        "input": {
+            "filename": "calibrated.csv",
+            "media_type": "text/csv",
+            "content": "sample,value,calibration\nA,1.0,c1\n",
+        },
+        "research_intent": {
+            "question": "검증할 수 있는가?",
+            "rationale": "재현성을 확인한다.",
+            "intended_benefit": "검증 가능한 기준선을 만든다.",
+            "success_criteria": ["체크섬이 일치한다."],
+            "constraints": ["비임상 연구만 수행한다."],
+            "stop_conditions": ["증거가 없으면 중단한다."],
+            "research_mode": "copilot",
+            "data_origin": "observed",
+        },
+        "org_id": "018f47a0-7b9c-7abd-8def-0123456789ab",
+    }
 
     # When/Then: strict request parsing rejects the extra authority field.
     with pytest.raises(ValidationError, match="org_id"):
-        _ = model.model_validate(fixture)
+        _ = RunCreate.model_validate(fixture)
 
 
 def test_run_create_requires_a_complete_research_intent() -> None:
@@ -251,24 +224,3 @@ def test_research_intent_rejects_normalization_colliding_items() -> None:
                 "data_origin": "observed",
             }
         )
-
-
-def test_rejects_non_uuidv7_and_non_utc_fixture() -> None:
-    # Given: a shared fixture with a UUIDv4 and offset timestamp.
-    fixture = FIXTURE.read_text(encoding="utf-8").replace(
-        '"018f47a0-7b9c-7abe-8def-0123456789ab"',
-        '"550e8400-e29b-41d4-a716-446655440000"',
-        1,
-    )
-    fixture = fixture.replace(
-        '"2026-07-13T10:00:00Z"',
-        '"2026-07-13T19:00:00+09:00"',
-    )
-
-    # When/Then: runtime parsing rejects both wire-contract violations.
-    with pytest.raises(ValidationError) as captured:
-        _ = ContractRoundTrip.model_validate_json(fixture)
-    assert {item["type"] for item in captured.value.errors()} >= {
-        "uuid7",
-        "utc_timestamp",
-    }

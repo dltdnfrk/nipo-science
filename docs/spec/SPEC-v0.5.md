@@ -3,14 +3,14 @@ document_id: FS-SPEC-001
 version: "0.5"
 status: normative
 supersedes: docs/spec/SPEC-v0.4.md
-requirements_manifest: docs/requirements/requirements-v0.5.yaml
+requirements_manifest: docs/requirements/requirements.yaml
 ---
 
 # Nipo Science local workbench specification v0.5
 
 ## 0. Normative status and scope
 
-This document is the self-contained product and engineering contract for the local product. `MUST`, `MUST NOT`, `REQUIRED`, `SHALL`, `SHALL NOT`, `SHOULD`, and `MAY` are normative. The ID-keyed machine contract in `docs/requirements/requirements-v0.5.yaml` is the implementation and verification authority. If this prose and that manifest diverge, delivery stops until both are amended together.
+This document is the self-contained product and engineering contract for the local product. `MUST`, `MUST NOT`, `REQUIRED`, `SHALL`, `SHALL NOT`, `SHOULD`, and `MAY` are normative. The ID-keyed machine contract in `docs/requirements/requirements.yaml` is the implementation and verification authority. If this prose and that manifest diverge, delivery stops until both are amended together.
 
 This document supersedes `docs/spec/SPEC-v0.4.md`, which described a hosted multi-tenant service and is retained as history, not authority. Every control v0.4 required and this document drops is enumerated with its justification in `docs/architecture/decisions/ADR-0011-local-first-single-user.md`. A control absent from both is an error here, not a permitted omission.
 

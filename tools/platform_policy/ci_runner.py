@@ -1731,7 +1731,6 @@ def ci_commands(root: Path) -> tuple[CiCommand, ...]:
             (*make, "verify-architecture"),
             CountKind.PYTEST,
         ),
-        CiCommand(CiJob.OPENAPI, (*make, "test-openapi"), CountKind.PYTEST),
         CiCommand(
             CiJob.PROTOCOL_CONTRACTS,
             (*make, "test-protocol-contracts"),
@@ -1742,22 +1741,15 @@ def ci_commands(root: Path) -> tuple[CiCommand, ...]:
             (*make, "test-artifact-contracts"),
             CountKind.PYTEST,
         ),
-        CiCommand(CiJob.UPLOAD, (*make, "test-upload"), CountKind.PYTEST),
         CiCommand(CiJob.ARTIFACTS, (*make, "test-artifacts"), CountKind.PYTEST),
         CiCommand(CiJob.SCIENCE, (*make, "test-science"), CountKind.PYTEST),
         CiCommand(CiJob.RETENTION, (*make, "test-retention"), CountKind.PYTEST),
-        CiCommand(
-            CiJob.GENERATED_DRIFT,
-            (*make, "check-generated-contracts"),
-            CountKind.PYTEST,
-        ),
         CiCommand(CiJob.SBOM, (*static, "sbom", str(root)), CountKind.CHECKS),
         CiCommand(
             CiJob.SECRET_SCAN,
             (*static, "secret-scan", str(root)),
             CountKind.CHECKS,
         ),
-        CiCommand(CiJob.DRY_LAB, (*make, "test-dry-lab"), CountKind.PYTEST),
         CiCommand(
             CiJob.LOCAL_WORKBENCH, (*make, "test-local-workbench"), CountKind.PYTEST
         ),

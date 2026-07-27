@@ -8,8 +8,6 @@ import unittest
 from pathlib import Path
 from typing import final, override
 
-from tools.architecture_manifest import read_manifest
-
 PROJECT_ROOT = Path(__file__).parents[1]
 CHECKER = PROJECT_ROOT / "tools" / "verify_architecture.py"
 SOURCE = PROJECT_ROOT / "docs" / "architecture"
@@ -59,58 +57,55 @@ class ArchitectureVerifierTests(unittest.TestCase):
         assert result.returncode == 0, result.stdout + result.stderr
         assert "architecture-check: PASS" in result.stdout
 
-    def test_contract_test_command_confines_vitest_discovery(self) -> None:
+    def test_contract_test_commands_confine_vitest_discovery(self) -> None:
         # Given: mise stores a trusted-config symlink back to the checkout.
-        scripts = read_manifest(PROJECT_ROOT / "package.json").get("scripts")
-        assert isinstance(scripts, dict)
-        command = scripts.get("contracts:test")
-        assert isinstance(command, str)
-
-        # When/Then: Vitest receives a discovery root, not a positional filter.
-        assert command.split() == [
-            "vitest",
-            "run",
-            "--dir",
-            "packages/contracts/tests",
+        makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+        vitest_lines = [
+            line for line in makefile.splitlines() if "vitest run" in line
         ]
+        assert vitest_lines
+
+        # When/Then: every Vitest invocation receives a discovery root.
+        for line in vitest_lines:
+            assert "vitest run --dir packages/contracts/tests" in line
 
     def test_rejects_missing_high_threat_evidence(self) -> None:
         # Given: one referenced High-threat evidence artifact is absent.
-        evidence = self.root.parents[1] / "tools/evidence/security/T07-malicious-files-and-archives.json"
+        evidence = self.root.parents[1] / "tools/evidence/security/T11-export-traversal.json"
         evidence.unlink()
 
         # When/Then: verification names the dangling reference.
-        self.assert_rejected("missing-evidence:T07")
+        self.assert_rejected("missing-evidence:T11")
 
     def test_rejects_missing_high_threat_evidence_checksum(self) -> None:
         # Given: raw evidence exists without its checksum sidecar.
-        checksum = self.root.parents[1] / "tools/evidence/security/T07-malicious-files-and-archives.sha256"
+        checksum = self.root.parents[1] / "tools/evidence/security/T11-export-traversal.sha256"
         checksum.unlink()
 
         # When/Then: verification rejects the unbound artifact.
-        self.assert_rejected("missing-evidence-checksum:T07")
+        self.assert_rejected("missing-evidence-checksum:T11")
 
     def test_rejects_high_threat_evidence_digest_mismatch(self) -> None:
         # Given: raw evidence changed after its checksum was recorded.
-        evidence = self.root.parents[1] / "tools/evidence/security/T07-malicious-files-and-archives.json"
+        evidence = self.root.parents[1] / "tools/evidence/security/T11-export-traversal.json"
         with evidence.open("ab") as stream:
             _ = stream.write(b"\n")
 
         # When/Then: verification detects the mutation.
-        self.assert_rejected("evidence-digest-mismatch:T07")
+        self.assert_rejected("evidence-digest-mismatch:T11")
 
     def test_rejects_high_threat_evidence_path_traversal(self) -> None:
         # Given: a path has the expected prefix but escapes the evidence tree.
         self.replace_once(
             "threat-model.json",
             (
-                "tools/evidence/security/T07-malicious-files-and-archives.json",
+                "tools/evidence/security/T11-export-traversal.json",
                 "tools/evidence/../../outside.json",
             ),
         )
 
         # When/Then: prefix-only path validation is insufficient and rejected.
-        self.assert_rejected("invalid-evidence-path:T07")
+        self.assert_rejected("invalid-evidence-path:T11")
 
     def test_rejects_oauth_refresh_token_exfiltration_control_omission(self) -> None:
         # Given: OAuth token theft lacks its refresh-token confinement control.
@@ -146,11 +141,11 @@ class ArchitectureVerifierTests(unittest.TestCase):
         self.assert_rejected("unclassified-sensitive-field")
 
     def test_rejects_untested_high_threat(self) -> None:
-        # Given: a High OAuth threat with no executable test.
+        # Given: a High threat with no executable test.
         self.replace_once(
             "threat-model.json",
             (
-                '"executable_test": "make test-security CASE=malicious-files-and-archives"',
+                '"executable_test": "make test-security CASE=export-traversal"',
                 '"executable_test": ""',
             ),
         )

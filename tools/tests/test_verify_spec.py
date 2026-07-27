@@ -10,36 +10,31 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
-from tools.spec_contract import (
-    V05_EXPECTED_IDS,
-    ContractParseError,
-    VerificationError,
-)
-from tools.verify_spec import verify_contract, verify_contract_v05
+from tools.platform_policy.ci_contract import TRUSTED_REQUIREMENT_IDS
+from tools.spec_contract import V05_EXPECTED_IDS, VerificationError
+from tools.verify_spec import verify_contract_v05
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "docs/requirements/requirements.yaml"
-SPEC = ROOT / "docs/spec/SPEC-v0.4.md"
-MINIMUM_REQUIREMENT_COUNT: Final = 70
-MANIFEST_V05 = ROOT / "docs/requirements/requirements-v0.5.yaml"
-SPEC_V05 = ROOT / "docs/spec/SPEC-v0.5.md"
+SPEC = ROOT / "docs/spec/SPEC-v0.5.md"
 V05_REQUIREMENT_COUNT: Final = 64
 
 
-class VerifySpecTests(unittest.TestCase):
-    """Exercise the canonical contract and every protected mutation class."""
+class VerifySpecV05Tests(unittest.TestCase):
+    """Exercise the v0.5 local-first contract and its protected mutations."""
 
     @contextmanager
     def mutated_manifest(self, old: str, new: str) -> Generator[Path]:
-        """Yield a temporary manifest containing exactly one text mutation."""
+        """Yield a temporary canonical manifest containing exactly one mutation."""
         original = MANIFEST.read_text(encoding="utf-8")
         if old not in original:
             pytest.fail(f"canonical manifest does not contain mutation target: {old}")
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "requirements.yaml"
+            path = Path(directory) / "docs" / "requirements" / "requirements.yaml"
+            path.parent.mkdir(parents=True)
             _ = path.write_text(original.replace(old, new, 1), encoding="utf-8")
             yield path
 
@@ -49,109 +44,11 @@ class VerifySpecTests(unittest.TestCase):
             self.mutated_manifest(old, new) as manifest,
             pytest.raises(VerificationError, match=label),
         ):
-            _ = verify_contract(manifest, SPEC)
+            _ = verify_contract_v05(manifest, SPEC)
 
     def test_accepts_canonical_contract(self) -> None:
-        """Accept the unmodified v0.4 contract with its complete ID inventory."""
-        report = verify_contract(MANIFEST, SPEC)
-        if report.spec_version != "0.4":
-            pytest.fail(f"unexpected SPEC version: {report.spec_version}")
-        if report.requirement_count <= MINIMUM_REQUIREMENT_COUNT:
-            pytest.fail(f"incomplete requirement inventory: {report.requirement_count}")
-
-    def test_rejects_monetary_budget_error_token(self) -> None:
-        """Reject a monetary budget error code added to the manifest."""
-        self.assert_mutation_rejected(
-            '"error_codes": []',
-            '"error_codes": ["BUDGET_HARD_CAP"]',
-            "monetary semantics",
-        )
-
-    def test_rejects_api_key_runtime_auth(self) -> None:
-        """Reject API-key authentication in the OAuth-only runtime contract."""
-        self.assert_mutation_rejected(
-            '"auth_mode": "official_subscription_oauth"',
-            '"auth_mode": "api_key"',
-            "OAuth-only",
-        )
-
-    def test_rejects_literal_seccomp_requirement(self) -> None:
-        """Reject literal seccomp in place of measured gVisor outcomes."""
-        self.assert_mutation_rejected(
-            '"enforcement_claim": "outcome_measured"',
-            '"enforcement_claim": "literal_seccomp_required"',
-            "gVisor outcomes",
-        )
-
-    def test_rejects_missing_required_runtime(self) -> None:
-        """Reject omission of the required openai_codex runtime."""
-        self.assert_mutation_rejected(
-            '"required_runtimes": ["openai_codex"]',
-            '"required_runtimes": []',
-            "required runtime",
-        )
-
-    def test_rejects_missing_exact_acceptance_id(self) -> None:
-        """Reject renaming an exact AC-F13 acceptance identifier."""
-        self.assert_mutation_rejected('"AC-F13-D": {', '"AC-F13-X": {', "exact IDs")
-
-    def test_rejects_renamed_skill(self) -> None:
-        """Reject renaming one of the three canonical Skill identifiers."""
-        self.assert_mutation_rejected(
-            '"literature-review"',
-            '"literature-search"',
-            "Skill IDs",
-        )
-
-    def test_rejects_review_api_drift(self) -> None:
-        """Reject drift from the persisted Review polling API."""
-        self.assert_mutation_rejected(
-            '"get_path": "/reviews/{id}"',
-            '"get_path": "/sessions/{sessionId}/reviews"',
-            "Review API",
-        )
-
-    def test_rejects_incomplete_dry_lab_chain(self) -> None:
-        """Reject omission of provenance from the deterministic dry-lab chain."""
-        self.assert_mutation_rejected('"provenance",', "", "dry-lab chain")
-
-    def test_rejects_missing_break_glass_contract(self) -> None:
-        """Reject omission of the bounded SEC14 break-glass contract."""
-        with (
-            self.mutated_manifest(
-                '"break_glass": {', '"break_glass_removed": {'
-            ) as manifest,
-            pytest.raises(ContractParseError, match="break_glass"),
-        ):
-            _ = verify_contract(manifest, SPEC)
-
-
-class VerifySpecV05Tests(unittest.TestCase):
-    """Exercise the v0.5 local-first contract and its protected mutations."""
-
-    @contextmanager
-    def mutated_manifest(self, old: str, new: str) -> Generator[Path]:
-        """Yield a temporary v0.5 manifest containing exactly one mutation."""
-        original = MANIFEST_V05.read_text(encoding="utf-8")
-        if old not in original:
-            pytest.fail(f"v0.5 manifest does not contain mutation target: {old}")
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "docs" / "requirements" / "requirements-v0.5.yaml"
-            path.parent.mkdir(parents=True)
-            _ = path.write_text(original.replace(old, new, 1), encoding="utf-8")
-            yield path
-
-    def assert_mutation_rejected(self, old: str, new: str, label: str) -> None:
-        """Assert that one v0.5 manifest mutation raises the named error."""
-        with (
-            self.mutated_manifest(old, new) as manifest,
-            pytest.raises(VerificationError, match=label),
-        ):
-            _ = verify_contract_v05(manifest, SPEC_V05)
-
-    def test_accepts_canonical_v05_contract(self) -> None:
-        """Accept the unmodified v0.5 contract with its complete ID inventory."""
-        report = verify_contract_v05(MANIFEST_V05, SPEC_V05)
+        """Accept the unmodified canonical v0.5 contract in place."""
+        report = verify_contract_v05(MANIFEST, SPEC)
         if report.spec_version != "0.5":
             pytest.fail(f"unexpected SPEC version: {report.spec_version}")
         if report.requirement_count != V05_REQUIREMENT_COUNT:
@@ -159,8 +56,8 @@ class VerifySpecV05Tests(unittest.TestCase):
                 f"incomplete v0.5 requirement inventory: {report.requirement_count}"
             )
 
-    def test_v05_id_set_is_the_stage3_trusted_source(self) -> None:
-        """Pin the v0.5 ID frozenset destined for TRUSTED_REQUIREMENT_IDS."""
+    def test_v05_id_set_matches_the_trusted_requirement_source(self) -> None:
+        """Pin the v0.5 ID frozenset mirrored into TRUSTED_REQUIREMENT_IDS."""
         if len(V05_EXPECTED_IDS) != V05_REQUIREMENT_COUNT:
             pytest.fail(f"v0.5 ID set drifted: {len(V05_EXPECTED_IDS)}")
         sentinels = (
@@ -183,6 +80,11 @@ class VerifySpecV05Tests(unittest.TestCase):
         for identifier in sentinels:
             if identifier not in V05_EXPECTED_IDS:
                 pytest.fail(f"missing v0.5 requirement ID: {identifier}")
+
+    def test_trusted_requirement_ids_equal_the_v05_set(self) -> None:
+        """Bind the CI trust anchor to exactly the v0.5 requirement inventory."""
+        if TRUSTED_REQUIREMENT_IDS != V05_EXPECTED_IDS:
+            pytest.fail("TRUSTED_REQUIREMENT_IDS diverged from V05_EXPECTED_IDS")
 
     def test_rejects_renamed_v05_acceptance_id(self) -> None:
         """Reject renaming an exact AC-L12-B acceptance identifier."""
@@ -237,40 +139,27 @@ class VerifySpecV05Tests(unittest.TestCase):
     def test_manifest_path_is_location_parameterized(self) -> None:
         """Verify the v0.5 contract from a relocated manifest and SPEC pair."""
         with tempfile.TemporaryDirectory() as directory:
-            manifest = (
-                Path(directory) / "docs" / "requirements" / "requirements-v0.5.yaml"
-            )
-            spec = Path(directory) / "docs" / "spec" / "SPEC-v0.5.md"
-            manifest.parent.mkdir(parents=True)
-            spec.parent.mkdir(parents=True)
-            _ = manifest.write_text(
-                MANIFEST_V05.read_text(encoding="utf-8"), encoding="utf-8"
-            )
-            _ = spec.write_text(SPEC_V05.read_text(encoding="utf-8"), encoding="utf-8")
-            report = verify_contract_v05(manifest, spec)
-        if report.spec_version != "0.5":
-            pytest.fail(f"unexpected SPEC version: {report.spec_version}")
-
-    def test_canonical_manifest_transition_needs_no_code_change(self) -> None:
-        """Verify a v0.5 manifest re-anchored at canonical requirements.yaml."""
-        declaration = "requirements_manifest: docs/requirements/requirements"
-        with tempfile.TemporaryDirectory() as directory:
             manifest = Path(directory) / "docs" / "requirements" / "requirements.yaml"
             spec = Path(directory) / "docs" / "spec" / "SPEC-v0.5.md"
             manifest.parent.mkdir(parents=True)
             spec.parent.mkdir(parents=True)
             _ = manifest.write_text(
-                MANIFEST_V05.read_text(encoding="utf-8"), encoding="utf-8"
+                MANIFEST.read_text(encoding="utf-8"), encoding="utf-8"
             )
-            spec_original = SPEC_V05.read_text(encoding="utf-8")
-            declared_v05 = f"{declaration}-v0.5.yaml"
-            if declared_v05 not in spec_original:
-                pytest.fail(f"SPEC-v0.5 lacks manifest declaration: {declared_v05}")
-            spec_text = spec_original.replace(declared_v05, f"{declaration}.yaml", 1)
-            _ = spec.write_text(spec_text, encoding="utf-8")
+            _ = spec.write_text(SPEC.read_text(encoding="utf-8"), encoding="utf-8")
             report = verify_contract_v05(manifest, spec)
         if report.spec_version != "0.5":
             pytest.fail(f"unexpected SPEC version: {report.spec_version}")
+
+    def test_rejects_undeclared_manifest_location(self) -> None:
+        """Reject verification against a manifest the SPEC does not declare."""
+        original = MANIFEST.read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            manifest = Path(directory) / "docs" / "requirements" / "renamed.yaml"
+            manifest.parent.mkdir(parents=True)
+            _ = manifest.write_text(original, encoding="utf-8")
+            with pytest.raises(VerificationError, match="manifest declaration"):
+                _ = verify_contract_v05(manifest, SPEC)
 
 
 if __name__ == "__main__":

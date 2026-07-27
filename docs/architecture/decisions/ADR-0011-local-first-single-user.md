@@ -221,7 +221,8 @@ ones — content-addressed compare-and-swap commits, blob digest verification,
 crash-ordering and sweep behaviour, provenance digest recomputation,
 determinism across separate interpreters and hash seeds, credential sealing and
 non-leakage, and refusal before any write — and the acceptance identifiers in
-`docs/requirements/requirements-v0.5.yaml` bind each remaining control to a
+`docs/requirements/requirements.yaml` (the canonical v0.5 manifest since the
+Stage 3 cutover) bind each remaining control to a
 test that must fail when its named behaviour breaks. Three limits are stated
 rather than claimed away: this decision does not assert that the local product
 provides confinement, since `execution_isolation` is `in_process` and analysis
@@ -229,7 +230,8 @@ code holds the researcher's full account authority; it does not assert that the
 Keychain master-key item is restricted to this application, since it is created
 without a trusted-application list; and it does not assert that the dropped
 controls were unnecessary in the hosted product, only that their threats do not
-arise in this one. `make verify-spec` remains pinned to SPEC-v0.4 and its
-manifest, so the v0.5 contract is not yet machine-verified; extending the
-verifier, and registering this decision in `docs/architecture/architecture.json`
-and the threat model, are follow-on work outside this ADR.
+arise in this one. Since the Stage 3 cutover, `make verify-spec` verifies the
+canonical v0.5 contract (`docs/requirements/requirements.yaml` against
+`docs/spec/SPEC-v0.5.md`); registering this decision in
+`docs/architecture/architecture.json` and the threat model remains follow-on
+work outside this ADR.

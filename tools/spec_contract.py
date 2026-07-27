@@ -14,72 +14,13 @@ type JsonValue = (
     str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 )
 
-P0_IDS: Final = (*tuple(f"F{number:02d}" for number in range(1, 12)), "F13")
-AC_IDS: Final = (
-    "AC-F01",
-    "AC-F01-B",
-    "AC-F01-C",
-    "AC-F01-D",
-    "AC-F01-E",
-    "AC-F02",
-    "AC-F03",
-    "AC-F04",
-    "AC-F04-B",
-    "AC-F05",
-    "AC-F05-B",
-    "AC-F06",
-    "AC-F06-B",
-    "AC-F07",
-    "AC-F08",
-    "AC-F09",
-    "AC-F10",
-    "AC-F11",
-    "AC-F11-B",
-    "AC-F13",
-    "AC-F13-B",
-    "AC-F13-C",
-    "AC-F13-D",
-    "AC-PROVIDER-AUTHORITY",
-    "AC-PROVIDER-RUN-BINDING",
-    "AC-PROVIDER-MIGRATION",
-    "AC-SAFE",
-    "AC-TENANT",
-    "AC-COMPLIANCE",
-    "AC-DATA",
-    "AC-NFR",
-)
-SEC_IDS: Final = tuple(f"SEC{number:02d}" for number in range(1, 17))
-NFR_IDS: Final = tuple(f"NFR{number:02d}" for number in range(1, 11))
-GS_IDS: Final = tuple(f"GS{number:02d}" for number in range(1, 11))
 RV_IDS: Final = tuple(f"RV{number:02d}" for number in range(1, 6))
-EXPECTED_IDS: Final = frozenset(P0_IDS + AC_IDS + SEC_IDS + NFR_IDS + GS_IDS + RV_IDS)
-SKILL_IDS: Final = ("literature-review", "source-attribution", "probe-diagnostic")
-DRY_LAB_CHAIN: Final = (
-    "scientific_input",
-    "research_intent",
-    "immutable_action_plan",
-    "isolated_python",
-    "csv",
-    "png",
-    "markdown",
-    "ledger",
-    "provenance",
-    "persisted_review",
-    "export",
-)
-STACK: Final = {
-    "node": "24.17.0",
-    "pnpm": "11.12.0",
-    "python": "3.12.13",
-    "uv": "0.11.28",
-    "postgresql": "18.4",
-}
 
 # SPEC-v0.5 (local-first) normative inventory.
 # V05_EXPECTED_IDS is the confirmed v0.5 requirement ID set. Stage 3 of the
-# local-first migration replaces the TRUSTED_REQUIREMENT_IDS constant in
+# local-first migration replaced the TRUSTED_REQUIREMENT_IDS constant in
 # tools/platform_policy/ci_contract.py with exactly this frozenset (MEDIUM-1),
-# so this block is the single source of truth for that substitution.
+# so this block remains the single source of truth for that substitution.
 V05_P0_IDS: Final = tuple(f"L{number:02d}" for number in range(1, 13))
 V05_AC_IDS: Final = (
     "AC-L01",
@@ -256,15 +197,6 @@ def frontmatter_fields(path: Path) -> dict[str, str]:
     if fields.get("status") != "normative":
         raise ContractParseError(str(path), "normative status")
     return fields
-
-
-def frontmatter_version(path: Path) -> str:
-    """Parse and return the normative Markdown frontmatter version."""
-    fields = frontmatter_fields(path)
-    manifest_path = "docs/requirements/requirements.yaml"
-    if fields.get("requirements_manifest") != manifest_path:
-        raise ContractParseError(str(path), "canonical requirements manifest path")
-    return fields.get("version", "").strip('"')
 
 
 def declares_manifest(fields: dict[str, str], manifest_path: Path) -> bool:

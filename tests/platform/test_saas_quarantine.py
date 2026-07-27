@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from tools.platform_policy import saas_quarantine
 from tools.platform_policy.saas_quarantine import (
     ALLOWED_REUSE_CLOSURE,
     DELETION_SCHEDULED_MODULES,
@@ -26,11 +27,9 @@ _CLOSURE_MODULE_NAMES = (
     "store",
 )
 
-_DELETION_FILES = (
-    "services/api/dry_lab_fixture.py",
-    "services/api/upload/__init__.py",
-    "services/local/__init__.py",
-    "services/worker/__init__.py",
+_SYNTHETIC_ZONE = (
+    "services.api.legacy_plane",
+    "services.hosted_*",
 )
 
 
@@ -41,21 +40,40 @@ def _write(tmp_path: Path, relative: str, content: str = "") -> None:
 
 
 def _write_minimal_repo(tmp_path: Path) -> None:
-    for relative in _DELETION_FILES:
-        _write(tmp_path, relative)
     _write(tmp_path, "services/api/artifacts/__init__.py")
     for name in _CLOSURE_MODULE_NAMES:
         _write(tmp_path, f"services/api/artifacts/{name}.py")
 
 
+def _write_synthetic_zone(tmp_path: Path) -> None:
+    _write(tmp_path, "services/api/legacy_plane.py")
+    _write(tmp_path, "services/hosted_worker/__init__.py")
+
+
+@pytest.fixture
+def synthetic_zone(monkeypatch: pytest.MonkeyPatch) -> tuple[str, ...]:
+    """Reinstate a deletion-scheduled zone to exercise the detection logic."""
+    monkeypatch.setattr(
+        saas_quarantine, "DELETION_SCHEDULED_MODULES", _SYNTHETIC_ZONE
+    )
+    return _SYNTHETIC_ZONE
+
+
 def test_unit_current_repository_satisfies_quarantine() -> None:
-    # Given: the real repository tree at Stage 2 (hosted persistence plane retired).
+    # Given: the real repository tree at Stage 3 (hosted zone fully deleted).
 
     # When: the quarantine check scans it.
     violations = scan(REPO_ROOT)
 
-    # Then: the keep side holds no SaaS import and the inventory is current.
+    # Then: the closure is intact and the keep side holds no zone import.
     assert violations == ()
+
+
+def test_unit_deletion_zone_is_empty_after_stage_3() -> None:
+    # Given / When: the declared deletion-scheduled inventory.
+
+    # Then: every hosted module retired; nothing is left to schedule.
+    assert DELETION_SCHEDULED_MODULES == ()
 
 
 def test_unit_allowed_closure_includes_indirect_reexport_modules() -> None:
@@ -87,42 +105,44 @@ def test_unit_minimal_keep_side_repo_passes(tmp_path: Path) -> None:
     assert scan(tmp_path) == ()
 
 
+@pytest.mark.usefixtures("synthetic_zone")
 def test_unit_saas_zone_internal_imports_are_allowed(tmp_path: Path) -> None:
-    # Given: SaaS zone modules importing each other inside the zone.
+    # Given: zone modules importing each other inside a scheduled zone.
     _write_minimal_repo(tmp_path)
+    _write_synthetic_zone(tmp_path)
     _write(
         tmp_path,
-        "services/api/dry_lab_fixture.py",
-        "import services.api.upload\n",
+        "services/api/legacy_plane.py",
+        "import services.hosted_worker\n",
     )
 
     # When / Then: intra-zone imports are not flagged (the zone goes wholesale).
     assert scan(tmp_path) == ()
 
 
+@pytest.mark.usefixtures("synthetic_zone")
 @pytest.mark.parametrize(
     "statement",
     [
-        "from services.api.dry_lab_fixture import run_server\n",
-        "import services.api.upload\n",
-        "from services.api import upload\n",
-        "import services.local.scanner\n",
-        "import services.worker.dry_lab_vertical\n",
+        "from services.api.legacy_plane import run_server\n",
+        "import services.api.legacy_plane\n",
+        "from services.api import legacy_plane\n",
+        "import services.hosted_worker\n",
     ],
     ids=(
         "from-module",
         "plain-import",
         "package-alias",
-        "services-local",
-        "services-worker",
+        "pattern-match",
     ),
 )
 def test_security_keep_side_saas_import_is_rejected(
     tmp_path: Path,
     statement: str,
 ) -> None:
-    # Given: nipo_local code importing a deletion-scheduled SaaS module.
+    # Given: nipo_local code importing a deletion-scheduled module.
     _write_minimal_repo(tmp_path)
+    _write_synthetic_zone(tmp_path)
     _write(tmp_path, "apps/local/nipo_local/app.py", statement)
 
     # When: the quarantine check scans the tree.
@@ -135,15 +155,17 @@ def test_security_keep_side_saas_import_is_rejected(
     )
 
 
+@pytest.mark.usefixtures("synthetic_zone")
 def test_security_closure_module_importing_saas_module_is_rejected(
     tmp_path: Path,
 ) -> None:
-    # Given: a closure module reaching into the deletion zone via relative import.
+    # Given: a closure module reaching into the scheduled zone via relative import.
     _write_minimal_repo(tmp_path)
+    _write_synthetic_zone(tmp_path)
     _write(
         tmp_path,
         "services/api/artifacts/service.py",
-        "from ..upload import IngestionService\n",
+        "from ..legacy_plane import run_server\n",
     )
 
     # When: the quarantine check scans the tree.
@@ -152,7 +174,7 @@ def test_security_closure_module_importing_saas_module_is_rejected(
     # Then: the closure drift is detected.
     assert violations == (
         "saas-quarantine-import:services/api/artifacts/service.py:"
-        "services.api.upload",
+        "services.api.legacy_plane",
     )
 
 
@@ -189,31 +211,31 @@ def test_unit_missing_closure_module_is_reported(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.usefixtures("synthetic_zone")
 def test_unit_stale_deletion_pattern_is_reported(tmp_path: Path) -> None:
-    # Given: a deletion stage landed without updating the inventory.
+    # Given: a scheduled zone whose modules were deleted without an update.
     _write_minimal_repo(tmp_path)
-    (tmp_path / "services/api/dry_lab_fixture.py").unlink()
 
     # When: the quarantine check scans the tree.
     violations = scan(tmp_path)
 
-    # Then: the stale pattern forces an inventory update in the same commit.
-    assert "saas-quarantine-stale-pattern:services.api.dry_lab_fixture" in violations
-    assert "services.api.dry_lab_fixture" in DELETION_SCHEDULED_MODULES
+    # Then: every stale pattern forces an inventory update in the same commit.
+    assert "saas-quarantine-stale-pattern:services.api.legacy_plane" in violations
+    assert "saas-quarantine-stale-pattern:services.hosted_*" in violations
 
 
 def test_unit_cli_reports_violations_and_clean_trees(tmp_path: Path) -> None:
-    # Given: a clean minimal repo and a copy with a forbidden import.
+    # Given: a clean minimal repo and a copy with an unclassified import.
     _write_minimal_repo(tmp_path)
 
     # When / Then: the CLI passes the clean tree.
     assert main([str(tmp_path)]) == 0
 
-    # When: a forbidden import is added.
+    # When: an unclassified services.api import is added.
     _write(
         tmp_path,
         "apps/local/nipo_local/app.py",
-        "import services.api.upload\n",
+        "import services.api.unknown_future_module\n",
     )
 
     # Then: the CLI fails.

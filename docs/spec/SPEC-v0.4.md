@@ -13,7 +13,7 @@ requirements_manifest: docs/requirements/requirements.yaml
 
 > **SUPERSEDED — historical record, not the product contract.**
 >
-> This document describes the hosted multi-tenant service Nipo Science no longer builds. The current normative contract is [`docs/spec/SPEC-v0.5.md`](SPEC-v0.5.md), with the machine contract in `docs/requirements/requirements-v0.5.yaml`. Every control this document required and v0.5 drops is enumerated with its justification in [`ADR-0011`](../architecture/decisions/ADR-0011-local-first-single-user.md).
+> This document describes the hosted multi-tenant service Nipo Science no longer builds. The current normative contract is [`docs/spec/SPEC-v0.5.md`](SPEC-v0.5.md), with the machine contract in `docs/requirements/requirements.yaml`. Every control this document required and v0.5 drops is enumerated with its justification in [`ADR-0011`](../architecture/decisions/ADR-0011-local-first-single-user.md).
 >
 > This file and `docs/requirements/requirements.yaml` are retained deliberately: the reasoning below is the record of what the dropped controls protected against, and ADR-0011 is only auditable against it. Do not implement from this document, and do not cite it as a current claim about the product.
 >

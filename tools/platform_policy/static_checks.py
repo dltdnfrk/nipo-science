@@ -1,4 +1,4 @@
-"""Dependency inventory, credential scan, and codegen drift checks."""
+"""Dependency inventory and credential scan checks."""
 
 from __future__ import annotations
 
@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Final
 
-from .ci_contract import GeneratedContract, verify_generated_contract
 from .secret_scan import check_secrets
 from .static_check_types import StaticCheckCode, StaticCheckError, StaticMode
 from .workflow_policy import check_workflow_actions
@@ -36,17 +35,6 @@ def check_sbom(root: Path) -> int:
     return count
 
 
-def check_drift(root: Path) -> int:
-    """Compare the checked-in OpenAPI type and mock catalog byte-for-byte."""
-    verify_generated_contract(
-        GeneratedContract.from_paths(
-            root / "packages/contracts/openapi/openapi.json",
-            root / ".ci/generated/openapi-catalog.json",
-        )
-    )
-    return 1
-
-
 def main() -> int:
     """Run exactly one named non-vacuous static check."""
     if len(sys.argv) != CLI_ARG_COUNT:
@@ -68,7 +56,6 @@ def _run(mode: StaticMode, root: Path) -> int:
     checks = {
         StaticMode.SBOM: check_sbom,
         StaticMode.SECRET_SCAN: check_secrets,
-        StaticMode.DRIFT_SCAN: check_drift,
     }
     return checks[mode](root)
 

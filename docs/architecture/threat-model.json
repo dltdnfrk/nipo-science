@@ -39,14 +39,14 @@
       "dropped": "ADR-0011 local-first single-user: connectors out of scope (Stage 1)"
     },
     {
-      "id": "T07", "name": "malicious-files-and-archives", "severity": "High", "owner": "ingestion-security",
+      "id": "T07", "name": "malicious-files-and-archives", "severity": "Dropped", "owner": "ingestion-security",
       "controls": ["archives-rejected-in-p0", "size-mime-magic-extension-validation", "malware-scan-before-read", "normalized-name-no-symlink-or-traversal", "active-content-isolated-or-downloaded"],
-      "executable_test": "make test-security CASE=malicious-files-and-archives", "evidence_path": "tools/evidence/security/T07-malicious-files-and-archives.json"
+      "dropped": "ADR-0011 local-first single-user: hosted upload quarantine pipeline deleted; local file-handling threats are re-assessed as LS-series local threats (Stage 3)"
     },
     {
-      "id": "T08", "name": "sandbox-escape", "severity": "High", "owner": "runner-security",
+      "id": "T08", "name": "sandbox-escape", "severity": "Dropped", "owner": "runner-security",
       "controls": ["gvisor-separate-node-pool", "nonroot-readonly-drop-capabilities", "default-deny-egress", "no-hostpath-runtime-socket-service-token", "resource-quotas-and-image-admission", "local-gke-denial-outcome-parity"],
-      "executable_test": "make test-security CASE=sandbox-escape", "evidence_path": "tools/evidence/security/T08-sandbox-escape.json"
+      "dropped": "ADR-0011 local-first single-user: no sandbox is claimed; v0.5 discloses in_process execution and egress threats are re-assessed as LS-series local threats (Stage 3)"
     },
     {
       "id": "T09", "name": "stale-workers-and-lease-fencing", "severity": "High", "owner": "orchestration-platform",
