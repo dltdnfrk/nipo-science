@@ -1,0 +1,121 @@
+{
+  "byte_identical_across_interpreters": true,
+  "deterministic_roles": [
+    "csv",
+    "png",
+    "markdown",
+    "input_sha256",
+    "research_intent_sha256",
+    "environment_sha256"
+  ],
+  "executed_at_utc": "2026-07-27T07:53:14Z",
+  "ledger_committed_in_every_run": true,
+  "procedure": "SPEC-v0.5 section 15 clean-machine chain",
+  "runs": [
+    {
+      "digests": {
+        "csv": "0f11588ff1ac3222b20ffc2b64badc188f3a380940e666db362fffd8259a5db9",
+        "environment_sha256": "190cd1581ab2ccb42e9fbbf847d602729495b86f2dc1ab17d6ff8d5c2a7fe927",
+        "input_sha256": "39c9365fd35b11a59f06e74568c3e97c8e6d32737575f8f6265f7180d9202246",
+        "ledger": "4623ba0c718269b32ae7d89fd8602a6b2ec979d830abebb909d49adf373c8f56",
+        "markdown": "fceda81f60839a3bf790e3d3f87adfada8a81a0d1edc84e669f608a29fa5eae5",
+        "png": "bed82296550883dfab49501d48e95f21a0fbefd63f2f6022b2af58c7638ad864",
+        "research_intent_sha256": "0b6bf4e570806f279b7707efe19fa043d1385a29071b0fc7cb8a6debd07652a1"
+      },
+      "hash_seed": "0",
+      "manifest_sha256": "1a25039eee796110668cf43e3eef498f9e9098078567a6979236bba05c7d4197",
+      "review_rules": [
+        "RV01",
+        "RV02",
+        "RV03",
+        "RV04",
+        "RV05"
+      ],
+      "review_state": "completed",
+      "review_verdicts": [
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ],
+      "verification": {
+        "execution_isolation": "in_process",
+        "manifest_sha256": "1a25039eee796110668cf43e3eef498f9e9098078567a6979236bba05c7d4197",
+        "members_verified": 12,
+        "review_state": "completed",
+        "run_state": "completed"
+      }
+    },
+    {
+      "digests": {
+        "csv": "0f11588ff1ac3222b20ffc2b64badc188f3a380940e666db362fffd8259a5db9",
+        "environment_sha256": "190cd1581ab2ccb42e9fbbf847d602729495b86f2dc1ab17d6ff8d5c2a7fe927",
+        "input_sha256": "39c9365fd35b11a59f06e74568c3e97c8e6d32737575f8f6265f7180d9202246",
+        "ledger": "d5ac72440444ee94a6a47528c5f09d5ed3a98c8546ed28ed767943b2659a98f2",
+        "markdown": "fceda81f60839a3bf790e3d3f87adfada8a81a0d1edc84e669f608a29fa5eae5",
+        "png": "bed82296550883dfab49501d48e95f21a0fbefd63f2f6022b2af58c7638ad864",
+        "research_intent_sha256": "0b6bf4e570806f279b7707efe19fa043d1385a29071b0fc7cb8a6debd07652a1"
+      },
+      "hash_seed": "1",
+      "manifest_sha256": "f35f96b01a1c77e33922080414e27ddf8c9b1b007008f47e4bff976bb617cd97",
+      "review_rules": [
+        "RV01",
+        "RV02",
+        "RV03",
+        "RV04",
+        "RV05"
+      ],
+      "review_state": "completed",
+      "review_verdicts": [
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ],
+      "verification": {
+        "execution_isolation": "in_process",
+        "manifest_sha256": "f35f96b01a1c77e33922080414e27ddf8c9b1b007008f47e4bff976bb617cd97",
+        "members_verified": 12,
+        "review_state": "completed",
+        "run_state": "completed"
+      }
+    },
+    {
+      "digests": {
+        "csv": "0f11588ff1ac3222b20ffc2b64badc188f3a380940e666db362fffd8259a5db9",
+        "environment_sha256": "190cd1581ab2ccb42e9fbbf847d602729495b86f2dc1ab17d6ff8d5c2a7fe927",
+        "input_sha256": "39c9365fd35b11a59f06e74568c3e97c8e6d32737575f8f6265f7180d9202246",
+        "ledger": "e265c000ef52bce5af51fddd24f74dbb0ed688a2473251ab1e88ff7328229800",
+        "markdown": "fceda81f60839a3bf790e3d3f87adfada8a81a0d1edc84e669f608a29fa5eae5",
+        "png": "bed82296550883dfab49501d48e95f21a0fbefd63f2f6022b2af58c7638ad864",
+        "research_intent_sha256": "0b6bf4e570806f279b7707efe19fa043d1385a29071b0fc7cb8a6debd07652a1"
+      },
+      "hash_seed": "12345",
+      "manifest_sha256": "799b648449fd0d1915e6e5af6ddc854234f3e1352351935624eccaddc6aef862",
+      "review_rules": [
+        "RV01",
+        "RV02",
+        "RV03",
+        "RV04",
+        "RV05"
+      ],
+      "review_state": "completed",
+      "review_verdicts": [
+        "pass",
+        "pass",
+        "pass",
+        "pass",
+        "pass"
+      ],
+      "verification": {
+        "execution_isolation": "in_process",
+        "manifest_sha256": "799b648449fd0d1915e6e5af6ddc854234f3e1352351935624eccaddc6aef862",
+        "members_verified": 12,
+        "review_state": "completed",
+        "run_state": "completed"
+      }
+    }
+  ]
+}

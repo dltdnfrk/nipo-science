@@ -1,4 +1,14 @@
-"""Fail-closed, two-environment GKE deployment qualification contract."""
+"""Fail-closed, two-environment GKE deployment qualification contract.
+
+Hosted-assumption triage (ADR-0011 Stage 4): the GKE deployment this module
+attests was retired with the hosted product. The contract is retained as the
+sealed, fail-closed format for any historical hosted deployment evidence — it
+never claims a live deployment exists and rejects every unproven capture — and
+the PERFORMANCE gate keeps exercising it as verification machinery. The local
+product's nonfunctional evidence is the LN-series observation contract in
+``release_contract`` (SPEC-v0.5 section 13); a live local deployment surface
+would replace this module rather than extend it.
+"""
 
 from __future__ import annotations
 

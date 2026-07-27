@@ -16,65 +16,32 @@
   ],
   "trust_boundaries": [
     {"id": "local-web-to-loopback-api", "owner": "local-platform", "source": "apps-web-local", "target": "nipo-local-loopback-api", "data": ["commands", "queries", "local_session_credential"]},
-    {"id": "loopback-api-to-local-data-root", "owner": "local-platform", "source": "nipo-local-loopback-api", "target": "researcher-owned-data-root", "data": ["artifact_versions", "exports", "settings"]},
-    {"id": "loopback-api-to-provider-endpoint", "owner": "local-platform", "source": "nipo-local-loopback-api", "target": "researcher-owned-provider-endpoint", "data": ["prompts", "model_responses"]},
-    {"id": "browser-to-same-origin-web", "owner": "identity-platform", "source": "browser", "target": "web", "data": ["auth_session", "csrf_token"]},
-    {"id": "web-to-application-api", "owner": "api-platform", "source": "web", "target": "application-api", "data": ["commands", "queries", "sse"]},
-    {"id": "application-to-postgresql", "owner": "data-platform", "source": "application-api", "target": "postgresql-rls", "data": ["tenant_records", "run_events"]},
-    {"id": "application-to-object-storage", "owner": "artifact-platform", "source": "application-api", "target": "private-object-storage", "data": ["uploads", "artifact_versions", "exports"]},
-    {"id": "orchestrator-to-runner-manager", "owner": "runner-platform", "source": "orchestrator", "target": "runner-manager", "data": ["execution_envelope"]},
-    {"id": "runner-manager-to-sandbox", "owner": "runner-security", "source": "runner-manager", "target": "isolated-sandbox", "data": ["code", "pinned_inputs"]},
-    {"id": "output-watcher-to-artifact-service", "owner": "artifact-platform", "source": "output-watcher", "target": "artifact-service", "data": ["registered_output_ref", "checksum"]},
-    {"id": "runtime-broker-to-provider-runtime", "owner": "runtime-platform", "source": "runtime-broker", "target": "provider-runtime", "data": ["opaque_runtime_home", "normalized_events"]},
-    {"id": "qualification-evaluator-to-external-authority", "owner": "runtime-security", "source": "qualification-evaluator", "target": "external-qualification-authority", "data": ["exact_qualification_claim", "signed_receipt"]},
-    {"id": "qualification-adopter-to-postgresql", "owner": "data-security", "source": "dedicated-qualification-login", "target": "science_workbench_qualification", "data": ["verified_signed_receipt", "exact_connection_cas"]},
-    {"id": "provider-dispatcher-to-postgresql", "owner": "runtime-platform", "source": "dedicated-dispatcher-login", "target": "science_workbench_dispatcher", "data": ["exact_current_qualification_binding", "queued_run"]},
-    {"id": "provider-cleanup-worker-to-state-and-runtime-home", "owner": "runtime-security", "source": "dedicated-provider-cleanup-login", "target": "science_workbench_provider_cleanup", "data": ["fixed_security_definer_due_candidate_and_validation_calls", "runtime_home_destruction", "fixed_completion_calls", "cleanup_receipt"]},
-    {"id": "connector-broker-to-provider", "owner": "connector-platform", "source": "connector-broker", "target": "fixed-provider-host", "data": ["one_use_handle", "connector_response"]},
+    {"id": "loopback-api-to-local-data-root", "owner": "local-platform", "source": "nipo-local-loopback-api", "target": "researcher-owned-data-root", "data": ["artifact_versions", "run_records", "exports", "settings"]},
+    {"id": "loopback-api-to-provider-endpoint", "owner": "provider-security", "source": "nipo-local-loopback-api", "target": "researcher-owned-provider-endpoint", "data": ["prompts", "model_responses"]},
+    {"id": "workbench-to-in-process-analysis", "owner": "local-platform", "source": "nipo-local-workbench", "target": "in-process-deterministic-python", "data": ["pinned_inputs", "research_intent", "analysis_outputs"]},
+    {"id": "credential-registry-to-keychain", "owner": "credential-security", "source": "provider-credential-registry", "target": "macos-keychain-master-key", "data": ["master_key_generic_password"]},
     {"id": "reviewer-to-read-model", "owner": "review-platform", "source": "reviewer", "target": "immutable-read-model", "data": ["pinned_versions", "executions", "sources"]},
-    {"id": "export-worker-to-download-origin", "owner": "artifact-platform", "source": "export-worker", "target": "artifact-origin", "data": ["pinned_export"]}
+    {"id": "export-builder-to-export-directory", "owner": "artifact-platform", "source": "export-pack-builder", "target": "owner-only-export-directory", "data": ["pinned_export_pack"]}
   ],
   "contracts": {
-    "transactional_event_log": {"atomic_with_state_change": true, "ordering": "per-run-monotonic-sequence", "replay_source": "postgresql-run-events"},
+    "local_store": {"engine": "sqlite-wal", "atomic_with_state_change": true, "ordering": "per-run-monotonic-state-machine", "authorization_source": "operating-system-account-owning-the-data-root"},
     "artifact_provenance": {"versions_immutable": true, "required_hashes": ["content", "code", "environment", "inputs", "execution", "research_intent"]},
-    "runner_parity": {"oracle": "scientific-output-checksum-and-denial-outcomes", "environments": ["local", "gke-gvisor"]},
-    "provider_runtime": {
-      "home_scope": "one-requesting-user-and-provider-connection",
-      "home_exposure": "broker-only",
-      "silent_fallback": false,
-      "qualification_issuer": "external-unix-socket-authority",
-      "private_signing_material_in_runtime": false,
-      "runtime_policy": "deployment-supplied-protected-exact-platform-policy-file-pinned-by-sha256",
-      "checked_in_darwin_policy": "development-and-test-example-only",
-      "receipt_history": "append-only-publicly-verifiable",
-      "verification_key_retention": "permanent-active-set-or-permanent-archive-verifier",
-      "receipt_publication": "ordered-profile-then-receipt-then-database-adoption-not-an-atomic-triple",
-      "adoption_failure": "non-authoritative-sidecars-no-database-receipt-or-pointer",
-      "adoption_snapshot": "cas-rechecks-runtime-home-account-models-selected-model-health-created-at-revision-and-subject",
-      "legacy_evidence": "append-only-unverified-never-authoritative",
-      "migration": {"fresh_upgrade": "0003-archives-observable-bare-healthy-before-pending", "security_convergence": "0004_provider_security", "stamped_older_0003_missing_evidence": "preserve-pending-never-fabricate-require-backup-remediation"},
-      "authority_process": "external-signer-without-database-credential",
-      "adoption": {"login": "deployment-managed-dedicated-noinherit-login", "capability_role": "science_workbench_qualification", "capability_role_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"]},
-      "dispatch": {"login": "deployment-managed-dedicated-noinherit-login", "capability_role": "science_workbench_dispatcher", "capability_role_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"]},
-      "cleanup": {"login": "deployment-managed-dedicated-noinherit-login", "capability_role": "science_workbench_provider_cleanup", "capability_role_attributes": ["NOLOGIN", "NOINHERIT", "NOBYPASSRLS"], "scope": "fixed-cross-tenant-due-cleanup-only", "direct_table_access": false, "database_interface": "four-fixed-security-definer-functions-for-bounded-due-candidates-exact-due-validation-and-two-completion-mutations", "credential_residency": "cleanup-process-only"},
-      "ordinary_application_run_insert": false,
-      "run_binding": "atomic-exact-current-receipt-revision-selected-model-profile-runtime-executable",
-      "external_live_status": "blocked-until-fresh-deployment-qualification-succeeds"
-    },
-    "tool_execution": {"executor": "application", "provider_builtin_tools": "disabled-and-probed", "model_role": "typed-action-proposal-only"},
+    "execution": {"language": "deterministic-python", "isolation_level": "in_process", "isolation_reporting": "recorded-value-verbatim-never-a-default", "sandbox_claims": "forbidden-without-an-outcome-test-of-the-specific-denial"},
+    "provider_credentials": {"plaintext_at_rest": false, "cipher": "aes-256-gcm", "additional_authenticated_data": "provider_id", "master_key_holder": "macos-keychain-generic-password", "automatic_fallback": false, "egress": "explicitly-selected-provider-only"},
+    "tool_execution": {"executor": "application", "model_role": "typed-action-proposal-only", "model_output_promotion": "never-without-application-policy"},
     "reviewer": {
       "allowed_capabilities": [
         "read_pinned_evidence",
         "submit_findings_once"
       ],
-      "forbidden_capabilities": ["runner", "python", "bash", "connector", "artifact_write", "tool_execute"],
+      "forbidden_capabilities": ["runner", "python", "bash", "connector", "network", "tool_execute", "artifact_write", "version_update"],
       "reexecution": false
     },
-    "credential_domains": {"provider_oauth": "requester-owned-provider-connections", "f13": "organization-owned-connector-credentials", "kms_purposes_distinct": true}
+    "local_interface": {"listener": "loopback-only", "non_loopback_bind": "refused", "remote_access_toggle": "absent"}
   },
   "claims": {
-    "gke_gvisor_enforces_workload_seccomp": false,
-    "gke_gvisor_enforces_no_new_privileges": false,
-    "isolation_acceptance": "outcome-tested-compensating-controls"
+    "in_process_execution_provides_confinement": false,
+    "keychain_item_restricted_to_this_application": false,
+    "isolation_acceptance": "disclosed-in-process-with-outcome-tested-denials-only"
   }
 }

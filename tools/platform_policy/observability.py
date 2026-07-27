@@ -37,14 +37,12 @@ class ObservabilityPolicy:
             frozenset(
                 {
                     "artifact_id",
-                    "connection_id",
                     "error_code",
                     "latency_ms",
-                    "org_id",
+                    "provider_id",
                     "request_id",
                     "run_id",
                     "status",
-                    "trace_id",
                 }
             )
         )

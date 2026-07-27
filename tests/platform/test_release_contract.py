@@ -456,35 +456,29 @@ def _attachment(
 
 def _nfr_measurements(requirement_id: NfrRequirementId) -> dict[str, MeasurementValue]:
     values: dict[NfrRequirementId, dict[str, MeasurementValue]] = {
-        "NFR01": {"success_percent": 99.9, "max_continuous_failure_seconds": 1},
-        "NFR02": {"crud_p95_ms": 1, "error_percent": 0},
-        "NFR03": {"visible_token_samples": 1, "visible_token_p95_seconds": 1},
-        "NFR04": {"sandbox_allocation_p95_seconds": 1},
-        "NFR05": {"checksum_mismatches": 0},
-        "NFR06": {"recovery_seconds": 1, "side_effect_replays": 0},
-        "NFR07": {"export_bytes": 500 * 1024 * 1024, "export_seconds": 1},
-        "NFR08": {"keyboard_complete": True, "serious_wcag_violations": 0},
-        "NFR09": {
-            "chrome_major_versions": (124, 125),
-            "chrome_latest_major": 125,
-            "chrome_p0_cases": 2,
-            "chrome_p0_failures": 0,
-            "edge_major_versions": (124, 125),
-            "edge_latest_major": 125,
-            "edge_p0_cases": 2,
-            "edge_p0_failures": 0,
-            "safari_major_versions": (17, 18),
-            "safari_latest_major": 18,
-            "safari_p0_cases": 2,
-            "safari_p0_failures": 0,
+        "LN01": {"cold_start_seconds": 1, "single_modality_p95_seconds": 1},
+        "LN02": {
+            "interpreter_runs": 3,
+            "distinct_hash_seeds": 3,
+            "byte_identical_artifacts": True,
         },
-        "NFR10": {
-            "quarterly_restore_current": True,
-            "rpo_minutes": 1,
-            "rto_minutes": 1,
-            "tombstones_replayed": True,
+        "LN03": {"checksum_mismatches": 0},
+        "LN04": {
+            "ambiguous_complete_records": 0,
+            "reconcile_seconds": 1,
             "side_effect_replays": 0,
-            "restore_evidence_date": "2026-07-13",
+        },
+        "LN05": {
+            "export_bytes": 500 * 1024 * 1024,
+            "export_seconds": 1,
+            "independent_verification": True,
+        },
+        "LN06": {"digest_mismatches": 0, "reproduced_every_read": True},
+        "LN07": {"keyboard_complete": True, "serious_wcag_violations": 0},
+        "LN08": {
+            "offline_stages_complete": True,
+            "corrupted_artifact_versions": 0,
+            "provider_selection_changes": 0,
         },
     }
     return values[requirement_id]
@@ -798,21 +792,13 @@ def _build_nfr_observations(
         report, report_hash = _attachment(evidence, f"nfr/{requirement_id}-report.json")
         raw, raw_hash = _attachment(evidence, f"nfr/{requirement_id}-raw.json")
         attachments.extend((report, raw))
-        start = (
-            "2026-07-11T12:00:00Z"
-            if requirement_id == "NFR01"
-            else "2026-07-14T09:00:00Z"
-        )
-        end = (
-            "2026-07-14T12:00:00Z"
-            if requirement_id == "NFR01"
-            else "2026-07-14T10:00:00Z"
-        )
+        start = "2026-07-14T09:00:00Z"
+        end = "2026-07-14T10:00:00Z"
         observations.append(
             NfrObservation(
                 requirement_id=requirement_id,
-                duration_seconds=259200 if requirement_id == "NFR01" else 3600,
-                sample_count=6 if requirement_id == "NFR09" else 1,
+                duration_seconds=3600,
+                sample_count=1,
                 environment="synthetic",
                 measurements=_nfr_measurements(requirement_id),
                 report_sha256=report_hash,
@@ -1461,36 +1447,36 @@ def test_typed_aliasing_and_epoch_forgery_are_rejected(
     )
     with pytest.raises(ValidationError, match="duration"):
         _ = type(fake_duration).model_validate(fake_duration.model_dump())
-    stale_restore = canonical_fixture.receipt.nfr_observations[-1].model_copy(
+    below_threshold = canonical_fixture.receipt.nfr_observations[-1].model_copy(
         update={
             "measurements": {
                 **canonical_fixture.receipt.nfr_observations[-1].measurements,
-                "restore_evidence_date": "2026-04-01",
+                "corrupted_artifact_versions": 1,
             },
             "seal": None,
         }
     )
-    stale_restore = stale_restore.model_copy(
+    below_threshold = below_threshold.model_copy(
         update={
             "seal": _seal(
-                stale_restore,
+                below_threshold,
                 ClaimKind.NFR,
                 canonical_fixture.receipt,
                 _issuer(canonical_fixture.trust, ClaimKind.NFR),
             )
         }
     )
-    stale_receipt = canonical_fixture.receipt.model_copy(
+    failing_receipt = canonical_fixture.receipt.model_copy(
         update={
             "nfr_observations": (
                 *canonical_fixture.receipt.nfr_observations[:-1],
-                stale_restore,
+                below_threshold,
             )
         }
     )
-    stale_receipt = _reseal_receipt_anchors(stale_receipt, canonical_fixture.trust)
-    with pytest.raises(ReleaseContractError, match="current quarter"):
-        _ = canonical_fixture.finalizer.finalize(stale_receipt)
+    failing_receipt = _reseal_receipt_anchors(failing_receipt, canonical_fixture.trust)
+    with pytest.raises(ReleaseContractError, match="below threshold"):
+        _ = canonical_fixture.finalizer.finalize(failing_receipt)
 
 
 def test_control_logs_external_bindings_and_sanitization_are_rederived(

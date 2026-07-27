@@ -16,7 +16,7 @@
         "token-pattern-redaction-and-canary-scan",
         "wipe-on-disconnect-or-reauth-failure"
       ],
-      "dropped": "ADR-0011 local-first single-user: hosted OAuth broker retired (Stage 1)"
+      "dropped": "ADR-0011 local-first single-user: hosted OAuth broker retired (Stage 1); researcher-owned provider credentials are covered by LS02 provider-credential-theft (Stage 4)"
     },
     {
       "id": "T03", "name": "provider-built-in-tool-bypass", "severity": "Dropped", "owner": "runtime-platform",
@@ -24,14 +24,14 @@
       "dropped": "ADR-0011 local-first single-user: hosted provider runtime retired (Stage 1)"
     },
     {
-      "id": "T04", "name": "provider-vendor-compromise", "severity": "Dropped", "owner": "supply-chain-security",
-      "controls": ["pinned-approved-runtime-binary", "signature-sbom-and-vulnerability-admission", "provider-only-egress", "no-tenant-or-control-plane-credential", "live-cleanup-conformance"],
-      "dropped": "ADR-0011 local-first single-user: hosted provider runtime retired (Stage 1)"
+      "id": "T04", "name": "provider-endpoint-compromise", "severity": "High", "owner": "provider-security",
+      "controls": ["typed-model-turn-boundary", "credential-only-in-one-request-frame", "error-and-traceback-paths-never-carry-key-material", "no-unauthenticated-or-cross-provider-retry"],
+      "executable_test": "make test-security CASE=endpoint-compromise", "evidence_path": "tools/evidence/security/T04-provider-endpoint-compromise.json"
     },
     {
-      "id": "T05", "name": "prompt-injection", "severity": "Dropped", "owner": "agent-security",
-      "controls": ["tool-output-and-files-treated-as-data", "typed-action-proposals", "policy-evaluated-outside-model", "secret-and-network-scope-never-model-selected"],
-      "dropped": "ADR-0011 local-first single-user: hosted provider runtime retired (Stage 1)"
+      "id": "T05", "name": "prompt-injection", "severity": "High", "owner": "agent-security",
+      "controls": ["model-output-and-trace-content-treated-as-data", "reviewer-structurally-without-execution-or-network-modules", "no-evaluation-builtins-in-reviewer-source", "injected-instructions-never-promoted-to-actions"],
+      "executable_test": "make test-security CASE=prompt-injection", "evidence_path": "tools/evidence/security/T05-prompt-injection.json"
     },
     {
       "id": "T06", "name": "ssrf", "severity": "Dropped", "owner": "connector-security",
@@ -49,28 +49,28 @@
       "dropped": "ADR-0011 local-first single-user: no sandbox is claimed; v0.5 discloses in_process execution and egress threats are re-assessed as LS-series local threats (Stage 3)"
     },
     {
-      "id": "T09", "name": "stale-workers-and-lease-fencing", "severity": "High", "owner": "orchestration-platform",
+      "id": "T09", "name": "stale-workers-and-lease-fencing", "severity": "Dropped", "owner": "orchestration-platform",
       "controls": ["15s-heartbeat-45s-lease", "monotonic-attempt-token", "fenced-completion-transaction", "kernel-loss-fails-without-side-effect-replay"],
-      "executable_test": "make test-security CASE=lease-fencing", "evidence_path": "tools/evidence/security/T09-lease-fencing.json"
+      "dropped": "ADR-0011 local-first single-user: hosted worker orchestration and heartbeat leases retired; local concurrent-claim fencing is a control of T10 approval-replay (Stage 4)"
     },
     {
       "id": "T10", "name": "approval-replay", "severity": "High", "owner": "tool-policy",
-      "controls": ["digest-binds-org-run-requester-tool-args-scopes-expiry", "research-intent-digest-bound", "single-consume-in-execution-start-transaction", "cross-tenant-and-expired-digest-rejected"],
+      "controls": ["approval-digest-binds-immutable-plan-and-research-intent", "single-consume-inside-the-start-run-transaction", "replayed-or-expired-approval-refused-without-execution", "concurrent-claims-fence-exactly-one-execution"],
       "executable_test": "make test-security CASE=approval-replay", "evidence_path": "tools/evidence/security/T10-approval-replay.json"
     },
     {
       "id": "T11", "name": "export-traversal", "severity": "High", "owner": "artifact-platform",
-      "controls": ["server-generated-normalized-unique-paths", "reject-absolute-dotdot-symlink-and-collision", "pinned-authorized-version-selection", "single-object-short-lived-download"],
+      "controls": ["server-generated-normalized-unique-paths", "reject-absolute-dotdot-symlink-and-collision", "pinned-authorized-version-selection", "owner-only-regular-files-in-the-pack"],
       "executable_test": "make test-security CASE=export-traversal", "evidence_path": "tools/evidence/security/T11-export-traversal.json"
     },
     {
-      "id": "T12", "name": "deletion-and-backup-resurrection", "severity": "High", "owner": "data-governance",
+      "id": "T12", "name": "deletion-and-backup-resurrection", "severity": "Dropped", "owner": "data-governance",
       "controls": ["immediate-tombstone", "per-system-deletion-receipts", "restore-reapplies-tombstones-before-access", "backup-and-provider-copy-expiry-tracked", "legal-hold-is-append-only-and-separated"],
-      "executable_test": "make test-security CASE=deletion-resurrection", "evidence_path": "tools/evidence/security/T12-deletion-resurrection.json"
+      "dropped": "ADR-0011 local-first single-user: no hosted backup, restore, or legal-hold plane exists; the data root is a researcher-owned directory whose lifecycle the operating-system account controls (Stage 4)"
     },
     {
       "id": "T13", "name": "dependency-and-supply-chain-compromise", "severity": "High", "owner": "supply-chain-security",
-      "controls": ["lockfiles-and-digest-pinned-images", "signature-sbom-vulnerability-and-license-gates", "trusted-build-provenance", "runtime-updaters-disabled", "release-binary-allowlist"],
+      "controls": ["uv-and-pnpm-lockfiles-required-and-never-rewritten-by-bootstrap", "sha-pinned-workflow-actions", "sbom-and-secret-scan-release-gates", "no-runtime-self-updaters"],
       "executable_test": "make test-security CASE=supply-chain", "evidence_path": "tools/evidence/security/T13-supply-chain.json"
     },
     {
@@ -82,6 +82,31 @@
       "id": "T15", "name": "database-role-qualification-forgery", "severity": "Dropped", "owner": "data-security",
       "controls": ["ordinary-app-role-cannot-write-receipts-current-pointer-or-runs", "dedicated-noinherit-login-to-science-workbench-qualification-nologin-role", "dedicated-noinherit-login-to-science-workbench-dispatcher-nologin-role", "dedicated-noinherit-login-to-science-workbench-provider-cleanup-nologin-nobypassrls-role", "cleanup-role-has-no-direct-table-access", "cleanup-executes-only-four-fixed-security-definer-due-functions", "fixed-adopter-append-and-cas-no-callback", "adopter-cas-rechecks-exact-connection-snapshot-including-created-at", "dedicated-dispatcher-exact-run-insert", "dedicated-cleanup-credential-absent-from-app-and-provider-runtime", "forced-requester-rls", "0004-provider-security-converges-stale-0003-without-fabricating-lost-evidence", "exact-current-receipt-status-and-selected-model-run-trigger", "immutable-run-binding"],
       "dropped": "ADR-0011 local-first single-user: provider qualification authority retired (Stage 1)"
+    },
+    {
+      "id": "LS01", "name": "loopback-exposure", "severity": "High", "owner": "local-platform",
+      "controls": ["listener-binds-loopback-only", "non-loopback-bind-refused-and-socket-closed", "no-remote-access-toggle"],
+      "executable_test": "make test-security CASE=loopback-exposure", "evidence_path": "tools/evidence/security/LS01-loopback-exposure.json"
+    },
+    {
+      "id": "LS02", "name": "provider-credential-theft", "severity": "High", "owner": "credential-security",
+      "controls": ["plaintext-provider-key-never-persisted", "aes-256-gcm-sealed-with-keychain-held-master-key", "ciphertext-bound-to-its-provider-by-aad", "secret-absent-from-argv-logs-and-reprs"],
+      "executable_test": "make test-security CASE=credential-theft", "evidence_path": "tools/evidence/security/LS02-provider-credential-theft.json"
+    },
+    {
+      "id": "LS04", "name": "overstated-isolation-claim", "severity": "High", "owner": "local-platform",
+      "controls": ["in-process-execution-disclosed-verbatim", "no-confinement-claim-without-an-outcome-test", "ledger-and-run-surfaces-report-only-the-recorded-isolation"],
+      "executable_test": "make test-security CASE=isolation-disclosure", "evidence_path": "tools/evidence/security/LS04-overstated-isolation-claim.json"
+    },
+    {
+      "id": "LS08", "name": "data-root-permission-broadening", "severity": "High", "owner": "local-platform",
+      "controls": ["owner-only-data-root-and-blob-directories", "permissive-umask-cannot-widen-the-layout", "owner-only-token-key-and-export-files"],
+      "executable_test": "make test-security CASE=data-root-permissions", "evidence_path": "tools/evidence/security/LS08-data-root-permission-broadening.json"
+    },
+    {
+      "id": "LS10", "name": "unsanctioned-egress", "severity": "High", "owner": "local-platform",
+      "controls": ["egress-only-to-the-explicitly-selected-provider", "provider-failure-contacts-no-other-provider", "no-telemetry-and-no-implicit-cloud-sync-of-the-data-root"],
+      "executable_test": "make test-security CASE=egress", "evidence_path": "tools/evidence/security/LS10-unsanctioned-egress.json"
     }
   ]
 }

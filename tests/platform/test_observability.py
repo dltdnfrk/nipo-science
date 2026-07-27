@@ -25,7 +25,7 @@ def test_security_allowlisted_metadata_is_accepted() -> None:
         name="run.completed",
         metadata={
             "request_id": "req-1",
-            "org_id": "org-1",
+            "provider_id": "openai",
             "run_id": "run-1",
             "status": "completed",
             "latency_ms": 42,

@@ -107,33 +107,33 @@ class ArchitectureVerifierTests(unittest.TestCase):
         # When/Then: prefix-only path validation is insufficient and rejected.
         self.assert_rejected("invalid-evidence-path:T11")
 
-    def test_rejects_oauth_refresh_token_exfiltration_control_omission(self) -> None:
-        # Given: OAuth token theft lacks its refresh-token confinement control.
+    def test_rejects_plaintext_provider_key_control_omission(self) -> None:
+        # Given: credential theft lacks its plaintext-never-persisted control.
         self.replace_once(
             "threat-model.json",
-            ('        "refresh-token-never-enters-provider-runtime-process",\n', ""),
+            ('"plaintext-provider-key-never-persisted", ', ""),
         )
 
         # When/Then: verification names the missing mitigation.
-        self.assert_rejected("oauth-refresh-token-exfiltration-mitigation")
+        self.assert_rejected("plaintext-provider-key-mitigation")
 
     def test_rejects_unowned_trust_boundary(self) -> None:
         # Given: a trust boundary with no accountable owner.
         self.replace_once(
             "architecture.json",
-            ('"owner": "identity-platform"', '"owner": ""'),
+            ('"owner": "review-platform"', '"owner": ""'),
         )
 
         # When/Then: verification rejects the unowned boundary.
         self.assert_rejected("unowned-boundary")
 
     def test_rejects_unclassified_sensitive_field(self) -> None:
-        # Given: the OAuth refresh token loses its classification.
+        # Given: the provider API key loses its classification.
         self.replace_once(
             "data-classification.json",
             (
-                '"classification": "secret", "retention": "until-disconnect',
-                '"retention": "until-disconnect',
+                '"classification": "secret", "retention": "until the researcher',
+                '"retention": "until the researcher',
             ),
         )
 
@@ -177,18 +177,18 @@ class ArchitectureVerifierTests(unittest.TestCase):
         # When/Then: verification rejects Reviewer execution.
         self.assert_rejected("reviewer-tool-execution")
 
-    def test_rejects_literal_gvisor_seccomp_claim(self) -> None:
-        # Given: architecture falsely claims gVisor enforces workload seccomp.
+    def test_rejects_overstated_isolation_claim(self) -> None:
+        # Given: architecture falsely claims in-process execution confines code.
         self.replace_once(
             "architecture.json",
             (
-                '"gke_gvisor_enforces_workload_seccomp": false',
-                '"gke_gvisor_enforces_workload_seccomp": true',
+                '"in_process_execution_provides_confinement": false',
+                '"in_process_execution_provides_confinement": true',
             ),
         )
 
-        # When/Then: verification rejects the literal claim.
-        self.assert_rejected("literal-seccomp-claim")
+        # When/Then: verification rejects the overstated claim.
+        self.assert_rejected("overstated-isolation-claim")
 
 
 if __name__ == "__main__":

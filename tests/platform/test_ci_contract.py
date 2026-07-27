@@ -2253,7 +2253,18 @@ def test_checked_in_ci_catalog_matches_runtime_and_normative_authorities() -> No
     assert set(verified) == set(CiJob)
     assert mapped_requirements == ()
     assert set(catalog.unverified_requirement_ids) == set(expected_requirements)
-    assert set(security.control_ids) == {f"T{number:02d}" for number in range(9, 14)}
+    assert set(security.control_ids) == {
+        "LS01",
+        "LS02",
+        "LS04",
+        "LS08",
+        "LS10",
+        "T04",
+        "T05",
+        "T10",
+        "T11",
+        "T13",
+    }
 
 
 def security_catalog_authority(catalog_id: str) -> RequiredSecurityCatalog:

@@ -6,46 +6,45 @@ from typing import Final
 
 # History principle: a decision removed from REQUIRED_DECISIONS keeps its ADR
 # document under docs/architecture/decisions/ as history; removal from this
-# frozenset never deletes the ADR file. ADR-0011 (local-first-single-user) is
-# registered in docs/architecture/architecture.json but deliberately absent
-# from REQUIRED_DECISIONS/REQUIRED_FIELDS: rewriting them for the local-first
-# topology is Stage 4 work, and adding the decision now would force
-# data-classification.json changes that must land in the same commit to keep
-# verify-architecture (CI-006) green. REQUIRED_THREATS is narrowed per stage
-# to the threats whose executable cases survive the retirement: Stage 1
-# dropped T01-T06 and T14/T15; Stage 3 dropped T07/T08 with the upload and
-# dry-lab fixture planes (T09/T10 re-pinned to nipo_local store cases).
+# frozenset never deletes the ADR file. Stage 4 of the ADR-0011 local-first
+# migration rewrote all three sets for the single-user product: the required
+# decisions are the ones that still govern the local topology, the required
+# threats are the High items of the rewritten threat model (each carries an
+# executable SECURITY case), and the required fields are the local data
+# classes — researcher-owned provider credentials, the local session token and
+# download signing key, and the research content the data root holds.
 REQUIRED_DECISIONS: Final = frozenset(
     {
         "isolated-monorepo-service-boundaries",
-        "same-origin-auth",
-        "transactional-event-log",
         "artifact-first-immutable-provenance",
-        "local-gke-runner-parity",
-        "opaque-per-user-runtime-homes",
         "application-sole-tool-executor",
         "reviewer-non-reexecution",
-        "oauth-f13-state-separation",
+        "local-first-single-user",
     }
 )
 REQUIRED_THREATS: Final = frozenset(
     {
-        "stale-workers-and-lease-fencing",
+        "provider-endpoint-compromise",
+        "prompt-injection",
         "approval-replay",
         "export-traversal",
-        "deletion-and-backup-resurrection",
         "dependency-and-supply-chain-compromise",
+        "loopback-exposure",
+        "provider-credential-theft",
+        "overstated-isolation-claim",
+        "data-root-permission-broadening",
+        "unsanctioned-egress",
     }
 )
 REQUIRED_FIELDS: Final = frozenset(
     {
-        "oauth_refresh_token",
-        "oauth_access_token",
+        "provider_api_key",
+        "local_session_token",
+        "download_signing_key",
         "scientific_inputs",
         "artifact_outputs",
         "reviews",
-        "audit_events",
-        "operational_logs",
         "exports",
+        "operational_logs",
     }
 )

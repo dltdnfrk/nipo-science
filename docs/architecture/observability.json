@@ -1,27 +1,24 @@
 {
   "allowed_metadata": [
     "artifact_id",
-    "connection_id",
     "error_code",
     "latency_ms",
-    "org_id",
+    "provider_id",
     "request_id",
     "run_id",
-    "status",
-    "trace_id"
+    "status"
   ],
-  "otel": {
-    "export_protocol": "otlp",
-    "processor": "batch",
-    "service_name": "science-workbench",
-    "transport_security": "tls"
+  "local_only": {
+    "log_destination": "files-inside-the-researcher-owned-data-root",
+    "external_log_shipping": "absent",
+    "telemetry": "absent",
+    "implicit_cloud_sync": "absent"
   },
   "prohibited_metadata": [
     "authorization",
     "cookie",
-    "email",
-    "oauth_access_token",
-    "oauth_refresh_token",
+    "local_session_token",
+    "provider_api_key",
     "prompt",
     "research_content"
   ]

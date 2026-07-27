@@ -41,9 +41,16 @@ class SecurityCase:
 
 SECURITY_CASES: tuple[SecurityCase, ...] = (
     SecurityCase(
-        "T09",
-        "lease-fencing",
-        "apps/local/tests/test_store.py::test_concurrent_claims_fence_one_produced_execution_id",
+        "T04",
+        "endpoint-compromise",
+        "apps/local/tests/test_modelcall.py::test_a_refused_connection_leaves_no_credential_in_any_frame",
+        0,
+        6,
+    ),
+    SecurityCase(
+        "T05",
+        "prompt-injection",
+        "apps/local/tests/test_reviewer.py::test_reviewer_source_imports_no_execution_or_network_module",
         0,
         1,
     ),
@@ -62,18 +69,46 @@ SECURITY_CASES: tuple[SecurityCase, ...] = (
         3,
     ),
     SecurityCase(
-        "T12",
-        "deletion-resurrection",
-        "tests/platform/test_g005_recovery_contract.py::test_pre_tombstone_backup_blocks_visibility_and_released_hold_allows_purge",
-        0,
-        2,
-    ),
-    SecurityCase(
         "T13",
         "supply-chain",
         "tests/platform/test_static_checks.py::test_security_floating_workflow_action_is_rejected",
         0,
         1,
+    ),
+    SecurityCase(
+        "LS01",
+        "loopback-exposure",
+        "apps/local/tests/test_api.py::test_a_wildcard_bound_socket_is_refused_by_the_server",
+        1,
+        2,
+    ),
+    SecurityCase(
+        "LS02",
+        "credential-theft",
+        "apps/local/tests/test_providers.py::test_a_ciphertext_cannot_be_moved_between_providers",
+        1,
+        0,
+    ),
+    SecurityCase(
+        "LS04",
+        "isolation-disclosure",
+        "apps/local/tests/test_workbench.py::test_ledger_discloses_the_absent_isolation_and_skill_hashes",
+        0,
+        2,
+    ),
+    SecurityCase(
+        "LS08",
+        "data-root-permissions",
+        "apps/local/tests/test_config.py::test_a_permissive_umask_cannot_widen_the_layout",
+        0,
+        1,
+    ),
+    SecurityCase(
+        "LS10",
+        "egress",
+        "apps/local/tests/test_modelcall.py::test_a_failing_provider_contacts_no_other_provider[failing0]",
+        0,
+        3,
     ),
 )
 

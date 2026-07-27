@@ -109,9 +109,9 @@ def _check_capabilities(
     claims = document.get("claims")
     if (
         not isinstance(claims, dict)
-        or claims.get("gke_gvisor_enforces_workload_seccomp") is not False
+        or claims.get("in_process_execution_provides_confinement") is not False
     ):
-        violations.append("literal-seccomp-claim")
+        violations.append("overstated-isolation-claim")
 
 
 def _check_threats(
@@ -144,16 +144,16 @@ def _check_threats(
         )
         if violation is not None:
             violations.append(violation)
-    oauth = next(
-        (item for item in threats if item.get("name") == "oauth-token-theft"),
+    credential = next(
+        (item for item in threats if item.get("name") == "provider-credential-theft"),
         None,
     )
-    controls = oauth.get("controls") if oauth is not None else None
+    controls = credential.get("controls") if credential is not None else None
     if (
         not isinstance(controls, list)
-        or "refresh-token-never-enters-provider-runtime-process" not in controls
+        or "plaintext-provider-key-never-persisted" not in controls
     ):
-        violations.append("oauth-refresh-token-exfiltration-mitigation")
+        violations.append("plaintext-provider-key-mitigation")
 
 
 def _check_data(document: _manifest.JsonObject, violations: list[str]) -> None:

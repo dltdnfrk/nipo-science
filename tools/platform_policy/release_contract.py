@@ -46,7 +46,7 @@ from .ci_contract import (
 )
 
 SHA256 = r"^[0-9a-f]{64}$"
-NFR_COUNT = 10
+NFR_COUNT = 8
 MIN_FINALIZATION_NONCE_LENGTH: Final = 16
 EXPECTED_REQUIREMENT_COUNT = 64
 GOAL_STATUSES = frozenset(
@@ -63,55 +63,32 @@ GOAL_STATUSES = frozenset(
 REQUIREMENT_ID_PATTERN = re.compile(
     r"(?:L\d{2}|LS\d{2}|LN\d{2}|GL\d{2}|RV\d{2}|AC-[A-Z0-9]+(?:-[A-Z0-9]+)*)"
 )
-MIN_SOAK_SECONDS = 72 * 3600
-MIN_SUCCESS_PERCENT = 99.5
-MAX_SUCCESS_PERCENT = 100.0
-MAX_CONTINUOUS_FAILURE_SECONDS = 900
-MAX_CRUD_P95_MS = 500
-MAX_VISIBLE_TOKEN_P95_SECONDS = 3
-MAX_SANDBOX_ALLOCATION_P95_SECONDS = 10
-MAX_RECOVERY_SECONDS = 300
-MIN_EXPORT_BYTES = 500 * 1024 * 1024
-MAX_RPO_MINUTES = 15
-MAX_RTO_MINUTES = 240
-BROWSERS = ("chrome", "edge", "safari")
-MIN_BROWSER_MAJOR_VERSIONS = 2
-MIN_BROWSER_CASES = len(BROWSERS) * MIN_BROWSER_MAJOR_VERSIONS
+MAX_COLD_START_SECONDS = 5
+MAX_SINGLE_MODALITY_P95_SECONDS = 10
+MIN_DETERMINISM_RUNS = 3
+MIN_DETERMINISM_HASH_SEEDS = 2
+MAX_RECONCILE_SECONDS = 5
+MAX_EXPORT_BYTES = 500 * 1024 * 1024
+MAX_EXPORT_SECONDS = 300
 REQUIRED_VISUAL_REVIEW_COUNT = 2
 REQUIRED_EXTERNAL_CONTROL_IDS = frozenset(
     {
-        "external-cleanup",
-        "gke-production",
-        "gke-staging",
-        "nfr01-72h",
-        "nfr02-07-production",
-        "nfr09-browser-fleet",
-        "nfr10-quarterly-pitr",
-        "openai-codex-live",
-        "postgres-forced-rls",
-        "production-trust-authorities",
+        "clean-machine-chain",
+        "golden-runs",
+        "reviewer-corpus",
+        "keychain-real-system",
+        "provider-live-model-turn",
     }
 )
 REQUIRED_EXTERNAL_BINDINGS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
-    "external-cleanup": (("AC-DATA", "SEC10", "SEC16"), ("G005", "G006")),
-    "gke-production": (("SEC06", "NFR02", "NFR04"), ("G005", "G006")),
-    "gke-staging": (("SEC06", "NFR02", "NFR04"), ("G005", "G006")),
-    "nfr01-72h": (("NFR01",), ("G006",)),
-    "nfr02-07-production": (
-        ("NFR02", "NFR03", "NFR04", "NFR05", "NFR06", "NFR07"),
-        ("G005", "G006"),
+    "clean-machine-chain": (("AC-LOCAL", "AC-DETERMINISM"), ("G006",)),
+    "golden-runs": (
+        ("GL01", "GL02", "GL03", "GL04", "GL05", "GL06", "GL07", "GL08"),
+        ("G006",),
     ),
-    "nfr09-browser-fleet": (("NFR09",), ("G003", "G006")),
-    "nfr10-quarterly-pitr": (("NFR10",), ("G005", "G006")),
-    "openai-codex-live": (("AC-F13-D", "NFR03"), ("G004", "G006")),
-    "postgres-forced-rls": (
-        ("AC-F02", "AC-TENANT", "SEC01"),
-        ("G003", "G004", "G005", "G006"),
-    ),
-    "production-trust-authorities": (
-        ("SEC04", "SEC06", "SEC10", "SEC14", "SEC16"),
-        ("G005", "G006"),
-    ),
+    "reviewer-corpus": (("RV01", "RV02", "RV03", "RV04", "RV05"), ("G006",)),
+    "keychain-real-system": (("LS02", "LS03"), ("G006",)),
+    "provider-live-model-turn": (("LS10",), ("G006",)),
 }
 AUTHORITY_INPUT_KEYS = frozenset(
     {
@@ -150,28 +127,24 @@ def _json_value(value: object) -> JsonValue:
 
 type MeasurementValue = bool | int | float | str | tuple[int, ...]
 type NfrRequirementId = Literal[
-    "NFR01",
-    "NFR02",
-    "NFR03",
-    "NFR04",
-    "NFR05",
-    "NFR06",
-    "NFR07",
-    "NFR08",
-    "NFR09",
-    "NFR10",
+    "LN01",
+    "LN02",
+    "LN03",
+    "LN04",
+    "LN05",
+    "LN06",
+    "LN07",
+    "LN08",
 ]
 NFR_REQUIREMENT_IDS: tuple[NfrRequirementId, ...] = (
-    "NFR01",
-    "NFR02",
-    "NFR03",
-    "NFR04",
-    "NFR05",
-    "NFR06",
-    "NFR07",
-    "NFR08",
-    "NFR09",
-    "NFR10",
+    "LN01",
+    "LN02",
+    "LN03",
+    "LN04",
+    "LN05",
+    "LN06",
+    "LN07",
+    "LN08",
 )
 
 
@@ -1279,87 +1252,81 @@ def _measurement_boolean(
     return _boolean(value) if value is not None else None
 
 
-def _meets_nfr01(observation: NfrObservation) -> bool:
-    success = _measurement_number(observation.measurements, "success_percent")
-    failure = _measurement_number(
-        observation.measurements, "max_continuous_failure_seconds"
-    )
-    return (
-        observation.duration_seconds >= MIN_SOAK_SECONDS
-        and observation.sample_count > 0
-        and success is not None
-        and MIN_SUCCESS_PERCENT <= success <= MAX_SUCCESS_PERCENT
-        and failure is not None
-        and 0 <= failure < MAX_CONTINUOUS_FAILURE_SECONDS
-    )
-
-
-def _meets_nfr02(observation: NfrObservation) -> bool:
-    crud = _measurement_number(observation.measurements, "crud_p95_ms")
-    errors = _measurement_number(observation.measurements, "error_percent")
-    return (
-        observation.sample_count > 0
-        and crud is not None
-        and 0 <= crud <= MAX_CRUD_P95_MS
-        and errors is not None
-        and 0 <= errors < 1
-    )
-
-
-def _meets_nfr03(observation: NfrObservation) -> bool:
-    samples = _measurement_integer(observation.measurements, "visible_token_samples")
-    duration = _measurement_number(
-        observation.measurements, "visible_token_p95_seconds"
+def _meets_ln01(observation: NfrObservation) -> bool:
+    cold_start = _measurement_number(observation.measurements, "cold_start_seconds")
+    modality = _measurement_number(
+        observation.measurements, "single_modality_p95_seconds"
     )
     return (
         observation.sample_count > 0
-        and samples is not None
-        and 0 < samples <= observation.sample_count
-        and duration is not None
-        and 0 <= duration <= MAX_VISIBLE_TOKEN_P95_SECONDS
+        and cold_start is not None
+        and 0 <= cold_start <= MAX_COLD_START_SECONDS
+        and modality is not None
+        and 0 <= modality <= MAX_SINGLE_MODALITY_P95_SECONDS
     )
 
 
-def _meets_nfr04(observation: NfrObservation) -> bool:
-    duration = _measurement_number(
-        observation.measurements, "sandbox_allocation_p95_seconds"
+def _meets_ln02(observation: NfrObservation) -> bool:
+    runs = _measurement_integer(observation.measurements, "interpreter_runs")
+    seeds = _measurement_integer(observation.measurements, "distinct_hash_seeds")
+    identical = _measurement_boolean(
+        observation.measurements, "byte_identical_artifacts"
     )
     return (
         observation.sample_count > 0
-        and duration is not None
-        and 0 <= duration <= MAX_SANDBOX_ALLOCATION_P95_SECONDS
+        and runs is not None
+        and runs >= MIN_DETERMINISM_RUNS
+        and seeds is not None
+        and seeds >= MIN_DETERMINISM_HASH_SEEDS
+        and identical is True
     )
 
 
-def _meets_nfr05(observation: NfrObservation) -> bool:
+def _meets_ln03(observation: NfrObservation) -> bool:
     mismatches = _measurement_integer(observation.measurements, "checksum_mismatches")
     return observation.sample_count > 0 and mismatches == 0
 
 
-def _meets_nfr06(observation: NfrObservation) -> bool:
-    recovery = _measurement_number(observation.measurements, "recovery_seconds")
+def _meets_ln04(observation: NfrObservation) -> bool:
+    ambiguous = _measurement_integer(
+        observation.measurements, "ambiguous_complete_records"
+    )
+    reconcile = _measurement_number(observation.measurements, "reconcile_seconds")
     replays = _measurement_integer(observation.measurements, "side_effect_replays")
     return (
         observation.sample_count > 0
-        and recovery is not None
-        and 0 <= recovery <= MAX_RECOVERY_SECONDS
+        and ambiguous == 0
+        and reconcile is not None
+        and 0 <= reconcile <= MAX_RECONCILE_SECONDS
         and replays == 0
     )
 
 
-def _meets_nfr07(observation: NfrObservation) -> bool:
+def _meets_ln05(observation: NfrObservation) -> bool:
     exported = _measurement_integer(observation.measurements, "export_bytes")
     duration = _measurement_number(observation.measurements, "export_seconds")
+    verified = _measurement_boolean(
+        observation.measurements, "independent_verification"
+    )
     return (
         observation.sample_count > 0
         and exported is not None
-        and exported >= MIN_EXPORT_BYTES
+        and 0 < exported <= MAX_EXPORT_BYTES
         and duration is not None
-        and 0 <= duration <= MAX_RECOVERY_SECONDS
+        and 0 <= duration <= MAX_EXPORT_SECONDS
+        and verified is True
     )
 
 
-def _meets_nfr08(observation: NfrObservation) -> bool:
+def _meets_ln06(observation: NfrObservation) -> bool:
+    mismatches = _measurement_integer(observation.measurements, "digest_mismatches")
+    reproduced = _measurement_boolean(
+        observation.measurements, "reproduced_every_read"
+    )
+    return observation.sample_count > 0 and mismatches == 0 and reproduced is True
+
+
+def _meets_ln07(observation: NfrObservation) -> bool:
     keyboard_complete = _measurement_boolean(
         observation.measurements, "keyboard_complete"
     )
@@ -1371,74 +1338,33 @@ def _meets_nfr08(observation: NfrObservation) -> bool:
     )
 
 
-def _meets_nfr09(observation: NfrObservation) -> bool:
-    if observation.sample_count < MIN_BROWSER_CASES:
-        return False
-    for browser in BROWSERS:
-        values = observation.measurements.get(f"{browser}_major_versions")
-        latest = _measurement_integer(
-            observation.measurements, f"{browser}_latest_major"
-        )
-        cases = _measurement_integer(observation.measurements, f"{browser}_p0_cases")
-        failures = _measurement_integer(
-            observation.measurements, f"{browser}_p0_failures"
-        )
-        if (
-            not isinstance(values, tuple)
-            or len(values) < MIN_BROWSER_MAJOR_VERSIONS
-            or latest is None
-            or latest < MIN_BROWSER_MAJOR_VERSIONS
-            or cases is None
-            or cases <= 0
-            or failures != 0
-        ):
-            return False
-        parsed = tuple(_integer(value) for value in values)
-        if any(value is None or value <= 0 for value in parsed):
-            return False
-        observed = {value for value in parsed if value is not None}
-        if not {latest - 1, latest}.issubset(observed):
-            return False
-    return True
-
-
-def _meets_nfr10(observation: NfrObservation) -> bool:
-    current = _measurement_boolean(
-        observation.measurements, "quarterly_restore_current"
+def _meets_ln08(observation: NfrObservation) -> bool:
+    offline = _measurement_boolean(
+        observation.measurements, "offline_stages_complete"
     )
-    rpo = _measurement_number(observation.measurements, "rpo_minutes")
-    rto = _measurement_number(observation.measurements, "rto_minutes")
-    tombstones = _measurement_boolean(observation.measurements, "tombstones_replayed")
-    replays = _measurement_integer(observation.measurements, "side_effect_replays")
-    restore_evidence_date = observation.measurements.get("restore_evidence_date")
-    observed_quarter = (int(observation.observed_end_utc[5:7]) - 1) // 3
+    corrupted = _measurement_integer(
+        observation.measurements, "corrupted_artifact_versions"
+    )
+    changes = _measurement_integer(
+        observation.measurements, "provider_selection_changes"
+    )
     return (
         observation.sample_count > 0
-        and current is True
-        and rpo is not None
-        and 0 <= rpo <= MAX_RPO_MINUTES
-        and rto is not None
-        and 0 <= rto <= MAX_RTO_MINUTES
-        and tombstones is True
-        and replays == 0
-        and isinstance(restore_evidence_date, str)
-        and re.fullmatch(r"\d{4}-\d{2}-\d{2}", restore_evidence_date) is not None
-        and int(restore_evidence_date[:4]) == int(observation.observed_end_utc[:4])
-        and (int(restore_evidence_date[5:7]) - 1) // 3 == observed_quarter
+        and offline is True
+        and corrupted == 0
+        and changes == 0
     )
 
 
 NFR_EVALUATORS: dict[NfrRequirementId, Callable[[NfrObservation], bool]] = {
-    "NFR01": _meets_nfr01,
-    "NFR02": _meets_nfr02,
-    "NFR03": _meets_nfr03,
-    "NFR04": _meets_nfr04,
-    "NFR05": _meets_nfr05,
-    "NFR06": _meets_nfr06,
-    "NFR07": _meets_nfr07,
-    "NFR08": _meets_nfr08,
-    "NFR09": _meets_nfr09,
-    "NFR10": _meets_nfr10,
+    "LN01": _meets_ln01,
+    "LN02": _meets_ln02,
+    "LN03": _meets_ln03,
+    "LN04": _meets_ln04,
+    "LN05": _meets_ln05,
+    "LN06": _meets_ln06,
+    "LN07": _meets_ln07,
+    "LN08": _meets_ln08,
 }
 
 
@@ -2727,27 +2653,6 @@ def _require_fresh_timestamp(
     return observed
 
 
-def _verify_restore_quarter(
-    observation: NfrObservation,
-    final_time: datetime,
-) -> None:
-    restore_date = observation.measurements.get("restore_evidence_date")
-    if not isinstance(restore_date, str):
-        msg = "NFR10 restore date is missing"
-        raise _contract_error(msg)
-    try:
-        restore = datetime.strptime(restore_date, "%Y-%m-%d").replace(tzinfo=UTC)
-    except ValueError as exc:
-        msg = "NFR10 restore date is invalid"
-        raise _contract_error(msg) from exc
-    if (restore.year, (restore.month - 1) // 3) != (
-        final_time.year,
-        (final_time.month - 1) // 3,
-    ):
-        msg = "NFR10 restore is not in the trusted current quarter"
-        raise _contract_error(msg)
-
-
 def _verify_nfr_epoch(
     observation: NfrObservation,
     final_time: datetime,
@@ -2761,11 +2666,6 @@ def _verify_nfr_epoch(
     if observation.duration_seconds != (end - start).total_seconds():
         msg = "NFR duration must be derived from its interval"
         raise _contract_error(msg)
-    if observation.requirement_id == "NFR01" and end - start < timedelta(hours=72):
-        msg = "NFR01 requires a 72-hour observed interval"
-        raise _contract_error(msg)
-    if observation.requirement_id == "NFR10":
-        _verify_restore_quarter(observation, final_time)
 
 
 def _verify_epoch_times(receipt: ReleaseReceipt, final_time: datetime) -> None:
