@@ -112,6 +112,14 @@
     method_not_allowed: "허용되지 않은 요청입니다.",
     payload_too_large: "요청이 너무 큽니다.",
     internal_error: "로컬 서버에서 처리하지 못했습니다.",
+    plan_not_found: "ActionPlan을 찾을 수 없습니다.",
+    approval_not_found: "계획 승인 기록을 찾을 수 없습니다.",
+    approval_exists: "이미 승인된 플랜입니다.",
+    approval_expired: "승인 유효 기간이 지났습니다.",
+    approval_consumed: "이미 사용된 승인입니다.",
+    approval_digest_mismatch: "연구 의도가 승인된 플랜과 달라 거부되었습니다.",
+    approval_forbidden: "이 승인을 사용할 수 없습니다.",
+    run_rejected: "실행을 시작하지 않고 거부했습니다.",
   };
 
   const NAME_REASON_TEXT = {
@@ -160,7 +168,7 @@
     project_archived: "보관된 프로젝트의 증거는 내보낼 수 없습니다.",
     run_not_found: "실행 기록을 찾을 수 없습니다.",
     execution_missing: "이 실행에는 커밋된 결과물이 없어 출처를 고정할 수 없습니다.",
-    plan_not_found: "승인된 ActionPlan을 찾을 수 없습니다.",
+    plan_not_found: "ActionPlan을 찾을 수 없습니다.",
     approval_not_found: "계획 승인 기록을 찾을 수 없습니다.",
     path_reserved_root: "결과물 이름이 팩이 예약한 문서 이름과 겹쳐 거부했습니다.",
     path_collision: "정규화하면 서로 겹치는 경로가 있어 거부했습니다.",
@@ -254,6 +262,15 @@
     downloadGrant: (pid, packId) =>
       request("POST", `/projects/${pid}/exports/${packId}/download`),
     contentUrl: (pid, aid, vid) => `${API}/projects/${pid}/artifacts/${aid}/versions/${vid}/content`,
+    createActionPlan: (pid, sessionId, researchIntent) =>
+      request("POST", `/projects/${pid}/action-plans`, {
+        session_id: sessionId,
+        research_intent: researchIntent,
+      }),
+    approveActionPlan: (pid, planId) =>
+      request("POST", `/projects/${pid}/action-plans/${planId}/approvals`, {}),
+    actionPlan: (pid, planId) => request("GET", `/projects/${pid}/action-plans/${planId}`),
+    approval: (pid, approvalId) => request("GET", `/projects/${pid}/approvals/${approvalId}`),
   };
 
   // ------------------------------------------------------------ DOM helpers --
@@ -1053,6 +1070,13 @@
     const actions = el("div", { class: "actions" });
     if (!session.archived) {
       actions.append(
+        el("a", {
+          class: "button button--small",
+          href: `#/projects/${projectId}/sessions/${session.id}/plan`,
+          text: "플랜 작성",
+          "aria-label": `${session.title} 세션 플랜 작성`,
+          "data-action": "open-plan",
+        }),
         el("button", {
           class: "button button--small",
           type: "button",
@@ -1215,6 +1239,605 @@
           ]),
     ]);
     announceScreen(`${project.name} 프로젝트를 표시했습니다.`);
+  }
+
+  // --------------------------------------------------- plan approval (L04) --
+
+  const RESEARCH_MODES = [
+    { value: "copilot", label: "copilot — 연구자 주도, 보조 제안" },
+    { value: "bounded_agentic", label: "bounded_agentic — 범위가 묶인 위임" },
+    { value: "ai_for_science", label: "ai_for_science — 과학 분석 실행" },
+  ];
+
+  const DATA_ORIGINS = [
+    { value: "observed", label: "observed — 관측 데이터" },
+    { value: "synthetic", label: "synthetic — 합성 데이터" },
+    { value: "mixed", label: "mixed — 관측과 합성 혼합" },
+  ];
+
+  function emptyIntentDraft() {
+    return {
+      question: "",
+      rationale: "",
+      intended_benefit: "",
+      success_criteria: [""],
+      constraints: [""],
+      stop_conditions: [""],
+      research_mode: "",
+      data_origin: "",
+      synthetic_generator_ref: "",
+      synthetic_validator_ref: "",
+    };
+  }
+
+  function readListItems(items) {
+    return items.map((item) => String(item ?? "").trim()).filter((item) => item.length > 0);
+  }
+
+  function intentPayloadFromDraft(draft) {
+    const payload = {
+      question: draft.question.trim(),
+      rationale: draft.rationale.trim(),
+      intended_benefit: draft.intended_benefit.trim(),
+      success_criteria: readListItems(draft.success_criteria),
+      constraints: readListItems(draft.constraints),
+      stop_conditions: readListItems(draft.stop_conditions),
+      research_mode: draft.research_mode,
+      data_origin: draft.data_origin,
+    };
+    if (draft.data_origin === "synthetic" || draft.data_origin === "mixed") {
+      payload.synthetic_generator_ref = draft.synthetic_generator_ref.trim() || null;
+      payload.synthetic_validator_ref = draft.synthetic_validator_ref.trim() || null;
+    }
+    return payload;
+  }
+
+  function validateIntentDraft(draft) {
+    if (!draft.question.trim()) return "연구 질문을 입력해 주세요.";
+    if (!draft.rationale.trim()) return "연구 근거를 입력해 주세요.";
+    if (!draft.intended_benefit.trim()) return "기대 이득을 입력해 주세요.";
+    if (readListItems(draft.success_criteria).length === 0) {
+      return "성공 기준을 하나 이상 입력해 주세요.";
+    }
+    if (readListItems(draft.constraints).length === 0) {
+      return "제약을 하나 이상 입력해 주세요.";
+    }
+    if (readListItems(draft.stop_conditions).length === 0) {
+      return "중단 조건을 하나 이상 입력해 주세요.";
+    }
+    if (!draft.research_mode) return "연구 모드를 선택해 주세요.";
+    if (!draft.data_origin) return "데이터 출처를 선택해 주세요.";
+    if (draft.data_origin === "synthetic" || draft.data_origin === "mixed") {
+      const generator = draft.synthetic_generator_ref.trim();
+      const validator = draft.synthetic_validator_ref.trim();
+      if (!generator || !validator) {
+        return "합성·혼합 출처에는 생성기와 검증기 참조를 모두 적어 주세요.";
+      }
+      if (generator === validator) {
+        return "생성기 참조와 검증기 참조는 서로 달라야 합니다.";
+      }
+    }
+    return "";
+  }
+
+  function digestCode(label, value, marker) {
+    return el("div", { class: "digest-row", "data-digest": marker }, [
+      el("p", { class: "meta", text: label }),
+      el("code", { class: "hash", text: value || "아직 없음" }),
+    ]);
+  }
+
+  function textField(id, label, help, value, onChange, multiline) {
+    const control = el(multiline ? "textarea" : "input", {
+      id,
+      name: id,
+      ...(multiline
+        ? { rows: "4" }
+        : { type: "text", autocomplete: "off" }),
+      value: multiline ? undefined : value,
+      on: {
+        input: (event) => onChange(event.currentTarget.value),
+        change: (event) => onChange(event.currentTarget.value),
+      },
+    });
+    if (multiline) control.value = value;
+    return el("div", { class: "field" }, [
+      el("label", { class: "field__label", for: id, text: label }),
+      control,
+      help ? el("p", { class: "field__help", text: help }) : null,
+    ]);
+  }
+
+  function selectField(id, label, help, value, options, onChange) {
+    const control = el(
+      "select",
+      {
+        id,
+        name: id,
+        on: {
+          change: (event) => onChange(event.currentTarget.value),
+          input: (event) => onChange(event.currentTarget.value),
+        },
+      },
+      [
+        el("option", { value: "", text: "선택해 주세요" }),
+        ...options.map((option) =>
+          el("option", {
+            value: option.value,
+            text: option.label,
+            selected: option.value === value ? true : null,
+          }),
+        ),
+      ],
+    );
+    // Selected state must be applied after options exist; the attribute alone
+    // is not reliable across re-renders when the empty option is first.
+    control.value = value;
+    return el("div", { class: "field" }, [
+      el("label", { class: "field__label", for: id, text: label }),
+      control,
+      help ? el("p", { class: "field__help", text: help }) : null,
+    ]);
+  }
+
+  function listField(id, label, help, items, onChange) {
+    const rows = items.map((item, index) => {
+      const inputId = `${id}-${index}`;
+      return el("div", { class: "list-field__row" }, [
+        el("input", {
+          id: inputId,
+          name: inputId,
+          type: "text",
+          autocomplete: "off",
+          value: item,
+          "aria-label": `${label} ${index + 1}`,
+          on: {
+            input: (event) => {
+              const next = items.slice();
+              next[index] = event.currentTarget.value;
+              onChange(next);
+            },
+            change: (event) => {
+              const next = items.slice();
+              next[index] = event.currentTarget.value;
+              onChange(next);
+            },
+          },
+        }),
+        el("button", {
+          class: "button button--small",
+          type: "button",
+          text: "삭제",
+          "aria-label": `${label} ${index + 1} 삭제`,
+          disabled: items.length <= 1,
+          on: {
+            click: () => {
+              if (items.length <= 1) return;
+              const next = items.slice();
+              next.splice(index, 1);
+              onChange(next.length === 0 ? [""] : next, { repaint: true });
+            },
+          },
+        }),
+      ]);
+    });
+    return el("div", { class: "field list-field", "data-list-field": id }, [
+      el("p", { class: "field__label", id: `${id}-label`, text: label }),
+      el("div", { class: "list-field__rows", role: "group", "aria-labelledby": `${id}-label` }, rows),
+      el("div", { class: "actions" }, [
+        el("button", {
+          class: "button button--small",
+          type: "button",
+          text: "항목 추가",
+          "aria-label": `${label} 항목 추가`,
+          on: {
+            click: () => onChange(items.concat([""]), { repaint: true }),
+          },
+        }),
+      ]),
+      help ? el("p", { class: "field__help", text: help }) : null,
+    ]);
+  }
+
+  async function renderPlanApproval(projectId, sessionId) {
+    document.title = "플랜 승인 — Nipo Science local";
+    workspaceTitle.textContent = "플랜 승인";
+    setBarActions([]);
+    state.projectId = projectId;
+    render([loadingState("세션을 확인하는 중")]);
+
+    const head = [
+      breadcrumb([
+        { label: "워크스페이스", href: "#/workspace" },
+        { label: "프로젝트", href: `#/projects/${projectId}` },
+        { label: "플랜 승인" },
+      ]),
+    ];
+
+    let project;
+    let sessions;
+    try {
+      [project, sessions] = await Promise.all([
+        request("GET", `/projects/${projectId}`),
+        api.sessions(projectId),
+      ]);
+    } catch (error) {
+      showError(describeError(error));
+      render([
+        ...head,
+        pageHeader("플랜 승인", "플랜 화면을 열 수 없습니다", describeError(error)),
+      ]);
+      return;
+    }
+
+    const sessionRows = Array.isArray(sessions.sessions) ? sessions.sessions : [];
+    const session = sessionRows.find((item) => String(item.id) === String(sessionId)) || null;
+    const sessionTitle = session ? session.title : sessionId;
+    document.title = `플랜 승인 — ${project.name} — Nipo Science local`;
+    workspaceTitle.textContent = "플랜 승인";
+
+    const draft = emptyIntentDraft();
+    let plan = null;
+    let approval = null;
+    let needsNewPlan = false;
+    let busy = false;
+
+    function touchIntent(mutator, options) {
+      mutator();
+      let cleared = false;
+      if (plan !== null || approval !== null) {
+        plan = null;
+        approval = null;
+        needsNewPlan = true;
+        cleared = true;
+      }
+      // Re-render only when structure or binding state changes. Typing into a
+      // text field must not rebuild the form or the caret jumps on every key.
+      if (cleared || (options && options.repaint)) paint();
+    }
+
+    async function onCreatePlan(event) {
+      event.preventDefault();
+      if (busy) return;
+      const problem = validateIntentDraft(draft);
+      if (problem) {
+        showError(problem);
+        return;
+      }
+      busy = true;
+      paint();
+      try {
+        plan = await api.createActionPlan(projectId, sessionId, intentPayloadFromDraft(draft));
+        approval = null;
+        needsNewPlan = false;
+        clearError();
+        announce("플랜을 만들었습니다. 서버가 계산한 다이제스트를 확인해 주세요.");
+      } catch (error) {
+        showError(describeError(error));
+      } finally {
+        busy = false;
+        paint();
+      }
+    }
+
+    async function onApprovePlan(event) {
+      event.preventDefault();
+      if (busy || !plan || !plan.plan_id) return;
+      busy = true;
+      paint();
+      try {
+        approval = await api.approveActionPlan(projectId, plan.plan_id);
+        clearError();
+        announce("플랜을 승인했습니다. 이 승인은 한 번만 쓸 수 있습니다.");
+      } catch (error) {
+        showError(describeError(error));
+      } finally {
+        busy = false;
+        paint();
+      }
+    }
+
+    function paint() {
+      const syntheticNeeded =
+        draft.data_origin === "synthetic" || draft.data_origin === "mixed";
+      const nodes = [
+        ...head,
+        pageHeader(
+          "플랜 승인",
+          sessionTitle,
+          "연구 의도를 작성하고 불변 ActionPlan을 만든 뒤, 한 번만 쓸 수 있는 승인을 남깁니다.",
+        ),
+        el("div", { class: "panel" }, [
+          keyValues([
+            ["프로젝트", project.name],
+            ["프로젝트 ID", project.id, true],
+            ["세션 ID", sessionId, true],
+            ["세션 상태", session ? (session.archived ? "보관됨" : "활성") : "목록에서 찾지 못함"],
+          ]),
+        ]),
+      ];
+
+      if (project.archived || (session && session.archived)) {
+        nodes.push(
+          emptyState(
+            "이 세션에서는 플랜을 만들 수 없습니다",
+            project.archived
+              ? "보관된 프로젝트에는 새 플랜을 만들 수 없습니다."
+              : "보관된 세션에는 새 플랜을 만들 수 없습니다.",
+            el("a", {
+              class: "button button--primary",
+              href: `#/projects/${projectId}`,
+              text: "프로젝트로 돌아가기",
+            }),
+          ),
+        );
+        render(nodes);
+        announceScreen("보관된 대상이라 플랜을 만들 수 없습니다.");
+        return;
+      }
+
+      if (needsNewPlan) {
+        nodes.push(
+          el("p", {
+            class: "inline-note",
+            "data-plan-notice": "intent-edited",
+            text: "수정된 의도는 새 승인이 필요합니다. 아래 내용으로 플랜을 다시 만들어 주세요.",
+          }),
+        );
+      }
+
+      nodes.push(
+        el("section", { class: "section", "aria-labelledby": "intent-heading", "data-plan-form": "research-intent" }, [
+          el("div", { class: "section__head" }, [
+            el("h2", { id: "intent-heading", text: "ResearchIntent" }),
+            el("p", {
+              class: "section__hint",
+              text: "과학적 기본값은 두지 않습니다. 모드와 출처는 직접 고르셔야 합니다.",
+            }),
+          ]),
+          el("form", { class: "panel plan-form", novalidate: true, on: { submit: onCreatePlan } }, [
+            textField(
+              "intent-question",
+              "연구 질문",
+              "이번 실행이 답하려는 질문을 적어 주세요.",
+              draft.question,
+              (value) => touchIntent(() => {
+                draft.question = value;
+              }),
+              true,
+            ),
+            textField(
+              "intent-rationale",
+              "연구 근거",
+              "왜 이 질문이 지금 필요한지 적어 주세요.",
+              draft.rationale,
+              (value) => touchIntent(() => {
+                draft.rationale = value;
+              }),
+              true,
+            ),
+            textField(
+              "intent-benefit",
+              "기대 이득",
+              "이 실행이 남기기를 기대하는 이득을 적어 주세요.",
+              draft.intended_benefit,
+              (value) => touchIntent(() => {
+                draft.intended_benefit = value;
+              }),
+              true,
+            ),
+            listField(
+              "intent-success",
+              "성공 기준",
+              "하나 이상 필요합니다. 빈 줄은 제출 때 제외됩니다.",
+              draft.success_criteria,
+              (value, options) => touchIntent(() => {
+                draft.success_criteria = value;
+              }, options),
+            ),
+            listField(
+              "intent-constraints",
+              "제약",
+              "하나 이상 필요합니다.",
+              draft.constraints,
+              (value, options) => touchIntent(() => {
+                draft.constraints = value;
+              }, options),
+            ),
+            listField(
+              "intent-stop",
+              "중단 조건",
+              "하나 이상 필요합니다.",
+              draft.stop_conditions,
+              (value, options) => touchIntent(() => {
+                draft.stop_conditions = value;
+              }, options),
+            ),
+            selectField(
+              "intent-mode",
+              "연구 모드",
+              "과학적 기본 선택은 없습니다. 비어 있는 첫 항목에서 직접 고르세요.",
+              draft.research_mode,
+              RESEARCH_MODES,
+              (value) => touchIntent(() => {
+                draft.research_mode = value;
+              }, { repaint: true }),
+            ),
+            selectField(
+              "intent-origin",
+              "데이터 출처",
+              "observed / synthetic / mixed 중 하나를 직접 고르세요.",
+              draft.data_origin,
+              DATA_ORIGINS,
+              (value) =>
+                touchIntent(() => {
+                  draft.data_origin = value;
+                  if (value === "observed" || value === "") {
+                    draft.synthetic_generator_ref = "";
+                    draft.synthetic_validator_ref = "";
+                  }
+                }, { repaint: true }),
+            ),
+            syntheticNeeded
+              ? textField(
+                  "intent-generator",
+                  "합성 생성기 참조",
+                  "synthetic 또는 mixed 출처에 필요합니다. 검증기 참조와 달라야 합니다.",
+                  draft.synthetic_generator_ref,
+                  (value) => touchIntent(() => {
+                    draft.synthetic_generator_ref = value;
+                  }),
+                  false,
+                )
+              : null,
+            syntheticNeeded
+              ? textField(
+                  "intent-validator",
+                  "합성 검증기 참조",
+                  "생성기와 독립된 검증 경로를 적어 주세요.",
+                  draft.synthetic_validator_ref,
+                  (value) => touchIntent(() => {
+                    draft.synthetic_validator_ref = value;
+                  }),
+                  false,
+                )
+              : null,
+            el("div", { class: "actions actions--spaced-above" }, [
+              el("button", {
+                class: "button button--primary",
+                type: "submit",
+                text: busy && !approval ? "플랜 생성 중…" : "플랜 생성",
+                "data-action": "create-plan",
+                disabled: busy,
+              }),
+            ]),
+          ]),
+        ]),
+      );
+
+      if (plan) {
+        nodes.push(
+          el("section", {
+            class: "section",
+            "aria-labelledby": "plan-digest-heading",
+            "data-plan-panel": "created",
+          }, [
+            el("div", { class: "section__head" }, [
+              el("h2", { id: "plan-digest-heading", text: "서버가 고정한 플랜" }),
+              el("p", {
+                class: "section__hint",
+                text: "다이제스트는 서버가 계산한 값입니다. 이 화면이 고른 값이 아닙니다.",
+              }),
+            ]),
+            el("div", { class: "panel panel--raised" }, [
+              keyValues([
+                ["플랜 ID", String(plan.plan_id ?? ""), true],
+                ["만든 시각", formatMoment(plan.created_at)],
+              ]),
+              digestCode("ActionPlan SHA-256", String(plan.plan_sha256 ?? ""), "plan_sha256"),
+              digestCode(
+                "ResearchIntent SHA-256",
+                String(plan.research_intent_sha256 ?? ""),
+                "research_intent_sha256",
+              ),
+              approval
+                ? null
+                : el("div", { class: "actions actions--spaced-above" }, [
+                    el("button", {
+                      class: "button button--primary",
+                      type: "button",
+                      text: busy ? "승인 중…" : "플랜 승인",
+                      "data-action": "approve-plan",
+                      disabled: busy,
+                      on: { click: onApprovePlan },
+                    }),
+                  ]),
+            ]),
+          ]),
+        );
+      }
+
+      if (approval) {
+        const consumed = approval.consumed_at
+          ? `사용됨 · ${formatMoment(approval.consumed_at)}`
+          : "미사용";
+        nodes.push(
+          el("section", {
+            class: "section",
+            "aria-labelledby": "approval-receipt-heading",
+            "data-plan-panel": "approved",
+          }, [
+            el("div", { class: "section__head" }, [
+              el("h2", { id: "approval-receipt-heading", text: "승인 영수증" }),
+              el("p", {
+                class: "section__hint",
+                text: "이 승인은 한 번만 쓸 수 있습니다. 만료되거나 사용되면 새 승인이 필요합니다.",
+              }),
+            ]),
+            el("div", { class: "panel panel--signal", "data-approval-state": approval.consumed_at ? "consumed" : "unused" }, [
+              el("div", { class: "actions actions--spaced-below" }, [
+                approval.consumed_at
+                  ? badge("attention", "사용됨", ICONS.alert)
+                  : badge("positive", "미사용", ICONS.check),
+              ]),
+              keyValues([
+                ["승인 ID", String(approval.approval_id ?? ""), true],
+                ["승인 시각", formatMoment(approval.granted_at)],
+                ["만료 시각", formatMoment(approval.expires_at)],
+                ["사용 상태", consumed],
+              ]),
+              digestCode("ActionPlan SHA-256", String(approval.plan_sha256 ?? ""), "approval_plan_sha256"),
+              digestCode(
+                "ResearchIntent SHA-256",
+                String(approval.research_intent_sha256 ?? ""),
+                "approval_research_intent_sha256",
+              ),
+            ]),
+          ]),
+        );
+      }
+
+      // Run start is API-only until L03 lands with measurement-file upload.
+      // Do not invent a Run CTA here; a button would claim a product path that
+      // this screen does not yet own.
+      nodes.push(
+        el("section", {
+          class: "section",
+          "aria-labelledby": "plan-run-deferred-heading",
+          "data-plan-run": "deferred",
+        }, [
+          el("h2", { id: "plan-run-deferred-heading", text: "실행" }),
+          el("div", { class: "panel panel--attention" }, [
+            el("p", {
+              text:
+                "승인된 플랜의 실행은 로컬 API로 가능하며, 측정 파일 업로드 화면(L03)과 함께 제공될 예정입니다.",
+            }),
+            el("p", {
+              class: "meta",
+              text: "이 화면에는 실행 버튼이 없습니다. 이미 시작된 실행은 실행 기록에서 읽기 전용으로 볼 수 있습니다.",
+            }),
+            el("div", { class: "actions actions--spaced-above" }, [
+              el("a", {
+                class: "button",
+                href: `#/projects/${projectId}/runs`,
+                text: "실행 기록 보기",
+              }),
+            ]),
+          ]),
+        ]),
+      );
+
+      render(nodes);
+      announceScreen(
+        approval
+          ? "승인 영수증을 표시했습니다."
+          : plan
+            ? "서버가 고정한 플랜 다이제스트를 표시했습니다."
+            : "연구 의도 작성 화면을 표시했습니다.",
+      );
+    }
+
+    paint();
   }
 
   // ------------------------------------------------------------ project gate --
@@ -3018,6 +3641,7 @@
     [/^\/artifacts$/u, () => renderProjectGate("아티팩트", "/artifacts")],
     [/^\/runs$/u, () => renderProjectGate("실행", "/runs")],
     [/^\/projects\/([^/]+)$/u, (pid) => renderProject(pid)],
+    [/^\/projects\/([^/]+)\/sessions\/([^/]+)\/plan$/u, (pid, sid) => renderPlanApproval(pid, sid)],
     [/^\/projects\/([^/]+)\/artifacts$/u, (pid) => renderArtifacts(pid)],
     [/^\/projects\/([^/]+)\/artifacts\/([^/]+)$/u, (pid, aid) => renderArtifact(pid, aid, null)],
     [

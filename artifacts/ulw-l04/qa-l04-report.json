@@ -1,0 +1,590 @@
+{
+  "kind": "api-test-report",
+  "story": "L04 ActionPlan half (plan/approval routes + API run-start + approval UI + docs flip)",
+  "goal": "G002",
+  "lane": "ultragoal-red-team-qa-l04",
+  "agent": "15-QaL04R2",
+  "base": "671b977 + frozen L04 change set",
+  "verdict": "pass",
+  "summary": {
+    "namedNodeE2e": "pass",
+    "adversarialProbes": "pass",
+    "docsHonesty": "pass",
+    "uiStructural": "pass",
+    "namedNodePassCount": 12,
+    "probePassCount": 10,
+    "blockerCount": 0,
+    "wireRecheck": "pass"
+  },
+  "contractCoverage": [
+    {
+      "id": "cc-acl04-incomplete-intent",
+      "contractRef": "AC-L04:incomplete-research-intent-rejected-at-every-boundary",
+      "obligation": "Incomplete ResearchIntent is rejected at the plan-create boundary with closed invalid_request and zero durable rows",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-incomplete",
+        "se-probe-canary"
+      ],
+      "adversarialCaseRefs": [
+        "adv-e-canary-sweep"
+      ]
+    },
+    {
+      "id": "cc-acl04-digest-fixed",
+      "contractRef": "AC-L04:accepted-intent-fixes-plan-digest",
+      "obligation": "Accepted intent binds server-derived plan_sha256 and research_intent_sha256; GET plan round-trips digests",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-digest-bind",
+        "se-named-roundtrip"
+      ],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl04-mutated-approval",
+      "contractRef": "AC-L04:mutated-approval-rejected-zero-side-effects",
+      "obligation": "Live intent fields that recompute to a different digest than the approval pin refuse with 409 approval_digest_mismatch and leave approval unspent / no new rows",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-mutated"
+      ],
+      "adversarialCaseRefs": [
+        "adv-a-cross-plan-intent"
+      ]
+    },
+    {
+      "id": "cc-acl04-expired-approval",
+      "contractRef": "AC-L04:expired-approval-rejected-zero-side-effects",
+      "obligation": "Expired approval refuses with 409 approval_expired and zero consumption/execution; boundary is now >= expires_at",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-expired"
+      ],
+      "adversarialCaseRefs": [
+        "adv-c-expiry-boundary"
+      ]
+    },
+    {
+      "id": "cc-acl04-replayed-consumed",
+      "contractRef": "AC-L04:replayed-or-already-consumed-approval-rejected-zero-side-effects",
+      "obligation": "Second run-start with a spent approval_id refuses 409 approval_consumed with no new execution; GET shows consumed_at set",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-one-use",
+        "se-named-replay",
+        "se-named-atomic"
+      ],
+      "adversarialCaseRefs": [
+        "adv-f-get-after-consume"
+      ]
+    },
+    {
+      "id": "cc-acl04-consumption-atomicity",
+      "contractRef": "AC-L04:approval-consumption-and-execution-start-commit-together",
+      "obligation": "Successful run-start co-commits approval consumption with the execution claim; concurrent double-spend yields exactly one execution",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-atomic",
+        "se-named-concurrent"
+      ],
+      "adversarialCaseRefs": [
+        "adv-f-get-after-consume"
+      ]
+    },
+    {
+      "id": "cc-acl04-run-without-approval",
+      "contractRef": "AC-L04 / plan Slice 2 wire: POST runs requires approval",
+      "obligation": "Run-start without a real approval_id is 404 approval_not_found with zero side effects",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-no-approval"
+      ],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl04-happy-chain",
+      "contractRef": "AC-L04 / plan Slice 2: plan → approve → run-start API chain",
+      "obligation": "Complete plan-create → approval → run-start with typed ProbeInput yields completed run, 4 output versions, execution_isolation=in_process",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-happy-chain"
+      ],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl04-closed-error-bodies",
+      "contractRef": "AC-L04 / plan Slice 2: closed codes, no field echo",
+      "obligation": "Refusal bodies use closed error codes and never echo intent/canary/secret-shaped strings",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-closed-errors"
+      ],
+      "adversarialCaseRefs": [
+        "adv-e-canary-sweep"
+      ]
+    },
+    {
+      "id": "cc-acl04-smuggle-identity",
+      "contractRef": "plan Slice 2 wire: org_id/requester_id not caller-chosen",
+      "obligation": "org_id/requester_id smuggled into plan-create or run-start bodies are strict-model refused and never honored",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-probe-smuggle"
+      ],
+      "adversarialCaseRefs": [
+        "adv-b-smuggle-identity"
+      ]
+    },
+    {
+      "id": "cc-acl04-hostile-probe",
+      "contractRef": "plan Slice 2: scientific_input validated before store mutation",
+      "obligation": "Valid approval + calibration-stripped ProbeInput refuses 422 invalid_request with approval unspent",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-probe-hostile-input"
+      ],
+      "adversarialCaseRefs": [
+        "adv-d-strip-calibration"
+      ]
+    },
+    {
+      "id": "cc-wire-consumed-by-run-id",
+      "contractRef": "plan Slice 2 wire: GET approval includes consumed_by_run_id",
+      "obligation": "GET /approvals/{id} returns {…, consumed_at, consumed_by_run_id}",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-probe-get-consumed"
+      ],
+      "adversarialCaseRefs": [
+        "adv-f-get-after-consume"
+      ],
+      "notes": "Re-verified 2026-07-27: ApprovalBody.consumed_by_run_id is on the GET wire (null before consumption, run id after). Named GET round-trip + happy-chain + incomplete-intent-at-run-start + probes all green (wire-recheck.log)."
+    },
+    {
+      "id": "cc-docs-l04-flip",
+      "contractRef": "AC-L04 / SPEC §14 / requirements.yaml",
+      "obligation": "L04 may be claimed implemented only for ActionPlan half; L03 and run-from-UI stay not implemented",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-docs-honesty",
+        "se-ui-no-run-cta"
+      ],
+      "adversarialCaseRefs": [
+        "adv-docs-boundary"
+      ]
+    },
+    {
+      "id": "cc-ui-no-run-cta",
+      "contractRef": "plan Slice 2 Axis B′ c′: UI Run CTA deferred to L03",
+      "obligation": "Plan screen has no run-start invocation; shows deferred L03 copy; digests displayed; intent edit invalidates local binding",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-ui-no-run-cta",
+        "se-ui-textcontent",
+        "se-ui-no-storage"
+      ],
+      "adversarialCaseRefs": [
+        "adv-ui-structure"
+      ]
+    }
+  ],
+  "surfaceEvidence": [
+    {
+      "id": "se-named-incomplete",
+      "contractRef": "AC-L04:incomplete-research-intent-rejected-at-every-boundary",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_incomplete_research_intent_is_rejected_at_plan_route",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-named-digest-bind",
+      "contractRef": "AC-L04:accepted-intent-fixes-plan-digest",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_create_plan_binds_server_derived_plan_digest_to_intent_digest",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-named-roundtrip",
+      "contractRef": "AC-L04 / plan Slice 2 GET plan+approval",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_plan_and_approval_get_round_trips",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log",
+        "artifacts/ulw-l04/logs/wire-recheck.log"
+      ]
+    },
+    {
+      "id": "se-named-happy-chain",
+      "contractRef": "AC-L04 / plan Slice 2 plan→approve→run",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_successful_plan_approve_run_chain",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log",
+        "artifacts/ulw-l04/logs/wire-recheck.log"
+      ]
+    },
+    {
+      "id": "se-named-one-use",
+      "contractRef": "AC-L04:replayed-or-already-consumed",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_approval_is_one_use_and_second_run_start_is_rejected",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-named-mutated",
+      "contractRef": "AC-L04:mutated-approval-rejected-zero-side-effects",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_mutated_intent_fields_invalidate_approval_with_zero_side_effects",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-named-expired",
+      "contractRef": "AC-L04:expired-approval-rejected-zero-side-effects",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_expired_approval_is_rejected_with_zero_side_effects",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-named-replay",
+      "contractRef": "AC-L04:replayed-or-already-consumed",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_replayed_approval_id_does_not_create_execution",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-named-no-approval",
+      "contractRef": "AC-L04 / plan Slice 2",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_run_start_without_approval_is_rejected",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-named-atomic",
+      "contractRef": "AC-L04:approval-consumption-and-execution-start-commit-together",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_approval_consumption_and_execution_appear_in_same_store_state",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-named-concurrent",
+      "contractRef": "AC-L04:approval-consumption-and-execution-start-commit-together",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_concurrent_run_starts_consume_one_approval_exactly_once",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ],
+      "notes": "Product test documents that the concurrent loser may leave an abandoned Run row while fencing exactly one execution; sequential refusal paths assert full count equality."
+    },
+    {
+      "id": "se-named-closed-errors",
+      "contractRef": "AC-L04 / plan Slice 2 closed codes",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_plan_api.py::test_error_bodies_use_closed_codes_and_never_echo_intent_text",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/plan-api-named.log"
+      ]
+    },
+    {
+      "id": "se-probe-smuggle",
+      "contractRef": "plan Slice 2 extra=forbid on CreateActionPlanRequest/CreateRunRequest",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l04/probes_test.py::test_probe_b_org_and_requester_smuggled_into_plan_and_run_bodies_are_refused",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py"
+      ]
+    },
+    {
+      "id": "se-probe-hostile-input",
+      "contractRef": "plan Slice 2 scientific_input validation before mutation",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l04/probes_test.py::test_probe_d_hostile_probe_payload_with_calibration_stripped_refuses_unspent",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py"
+      ]
+    },
+    {
+      "id": "se-probe-canary",
+      "contractRef": "AC-L04 / plan Slice 2 no field echo",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l04/probes_test.py::test_probe_e_error_body_canary_sweep_never_echoes_hostile_intent",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py"
+      ]
+    },
+    {
+      "id": "se-probe-get-consumed",
+      "contractRef": "plan Slice 2 GET approval after consumption",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l04/probes_test.py::test_probe_f_get_approval_after_consumption_and_replay_stays_closed",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py",
+        "artifacts/ulw-l04/logs/wire-recheck.log"
+      ],
+      "notes": "consumed_at set, consumed_by_run_id == run_id on wire after consumption; replay 409 proven. Wire recheck: artifacts/ulw-l04/logs/wire-recheck.log"
+    },
+    {
+      "id": "se-docs-honesty",
+      "contractRef": "SPEC §14 L04 sentence + requirements.yaml conformance",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l04/probes_test.py::test_probe_docs_honesty_l04_claim_boundary + source read of SPEC §14 and requirements.yaml",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "docs/spec/SPEC-v0.5.md",
+        "docs/requirements/requirements.yaml"
+      ]
+    },
+    {
+      "id": "se-ui-no-run-cta",
+      "contractRef": "plan Slice 2 Axis B′ c′",
+      "surface": "web",
+      "invocation": "source-level grep of apps/web/local/app.js: no POST /runs create; data-plan-run=deferred; L03 honesty copy; node --check",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "apps/web/local/app.js"
+      ]
+    },
+    {
+      "id": "se-ui-no-storage",
+      "contractRef": "plan Slice 2 / product security: no plan/approval secrets in web storage",
+      "surface": "web",
+      "invocation": "source-level: localStorage/sessionStorage appear only in forbidding header comment; no getItem/setItem",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "apps/web/local/app.js"
+      ]
+    },
+    {
+      "id": "se-ui-textcontent",
+      "contractRef": "plan Slice 2 UI: digests/intent rendered safely",
+      "surface": "web",
+      "invocation": "source-level: el() assigns textContent; no .innerHTML=; no esc() helper; plan screen uses keyValues/digestCode; no template-literal draft HTML",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "apps/web/local/app.js"
+      ],
+      "notes": "Assignment asked for esc() usage; product uses textContent via el() instead of an esc() helper. Equivalent safety property holds."
+    }
+  ],
+  "adversarialCases": [
+    {
+      "id": "adv-a-cross-plan-intent",
+      "contractRef": "AC-L04:mutated-approval-rejected-zero-side-effects",
+      "scenario": "Approval granted for plan A presented with plan B's EDITED_INTENT fields at run-start",
+      "expectedBehavior": "409 approval_digest_mismatch; plan_approvals/runs/executions counts unchanged; approval unspent",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py"
+      ]
+    },
+    {
+      "id": "adv-b-smuggle-identity",
+      "contractRef": "plan Slice 2: org_id/requester_id not on request wire",
+      "scenario": "org_id + requester_id smuggled into POST action-plans and POST runs bodies",
+      "expectedBehavior": "Strict-model refusal (400/422 invalid_request); zero new plan/approval/run rows; smuggled UUIDs never echoed; subsequent clean run-start still works",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py"
+      ]
+    },
+    {
+      "id": "adv-c-expiry-boundary",
+      "contractRef": "AC-L04:expired-approval-rejected-zero-side-effects",
+      "scenario": "Clocked run-start at expires_at-1s, exactly at expires_at, and expires_at+1s (DEFAULT_APPROVAL_TTL=3600s)",
+      "expectedBehavior": "expires_at-1s → 201; now >= expires_at → 409 approval_expired, unspent. Boundary closed on the left of [granted_at, expires_at).",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py"
+      ],
+      "notes": "API `_require_unspent_approval` and store `_reject_claim` both use `now >= expires_at`."
+    },
+    {
+      "id": "adv-d-strip-calibration",
+      "contractRef": "plan Slice 2 scientific_input validated before mutation",
+      "scenario": "Valid approval + ProbeInput with calibration stripped from spectrum.metadata",
+      "expectedBehavior": "422 invalid_request; approval unspent; subsequent clean probe still consumes once",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py"
+      ]
+    },
+    {
+      "id": "adv-e-canary-sweep",
+      "contractRef": "AC-L04 / plan Slice 2: closed codes never echo intent",
+      "scenario": "Hostile unicode + secret-shaped strings in every intent field across incomplete plan-create, digest-mismatch/invalid run-start, missing approval, and consumed replay",
+      "expectedBehavior": "Only closed error codes; canaries never present in any response body",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py"
+      ]
+    },
+    {
+      "id": "adv-f-get-after-consume",
+      "contractRef": "AC-L04:replayed-or-already-consumed + plan Slice 2 GET approval",
+      "scenario": "Successful run-start then GET approval then replay run-start",
+      "expectedBehavior": "GET shows consumed_at set and consumed_by_run_id == run_id; replay 409 approval_consumed; no new execution.",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "artifacts/ulw-l04/probes_test.py",
+        "artifacts/ulw-l04/logs/wire-recheck.log"
+      ]
+    },
+    {
+      "id": "adv-ui-structure",
+      "contractRef": "plan Slice 2 Axis B′ c′ + UI security",
+      "scenario": "Source red-team of apps/web/local/app.js for run-start POST, storage of plan/approval secrets, and HTML interpolation of intent text",
+      "expectedBehavior": "No run-start POST; no localStorage/sessionStorage API use; user/server text via textContent (el()); deferred L03 copy present; node --check clean",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "apps/web/local/app.js"
+      ]
+    },
+    {
+      "id": "adv-docs-boundary",
+      "contractRef": "SPEC §14 + requirements.yaml L04 claim boundary",
+      "scenario": "Docs claim L04 implemented only as ActionPlan half; L03/run-from-UI remain not implemented",
+      "expectedBehavior": "SPEC §14 ActionPlan-half sentence; requirements implemented_and_verified includes L04; not_implemented includes L03; no L03 in implemented list",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l04/logs/probes-adversarial.log",
+        "docs/spec/SPEC-v0.5.md",
+        "docs/requirements/requirements.yaml"
+      ]
+    }
+  ],
+  "blockers": [],
+  "docsHonesty": {
+    "checked": [
+      "docs/spec/SPEC-v0.5.md §14 Conformance status (L04 ActionPlan half sentence)",
+      "docs/requirements/requirements.yaml conformance.implemented_and_verified includes L04",
+      "docs/requirements/requirements.yaml conformance.not_implemented includes L03",
+      "docs/requirements/requirements.yaml AC-L04 statement",
+      "apps/web/local/app.js plan screen deferred-run copy"
+    ],
+    "backedClaims": [
+      "Incomplete ResearchIntent rejected at plan route (named test)",
+      "Accepted intent fixes server-derived plan + intent digests (named test)",
+      "Mutated / expired / replayed / already-consumed approval refused with zero execution side effects on sequential paths (named + probes)",
+      "Approval consumption co-committed with execution start; concurrent double-spend → one execution (named test)",
+      "Run-start reachable via local API with typed ProbeInput (named happy-chain)",
+      "UI: plan create, digest display, one-use approval grant, intent-edit invalidation; no Run CTA (source + structure tests)",
+      "L03 and measurement-file → run UX still listed not implemented (SPEC §14 + requirements.yaml + UI copy)",
+      "Wire GET approval includes consumed_by_run_id (null pre-consume, run id post-consume)"
+    ],
+    "mismatches": [],
+    "nonBlockerNotes": [
+      "No esc() helper in app.js; safety is textContent assignment inside el() — assignment asked for esc() usage; equivalent property verified.",
+      "Strict extra=forbid returns HTTP 400 (not 422) for smuggled org_id/requester_id; still closed invalid_request with zero side effects.",
+      "Concurrent loser may leave an abandoned Run row (documented in product test); sequential refusal paths keep full store-count equality."
+    ]
+  },
+  "uiStructural": {
+    "runStartInvocationAbsent": true,
+    "localStorageSessionStorageApiAbsent": true,
+    "textContentNotInnerHtml": true,
+    "escHelperAbsentUsesTextContent": true,
+    "deferredRunPanelPresent": true,
+    "nodeCheck": "pass",
+    "notes": "POST /projects/{pid}/runs/${rid}/review and /export remain; those are not run-start."
+  },
+  "runs": {
+    "planApiNamedNodes": {
+      "command": "PYTHONPATH=\"apps/local:packages/science:.\" PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest apps/local/tests/test_plan_api.py::(12 named nodes) -v",
+      "result": "12 passed",
+      "log": "artifacts/ulw-l04/logs/plan-api-named.log"
+    },
+    "adversarialProbes": {
+      "command": "PYTHONPATH=\"apps/local:packages/science:.\" PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest artifacts/ulw-l04/probes_test.py -v",
+      "result": "10 passed",
+      "log": "artifacts/ulw-l04/logs/probes-adversarial.log"
+    },
+    "nodeCheck": {
+      "command": "node --check apps/web/local/app.js",
+      "result": "exit 0"
+    },
+    "wireRecheck": {
+      "command": "PYTHONPATH=\"apps/local:packages/science:.\" PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest apps/local/tests/test_plan_api.py::test_plan_and_approval_get_round_trips apps/local/tests/test_plan_api.py::test_successful_plan_approve_run_chain apps/local/tests/test_plan_api.py::test_incomplete_research_intent_is_rejected_at_run_start artifacts/ulw-l04/probes_test.py -q",
+      "result": "13 passed",
+      "log": "artifacts/ulw-l04/logs/wire-recheck.log"
+    }
+  },
+  "artifactRefs": [
+    {
+      "id": "ref-qa-report",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l04/qa-l04-report.json",
+      "description": "L04 red-team QA matrix and verdict"
+    },
+    {
+      "id": "ref-named-log",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l04/logs/plan-api-named.log",
+      "description": "12 named plan-api e2e nodes"
+    },
+    {
+      "id": "ref-probes-log",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l04/logs/probes-adversarial.log",
+      "description": "Adversarial probes + UI/docs structure checks"
+    },
+    {
+      "id": "ref-probes-src",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l04/probes_test.py",
+      "description": "Probe source for AC-L04 red-team cases"
+    },
+    {
+      "id": "ref-wire-recheck-log",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l04/logs/wire-recheck.log",
+      "description": "Wire recheck after consumed_by_run_id fix (3 named + 10 probes)"
+    }
+  ]
+}

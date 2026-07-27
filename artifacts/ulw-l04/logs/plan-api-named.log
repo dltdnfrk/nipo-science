@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/nipo-gjc/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/nipo-gjc
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 12 items
+
+apps/local/tests/test_plan_api.py::test_incomplete_research_intent_is_rejected_at_plan_route PASSED [  8%]
+apps/local/tests/test_plan_api.py::test_create_plan_binds_server_derived_plan_digest_to_intent_digest PASSED [ 16%]
+apps/local/tests/test_plan_api.py::test_plan_and_approval_get_round_trips PASSED [ 25%]
+apps/local/tests/test_plan_api.py::test_successful_plan_approve_run_chain PASSED [ 33%]
+apps/local/tests/test_plan_api.py::test_approval_is_one_use_and_second_run_start_is_rejected PASSED [ 41%]
+apps/local/tests/test_plan_api.py::test_mutated_intent_fields_invalidate_approval_with_zero_side_effects PASSED [ 50%]
+apps/local/tests/test_plan_api.py::test_expired_approval_is_rejected_with_zero_side_effects PASSED [ 58%]
+apps/local/tests/test_plan_api.py::test_replayed_approval_id_does_not_create_execution PASSED [ 66%]
+apps/local/tests/test_plan_api.py::test_run_start_without_approval_is_rejected PASSED [ 75%]
+apps/local/tests/test_plan_api.py::test_approval_consumption_and_execution_appear_in_same_store_state PASSED [ 83%]
+apps/local/tests/test_plan_api.py::test_concurrent_run_starts_consume_one_approval_exactly_once PASSED [ 91%]
+apps/local/tests/test_plan_api.py::test_error_bodies_use_closed_codes_and_never_echo_intent_text PASSED [100%]
+
+============================== 12 passed in 0.77s ==============================

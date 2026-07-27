@@ -90,6 +90,7 @@ from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+from services.api.artifacts.memory_recovery import InMemoryArtifactRecovery
 from services.api.artifacts.models import (
     ArtifactRecord,
     ArtifactScope,
@@ -98,14 +99,22 @@ from services.api.artifacts.models import (
     IdFactory,
 )
 from services.api.artifacts.runtime import SystemClock, Uuid7Factory
+from services.api.artifacts.service import ArtifactService
 from services.api.artifacts.store_contract import (
     ArtifactStoreError,
     BlobIntegrityError,
     StoreOutcome,
 )
+from services.api.artifacts.watcher import OutputWatcher
 from starlette.concurrency import iterate_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
+
+from science_workbench_science import ProbeInput, ResearchIntent
+from science_workbench_science.research_intent import (
+    ResearchIntentError,
+    research_intent_from_mapping,
+)
 
 from .apiquery import LocalReadModel
 from .apiserver import (
@@ -116,15 +125,21 @@ from .apiserver import (
     loopback_origins,
 )
 from .apitypes import (
+    ActionPlanBody,
+    ActionPlanCreatedBody,
     ApiErrorCode,
+    ApprovalBody,
     ArtifactDetail,
     ArtifactList,
     ArtifactSummary,
     ComposerModelEntry,
     ComposerPicker,
     ComposerUpdate,
+    CreateActionPlanRequest,
+    CreateApprovalRequest,
     CreateExportRequest,
     CreateProjectRequest,
+    CreateRunRequest,
     CreateSessionRequest,
     DeletedPackBody,
     DownloadGrantBody,
@@ -144,9 +159,12 @@ from .apitypes import (
     ProvenanceBody,
     ProviderCard,
     ProviderList,
+    ResearchIntentBody,
     ReviewBody,
     ReviewCoverageBody,
     ReviewFindingBody,
+    RunCreatedBody,
+    RunRejection,
     SessionBody,
     SessionList,
     SetKeyRequest,
@@ -158,7 +176,13 @@ from .apitypes import (
     safe_media_type,
     validate_local_name,
 )
-from .config import LOCAL_ORG_ID, LOCAL_USER_ID, LocalPaths
+from .config import (
+    LOCAL_ORG_ID,
+    LOCAL_RUNTIME_ADAPTER_ID,
+    LOCAL_RUNTIME_CONNECTION_ID,
+    LOCAL_USER_ID,
+    LocalPaths,
+)
 from .exportpack import ExportRejection
 from .exportrun import (
     ALWAYS_WRITTEN_DOCUMENTS,
@@ -205,8 +229,30 @@ from .reviewrun import (
     persisted_review,
     review_run,
 )
-from .store import LocalArtifactStore, ProjectRecord, SessionRecord
+from .store import (
+    ActionPlanRecord,
+    ApprovalOutcome,
+    LocalArtifactStore,
+    PlanApprovalRecord,
+    ProjectRecord,
+    SessionRecord,
+)
 from .webui import StaticAsset, StaticSurface, inject_token
+from .workbench import (
+    DEFAULT_APPROVAL_TTL,
+    ActionPlanError,
+    ApprovedPlan,
+    LocalArtifactRuntime,
+    PlanApprovalError,
+    WorkbenchRejection,
+    WorkbenchRun,
+    WorkbenchRunError,
+    approve_action_plan,
+    create_action_plan,
+    load_download_signing_key,
+    local_scope,
+    run_analysis,
+)
 
 API_PREFIX: Final = "/api/v1"
 
@@ -251,7 +297,14 @@ class LocalApiError(Exception):
 
     status: HTTPStatus
     code: ApiErrorCode
-    reason: NameRejection | KeyRejection | ExportRunRejection | ExportRejection | None
+    reason: (
+        NameRejection
+        | KeyRejection
+        | ExportRunRejection
+        | ExportRejection
+        | RunRejection
+        | None
+    )
 
     def __init__(
         self,
@@ -261,6 +314,7 @@ class LocalApiError(Exception):
         | KeyRejection
         | ExportRunRejection
         | ExportRejection
+        | RunRejection
         | None = None,
     ) -> None:
         """Record the refusal without retaining anything the caller sent."""
@@ -357,21 +411,23 @@ def write_token_file(paths: LocalPaths, token: LocalToken, base_url: str) -> Pat
 
 
 class RunSurface(Protocol):
-    """The seam a durable Run implementation binds into this API.
+    """The seam a durable Run *read* implementation binds into this API.
 
-    Runs, executions, ActionPlans, and approvals are owned by another module
-    that is being written concurrently. Rather than guess at its record shape,
-    this surface asks only questions whose answers it needs and lets the
-    implementation own every field it returns:
+    ActionPlans, approvals, and Run *starts* are owned by
+    :mod:`nipo_local.store` and :mod:`nipo_local.workbench`, and the plan /
+    approval / run-start routes call those modules directly. This Protocol is
+    deliberately read-only: it answers only the questions the list/detail and
+    provenance surfaces need, and never mutates store state.
 
     * `list_runs` and `read_run` return already-projected JSON objects.
     * `execution_isolation` answers the one provenance question SPEC-v0.5
       section 5 requires and the `artifact_versions` row cannot answer.
 
-    While nothing is bound, `/runs` endpoints answer `501` with
+    While nothing is bound, the GET `/runs` endpoints answer `501` with
     `run_surface_unavailable`. They are declared and refused rather than
     absent, so the front end can render the capability as not-yet-implemented
-    instead of discovering a 404 and guessing why.
+    instead of discovering a 404 and guessing why. The POST `/runs` route
+    that starts an approved analysis does not use this Protocol.
     """
 
     def list_runs(self, scope: ArtifactScope) -> Sequence[Mapping[str, object]]:
@@ -1375,13 +1431,353 @@ def _artifact_router(deps: LocalApiDeps) -> APIRouter:
     return router
 
 
-def _run_router(deps: LocalApiDeps) -> APIRouter:
-    """Build the declared-but-unbound Run routes.
+def _invalid_request() -> LocalApiError:
+    """Refuse a malformed plan, intent, or probe without quoting the input."""
+    return LocalApiError(HTTPStatus.UNPROCESSABLE_ENTITY, ApiErrorCode.INVALID_REQUEST)
 
-    Runs are the seam described on :class:`RunSurface`. Until an
-    implementation is bound these answer `501 run_surface_unavailable`, which
-    is a truthful "not implemented here yet" rather than a fabricated empty
-    list -- an empty list would read as "this Project has no Runs".
+
+def _research_intent(body: ResearchIntentBody) -> ResearchIntent:
+    """Parse one submitted intent through the science package, closed-code only."""
+    try:
+        return research_intent_from_mapping(
+            body.model_dump(exclude_none=False),
+        )
+    except ResearchIntentError as error:
+        raise _invalid_request() from error
+
+
+def _probe_input(payload: Mapping[str, object]) -> ProbeInput:
+    """Parse one ProbeInput JSON document without echoing caller values."""
+    try:
+        # Strict ProbeInput rejects Python lists for tuple fields; round-trip
+        # through JSON so the same document a browser would send is accepted.
+        return ProbeInput.model_validate_json(json.dumps(payload))
+    except ValidationError as error:
+        raise _invalid_request() from error
+
+
+def _live_session(
+    deps: LocalApiDeps,
+    scope: ArtifactScope,
+    session_id: UUID,
+) -> SessionRecord:
+    """Read one live Session in an active Project, or refuse closed-code."""
+    record = deps.store.session(scope, session_id)
+    if record is None:
+        raise LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND)
+    if record.archived:
+        raise LocalApiError(HTTPStatus.CONFLICT, ApiErrorCode.SESSION_ARCHIVED)
+    return record
+
+
+def _bound_runtime(
+    deps: LocalApiDeps,
+    *,
+    project_id: UUID,
+    session_id: UUID | None,
+) -> LocalArtifactRuntime:
+    """Assemble one execution runtime on the surface's injected clock.
+
+    `assemble_artifact_runtime` hardcodes :class:`SystemClock`. Plan, approval,
+    and run-start routes must share `deps.clock` so a test can advance time and
+    so granted/expired timestamps agree with the rest of the surface.
+    """
+    execution = deps.ids.new_uuid7()
+    scope = local_scope(project_id)
+    watcher = OutputWatcher(
+        deps.ids,
+        frozenset(
+            {
+                (
+                    scope.org_id,
+                    scope.project_id,
+                    scope.requester_id,
+                    execution,
+                    LOCAL_RUNTIME_ADAPTER_ID,
+                    LOCAL_RUNTIME_CONNECTION_ID,
+                )
+            }
+        ),
+        InMemoryArtifactRecovery(),
+    )
+    service = ArtifactService(
+        deps.store,
+        watcher,
+        deps.ids,
+        deps.clock,
+        load_download_signing_key(deps.paths),
+    )
+    return LocalArtifactRuntime(
+        service=service,
+        watcher=watcher,
+        scope=scope,
+        execution_id=execution,
+        paths=deps.paths,
+        store=deps.store,
+        ids=deps.ids,
+        clock=deps.clock,
+        session_id=session_id,
+    )
+
+
+def _plan_body(record: ActionPlanRecord) -> ActionPlanBody:
+    """Project one ActionPlan onto the wire."""
+    return ActionPlanBody(
+        plan_id=record.id,
+        plan_sha256=record.plan_sha256,
+        research_intent_sha256=record.research_intent_sha256,
+        created_at=record.created_at,
+    )
+
+
+def _approval_body(record: PlanApprovalRecord) -> ApprovalBody:
+    """Project one approval and its consumption state onto the wire."""
+    return ApprovalBody(
+        approval_id=record.id,
+        plan_id=record.plan_id,
+        plan_sha256=record.plan_sha256,
+        research_intent_sha256=record.research_intent_sha256,
+        granted_at=record.granted_at,
+        expires_at=record.expires_at,
+        consumed_at=record.consumed_at,
+        consumed_by_run_id=record.consumed_by_run_id,
+    )
+
+
+def _action_plan_error(error: ActionPlanError) -> LocalApiError:
+    """Translate one plan/approval/run-queue refusal onto a closed code."""
+    if error.outcome is StoreOutcome.ARCHIVED:
+        return LocalApiError(HTTPStatus.CONFLICT, ApiErrorCode.PROJECT_ARCHIVED)
+    if error.outcome is StoreOutcome.ASSOCIATION_EXISTS:
+        if error.code is WorkbenchRejection.APPROVAL_REJECTED:
+            return LocalApiError(HTTPStatus.CONFLICT, ApiErrorCode.APPROVAL_EXISTS)
+        return LocalApiError(HTTPStatus.CONFLICT, ApiErrorCode.NAME_IN_USE)
+    if error.code is WorkbenchRejection.PLAN_REJECTED:
+        return LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND)
+    return LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND)
+
+
+_APPROVAL_OUTCOME_ERRORS: Final[Mapping[ApprovalOutcome, LocalApiError]] = {
+    ApprovalOutcome.NOT_FOUND: LocalApiError(
+        HTTPStatus.NOT_FOUND, ApiErrorCode.APPROVAL_NOT_FOUND
+    ),
+    ApprovalOutcome.EXPIRED: LocalApiError(
+        HTTPStatus.CONFLICT, ApiErrorCode.APPROVAL_EXPIRED
+    ),
+    ApprovalOutcome.REPLAYED: LocalApiError(
+        HTTPStatus.CONFLICT, ApiErrorCode.APPROVAL_CONSUMED
+    ),
+    ApprovalOutcome.DIGEST_MISMATCH: LocalApiError(
+        HTTPStatus.CONFLICT, ApiErrorCode.APPROVAL_DIGEST_MISMATCH
+    ),
+    ApprovalOutcome.FORBIDDEN: LocalApiError(
+        HTTPStatus.FORBIDDEN, ApiErrorCode.APPROVAL_FORBIDDEN
+    ),
+    ApprovalOutcome.ARCHIVED: LocalApiError(
+        HTTPStatus.CONFLICT, ApiErrorCode.PROJECT_ARCHIVED
+    ),
+    ApprovalOutcome.EXECUTION_CLAIMED: LocalApiError(
+        HTTPStatus.CONFLICT,
+        ApiErrorCode.RUN_REJECTED,
+        RunRejection.EXECUTION_REPLAYED,
+    ),
+}
+
+
+def _approval_outcome_error(outcome: ApprovalOutcome) -> LocalApiError:
+    """Translate one approval-consumption refusal onto a closed wire code."""
+    return _APPROVAL_OUTCOME_ERRORS.get(
+        outcome,
+        LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.APPROVAL_NOT_FOUND),
+    )
+
+
+def _run_created(run: WorkbenchRun) -> RunCreatedBody:
+    """Project one completed workbench run onto the create-run receipt."""
+    return RunCreatedBody(
+        run_id=run.run_id,
+        execution_id=run.provenance.execution_id,
+        state="completed",
+        output_version_ids=tuple(item.version.id for item in run.outputs),
+        execution_isolation="in_process",
+    )
+
+
+def _require_unspent_approval(
+    deps: LocalApiDeps,
+    scope: ArtifactScope,
+    approval_id: UUID,
+    intent: ResearchIntent,
+) -> tuple[ActionPlanRecord, PlanApprovalRecord]:
+    """Load one usable approval and its plan, refusing before any mutation.
+
+    Digest mismatch, expiry, and prior consumption are decided here so a
+    refused run-start never queues a Run, claims an execution, or spends the
+    approval. The store still re-enforces the same checks inside `start_run`.
+    """
+    approval = deps.store.plan_approval(scope, approval_id)
+    if approval is None:
+        raise LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.APPROVAL_NOT_FOUND)
+    if intent.sha256 != approval.research_intent_sha256:
+        raise LocalApiError(
+            HTTPStatus.CONFLICT,
+            ApiErrorCode.APPROVAL_DIGEST_MISMATCH,
+        )
+    if approval.consumed_at is not None or approval.consumed_by_run_id is not None:
+        raise LocalApiError(HTTPStatus.CONFLICT, ApiErrorCode.APPROVAL_CONSUMED)
+    if deps.clock.now() >= approval.expires_at:
+        raise LocalApiError(HTTPStatus.CONFLICT, ApiErrorCode.APPROVAL_EXPIRED)
+    plan = deps.store.action_plan(scope, approval.plan_id)
+    if plan is None:
+        raise LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.PLAN_NOT_FOUND)
+    return plan, approval
+
+
+def _plan_router(deps: LocalApiDeps) -> APIRouter:
+    """Build the ActionPlan and approval routes that gate Run starts."""
+    router = APIRouter()
+    store = deps.store
+
+    def create_plan(
+        project_id: UUID,
+        body: CreateActionPlanRequest,
+    ) -> ActionPlanCreatedBody:
+        """Create one immutable ActionPlan bound to a live Session."""
+        scope = _live_project(deps, project_id)
+        _ = _live_session(deps, scope, body.session_id)
+        intent = _research_intent(body.research_intent)
+        runtime = _bound_runtime(
+            deps,
+            project_id=project_id,
+            session_id=body.session_id,
+        )
+        try:
+            plan = create_action_plan(runtime, intent)
+        except ActionPlanError as error:
+            raise _action_plan_error(error) from error
+        return ActionPlanCreatedBody(
+            plan_id=plan.id,
+            session_id=body.session_id,
+            plan_sha256=plan.plan_sha256,
+            research_intent_sha256=plan.research_intent_sha256,
+            created_at=plan.created_at,
+        )
+
+    def read_plan(project_id: UUID, plan_id: UUID) -> ActionPlanBody:
+        """Read one ActionPlan by identity."""
+        scope = _live_project(deps, project_id)
+        plan = store.action_plan(scope, plan_id)
+        if plan is None:
+            raise LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.PLAN_NOT_FOUND)
+        return _plan_body(plan)
+
+    def create_approval(
+        project_id: UUID,
+        plan_id: UUID,
+        body: CreateApprovalRequest,
+    ) -> ApprovalBody:
+        """Grant the one approval this plan may ever carry, with a fixed TTL."""
+        _ = body
+        scope = _live_project(deps, project_id)
+        plan = store.action_plan(scope, plan_id)
+        if plan is None:
+            raise LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.PLAN_NOT_FOUND)
+        # Approval needs no Session binding: granting consumes nothing and the
+        # runtime's session_id is only read by the run path.
+        runtime = _bound_runtime(
+            deps,
+            project_id=project_id,
+            session_id=None,
+        )
+        try:
+            approval = approve_action_plan(
+                runtime,
+                plan,
+                ttl=DEFAULT_APPROVAL_TTL,
+            )
+        except ActionPlanError as error:
+            raise _action_plan_error(error) from error
+        return _approval_body(approval)
+
+    def read_approval(project_id: UUID, approval_id: UUID) -> ApprovalBody:
+        """Read one approval and whether it has been consumed."""
+        scope = _live_project(deps, project_id)
+        approval = store.plan_approval(scope, approval_id)
+        if approval is None:
+            raise LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.APPROVAL_NOT_FOUND)
+        return _approval_body(approval)
+
+    plans = "/projects/{project_id}/action-plans"
+    router.add_api_route(
+        plans,
+        create_plan,
+        methods=["POST"],
+        status_code=int(HTTPStatus.CREATED),
+    )
+    router.add_api_route(f"{plans}/{{plan_id}}", read_plan, methods=["GET"])
+    router.add_api_route(
+        f"{plans}/{{plan_id}}/approvals",
+        create_approval,
+        methods=["POST"],
+        status_code=int(HTTPStatus.CREATED),
+    )
+    router.add_api_route(
+        "/projects/{project_id}/approvals/{approval_id}",
+        read_approval,
+        methods=["GET"],
+    )
+    return router
+
+
+def _start_run(
+    deps: LocalApiDeps,
+    project_id: UUID,
+    body: CreateRunRequest,
+) -> RunCreatedBody:
+    """Start one approved analysis synchronously under a live Session."""
+    intent = _research_intent(body.research_intent)
+    source = _probe_input(body.scientific_input)
+    scope = _live_project(deps, project_id)
+    _ = _live_session(deps, scope, body.session_id)
+    plan, approval = _require_unspent_approval(
+        deps,
+        scope,
+        body.approval_id,
+        intent,
+    )
+    runtime = _bound_runtime(
+        deps,
+        project_id=project_id,
+        session_id=body.session_id,
+    )
+    approved = ApprovedPlan(plan=plan, approval=approval)
+    try:
+        run = run_analysis(runtime, intent, source, approved)
+    except PlanApprovalError as error:
+        raise _approval_outcome_error(error.outcome) from error
+    except WorkbenchRunError as error:
+        if error.code is WorkbenchRejection.EXECUTION_REPLAYED:
+            raise LocalApiError(
+                HTTPStatus.CONFLICT,
+                ApiErrorCode.RUN_REJECTED,
+                RunRejection.EXECUTION_REPLAYED,
+            ) from error
+        raise LocalApiError(
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            ApiErrorCode.INVALID_REQUEST,
+        ) from error
+    except ActionPlanError as error:
+        raise _action_plan_error(error) from error
+    return _run_created(run)
+
+
+def _run_router(deps: LocalApiDeps) -> APIRouter:
+    """Build the Run start route and the optional read surface.
+
+    POST `/runs` starts an approved analysis through the workbench and is
+    always registered. GET `/runs` still answers through :class:`RunSurface`
+    and remains `501 run_surface_unavailable` until a read implementation is
+    bound, so an empty list is never fabricated for an unbound surface.
     """
     router = APIRouter()
 
@@ -1393,6 +1789,10 @@ def _run_router(deps: LocalApiDeps) -> APIRouter:
                 ApiErrorCode.RUN_SURFACE_UNAVAILABLE,
             )
         return surface
+
+    def create_run(project_id: UUID, body: CreateRunRequest) -> RunCreatedBody:
+        """Start one approved analysis and return its completed receipt."""
+        return _start_run(deps, project_id, body)
 
     def list_runs(project_id: UUID) -> Response:
         """List one Project's Runs, once a Run implementation is bound."""
@@ -1410,6 +1810,12 @@ def _run_router(deps: LocalApiDeps) -> APIRouter:
         return JSONResponse(content=dict(record))
 
     runs = "/projects/{project_id}/runs"
+    router.add_api_route(
+        runs,
+        create_run,
+        methods=["POST"],
+        status_code=int(HTTPStatus.CREATED),
+    )
     router.add_api_route(runs, list_runs, methods=["GET"])
     router.add_api_route(f"{runs}/{{run_id}}", read_run, methods=["GET"])
     return router
@@ -2126,6 +2532,7 @@ def create_app(
         _project_router(deps),
         _session_router(deps),
         _artifact_router(deps),
+        _plan_router(deps),
         _run_router(deps),
         _review_router(deps),
         _export_router(deps, tickets),

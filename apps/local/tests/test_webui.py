@@ -274,3 +274,53 @@ def test_served_returns_every_asset_in_path_order(tmp_path: Path) -> None:
     ]
     assert {item.path for item in served} == StaticSurface(directory).paths
     assert [item.is_document for item in served] == [True, False, True, False]
+
+
+def test_the_plan_approval_route_is_registered() -> None:
+    # L04 surfaces plan creation under the session path. A missing route leaves
+    # the researcher on the not-found screen with no way to author an intent.
+    source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+
+    assert r"/projects\/([^/]+)\/sessions\/([^/]+)\/plan" in source
+    assert "renderPlanApproval" in source
+    assert "createActionPlan" in source
+    assert "approveActionPlan" in source
+    assert "#/projects/${projectId}/sessions/${session.id}/plan" in source
+
+
+def test_the_plan_approval_screen_has_no_run_cta() -> None:
+    # Run start is API-only until L03. A Run button on this screen would claim a
+    # product path that the approved plan explicitly deferred.
+    source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+    start = source.index("async function renderPlanApproval")
+    marker = "-" * 60
+    end = source.index(f"// {marker} project gate --", start)
+    screen = source[start:end]
+
+    assert '"data-plan-run": "deferred"' in screen
+    assert 'data-action": "start-run"' not in screen
+    assert 'data-action": "run-plan"' not in screen
+    assert "실행 시작" not in screen
+    assert "측정 파일 업로드 화면(L03)" in screen
+    assert "승인된 플랜의 실행은 로컬 API로 가능하며" in screen
+
+
+def test_the_plan_approval_screen_renders_digest_code_elements() -> None:
+    # Digests are server-derived and must be inspectable as <code> blocks, not
+    # only as plain text that a reader cannot distinguish from labels.
+    source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+
+    assert 'el("code", { class: "hash"' in source
+    assert "function digestCode(label, value, marker)" in source
+    assert '"data-digest": marker' in source
+    plan_digest_call = (
+        'digestCode("ActionPlan SHA-256", '
+        'String(plan.plan_sha256 ?? ""), "plan_sha256")'
+    )
+    assert plan_digest_call in source
+    assert '"research_intent_sha256"' in source
+    assert "수정된 의도는 새 승인이 필요합니다" in source
+    assert "이미 승인된 플랜입니다" in source
+    assert '"data-action": "create-plan"' in source
+    assert '"data-action": "approve-plan"' in source
+    assert "플랜 작성" in source

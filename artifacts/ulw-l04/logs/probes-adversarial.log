@@ -1,0 +1,20 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/nipo-gjc/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/nipo-gjc
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 10 items
+
+artifacts/ulw-l04/probes_test.py::test_probe_a_plan_a_approval_with_plan_b_intent_is_digest_mismatch PASSED [ 10%]
+artifacts/ulw-l04/probes_test.py::test_probe_b_org_and_requester_smuggled_into_plan_and_run_bodies_are_refused PASSED [ 20%]
+artifacts/ulw-l04/probes_test.py::test_probe_c_expired_approval_boundary_at_and_before_expires_at PASSED [ 30%]
+artifacts/ulw-l04/probes_test.py::test_probe_d_hostile_probe_payload_with_calibration_stripped_refuses_unspent PASSED [ 40%]
+artifacts/ulw-l04/probes_test.py::test_probe_e_error_body_canary_sweep_never_echoes_hostile_intent PASSED [ 50%]
+artifacts/ulw-l04/probes_test.py::test_probe_f_get_approval_after_consumption_and_replay_stays_closed PASSED [ 60%]
+artifacts/ulw-l04/probes_test.py::test_probe_ui_no_run_start_invocation_in_app_js PASSED [ 70%]
+artifacts/ulw-l04/probes_test.py::test_probe_ui_no_localstorage_sessionstorage_for_plan_or_secrets PASSED [ 80%]
+artifacts/ulw-l04/probes_test.py::test_probe_ui_user_text_uses_textcontent_not_html_interpolation PASSED [ 90%]
+artifacts/ulw-l04/probes_test.py::test_probe_docs_honesty_l04_claim_boundary PASSED [100%]
+
+============================== 10 passed in 0.46s ==============================

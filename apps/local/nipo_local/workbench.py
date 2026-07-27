@@ -154,7 +154,12 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from uuid import UUID
 
-    from services.api.artifacts.models import ArtifactRecord, ArtifactVersion
+    from services.api.artifacts.models import (
+        ArtifactRecord,
+        ArtifactVersion,
+        Clock,
+        IdFactory,
+    )
 
     from science_workbench_science import (
         AnalysisIssue,
@@ -343,8 +348,8 @@ class LocalArtifactRuntime:
     execution_id: UUID
     paths: LocalPaths
     store: LocalArtifactStore
-    ids: Uuid7Factory
-    clock: SystemClock
+    ids: IdFactory
+    clock: Clock
     session_id: UUID | None = None
 
 

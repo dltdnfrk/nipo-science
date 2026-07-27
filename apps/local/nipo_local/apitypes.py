@@ -129,6 +129,14 @@ class ApiErrorCode(StrEnum):
     METHOD_NOT_ALLOWED = "method_not_allowed"
     PAYLOAD_TOO_LARGE = "payload_too_large"
     INTERNAL_ERROR = "internal_error"
+    PLAN_NOT_FOUND = "plan_not_found"
+    APPROVAL_NOT_FOUND = "approval_not_found"
+    APPROVAL_EXISTS = "approval_exists"
+    APPROVAL_EXPIRED = "approval_expired"
+    APPROVAL_CONSUMED = "approval_consumed"
+    APPROVAL_DIGEST_MISMATCH = "approval_digest_mismatch"
+    APPROVAL_FORBIDDEN = "approval_forbidden"
+    RUN_REJECTED = "run_rejected"
 
 
 class KeyRejection(StrEnum):
@@ -154,6 +162,12 @@ class NameRejection(StrEnum):
     RESERVED_DEVICE_NAME = "reserved_device_name"
     ABSOLUTE_PATH = "absolute_path"
     DRIVE_QUALIFIED = "drive_qualified"
+
+
+class RunRejection(StrEnum):
+    """Why a Run start was refused after the approval gate, never quoting input."""
+
+    EXECUTION_REPLAYED = "execution_replayed"
 
 
 @final
@@ -291,7 +305,12 @@ class ErrorBody(LocalModel):
 
     error: ApiErrorCode
     reason: (
-        NameRejection | KeyRejection | ExportRunRejection | ExportRejection | None
+        NameRejection
+        | KeyRejection
+        | ExportRunRejection
+        | ExportRejection
+        | RunRejection
+        | None
     ) = None
 
 
@@ -750,3 +769,94 @@ class DownloadGrantBody(LocalModel):
     expires_at: datetime
     expires_in_seconds: int
     single_use: bool = True
+
+
+class ResearchIntentBody(LocalModel):
+    """One submitted research intent, validated fully by the science package.
+
+    Every field is optional at the wire layer so an incomplete document reaches
+    the science package instead of the framework validator. Completeness,
+    length, synthetic provenance pairing, and enum membership are enforced by
+    `ResearchIntent` itself and refused with the closed `invalid_request` code.
+    """
+
+    question: str | None = None
+    rationale: str | None = None
+    intended_benefit: str | None = None
+    success_criteria: list[str] | None = None
+    constraints: list[str] | None = None
+    stop_conditions: list[str] | None = None
+    research_mode: str | None = None
+    data_origin: str | None = None
+    synthetic_generator_ref: str | None = None
+    synthetic_validator_ref: str | None = None
+
+
+class CreateActionPlanRequest(LocalModel):
+    """Create one ActionPlan bound to a live Session and one ResearchIntent."""
+
+    session_id: SubmittedUuid
+    research_intent: ResearchIntentBody
+
+
+class ActionPlanCreatedBody(LocalModel):
+    """Receipt for one newly created ActionPlan."""
+
+    plan_id: UUID
+    session_id: UUID
+    plan_sha256: str
+    research_intent_sha256: str
+    created_at: datetime
+
+
+class ActionPlanBody(LocalModel):
+    """One stored ActionPlan and the digests that pin it."""
+
+    plan_id: UUID
+    plan_sha256: str
+    research_intent_sha256: str
+    created_at: datetime
+
+
+class CreateApprovalRequest(LocalModel):
+    """Grant the one approval a plan may ever carry.
+
+    The body is deliberately empty: the server fixes the TTL and the approver
+    is the local requester, so a caller has nothing to choose.
+    """
+
+
+class ApprovalBody(LocalModel):
+    """One plan approval and its one-use consumption state."""
+
+    approval_id: UUID
+    plan_id: UUID
+    plan_sha256: str
+    research_intent_sha256: str
+    granted_at: datetime
+    expires_at: datetime
+    consumed_at: datetime | None = None
+    consumed_by_run_id: UUID | None = None
+
+
+class CreateRunRequest(LocalModel):
+    """Start one approved analysis under a live Session.
+
+    `research_intent` must recompute to the digest the approval pinned;
+    `scientific_input` is the ProbeInput JSON document the analysis consumes.
+    """
+
+    session_id: SubmittedUuid
+    approval_id: SubmittedUuid
+    research_intent: ResearchIntentBody
+    scientific_input: dict[str, object]
+
+
+class RunCreatedBody(LocalModel):
+    """Receipt for one synchronous, approved analysis run."""
+
+    run_id: UUID
+    execution_id: UUID
+    state: str
+    output_version_ids: tuple[UUID, ...]
+    execution_isolation: str
