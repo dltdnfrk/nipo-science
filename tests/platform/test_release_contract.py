@@ -1118,7 +1118,7 @@ def test_canonical_fixture_finalizes_and_verifies_document(
     document = canonical_bytes(envelope)
     payload = verify_finalized_release_document(document, trust=canonical_fixture.trust)
     assert payload.receipt.outcome == "incomplete"
-    assert len(payload.receipt.controls) == 28
+    assert len(payload.receipt.controls) == 25
     assert (
         len(
             {
@@ -1136,7 +1136,7 @@ def test_canonical_fixture_finalizes_and_verifies_document(
     assert {item.category for item in payload.receipt.controls} == set(
         CI_JOB_CATEGORIES.values()
     )
-    assert len({item.category for item in payload.receipt.controls}) == 11
+    assert len({item.category for item in payload.receipt.controls}) == 9
     assert {
         item.control_id for item in payload.receipt.external_evidence
     } == REQUIRED_EXTERNAL_CONTROL_IDS

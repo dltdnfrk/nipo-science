@@ -67,9 +67,7 @@ build, verify, and remove the local stack. Published service ports bind only to
 The browser-facing app origin is `http://localhost:53000`; the isolated Artifact
 origin is `http://127.0.0.1:59000`. These resolvable loopback hosts require no
 `/etc/hosts` entries and keep the host-only app cookie outside the Artifact
-origin. `COOKIE_DOMAIN` remains empty. The Artifact UI test-principal fixture
-documented below intentionally reverses the two loopback hostnames while
-preserving the same cross-origin cookie boundary.
+origin. `COOKIE_DOMAIN` remains empty.
 
 ## Persistence verification
 
@@ -129,42 +127,6 @@ Blobs are fsynced before atomic publication, while filesystem or metadata failur
 compensates unreferenced content under a per-address database lock. The
 deterministic in-memory adapter remains for isolated tests.
 
-The production Artifact HTTP composition is available through
-`python -m services.api.artifact_production_app`. It consumes persisted opaque
-sessions, derives organization and requester identity server-side, resolves
-Artifact Project scope under forced RLS, and composes PostgreSQL metadata with
-owner-private blob and recovery roots. The environment contract, role grant,
-trusted execution binding, TLS/origin requirements, and exact invocation are in
-[docs/operations/artifact-service.md](docs/operations/artifact-service.md).
-
-## Provider qualification boundary
-
-Run `make test-provider-runtime` to verify the external-authority client,
-public receipt verifier, durable adoption, qualified Run dispatch, cleanup,
-migration, and PostgreSQL privilege code paths. Qualification authority,
-adopter, dispatcher, and cleanup worker are separate credentialed processes.
-`science_workbench_qualification` and `science_workbench_dispatcher` are
-`NOLOGIN`, `NOINHERIT`, `NOBYPASSRLS` capability roles assumed by separate deployment-managed
-`NOINHERIT` LOGINs; the ordinary application role cannot insert Runs. The
-`science_workbench_provider_cleanup` capability role is also `NOLOGIN` and
-`NOINHERIT` with `NOBYPASSRLS`; its dedicated LOGIN has no direct provider-table
-access and may execute only four fixed due-candidate, validation, and completion
-functions. It is never resident in the ordinary application or provider runtime.
-
-Production supplies a protected exact runtime-policy file for its deployed
-platform and pins the file's SHA-256. The
-Darwin arm64 policy checked into `config/provider-runtime-policies.json` is a
-development/test example only. A fresh upgrade archives observable bare legacy
-`healthy` state before normalization. `0004_provider_security` converges a
-stale-0003 deployment but never fabricates evidence already lost by an older
-0003; that case requires pre-0003 backup remediation or new qualification. The code-path
-gates are not external live qualification: the current external attempt is
-blocked by the provider subscription usage limit, no deployment-signed or
-adopted live qualification is claimed, and release remains blocked until a fresh
-external attempt succeeds. Deployment, rotation, recovery, and rollback are
-documented in
-[docs/operations/provider-qualification.md](docs/operations/provider-qualification.md).
-
 ## Deterministic Dry-Lab Science
 
 Run `make test-science` to verify the pure research-support analysis package.
@@ -180,22 +142,6 @@ lineage, or a dimensionally incompatible wavelength unit produce
 `insufficient_data`; malformed numeric shapes, unrepresentable derived arithmetic,
 and invalid Unicode scalar data produce `invalid_data`. Neither path imputes
 hidden values, collapses nonfinite evidence values, or emits a diagnostic verdict.
-
-## Test-principal Artifact UI
-
-Run `make test-e2e-artifacts` to verify the Korean Artifact list/detail slice.
-The fixture creates immutable CSV, PNG, and PDF V1/V2 histories, shows checksum,
-producer Execution, environment hash, predecessor diff, and lineage, and changes
-only an explicitly selected Version-to-Session association. Unknown tenant IDs
-remain indistinguishable from absent IDs, stale Version creation is rejected,
-and download bytes are checked against the selected SHA-256.
-
-The app route is unavailable without the opaque test-principal cookie. Preview
-bytes are served from `localhost` while the app is served from `127.0.0.1`, so
-the host-only app cookie does not match the preview origin. Preview responses
-allow only passive CSV/PNG/PDF media and enforce `default-src 'none'`, `nosniff`,
-and `no-referrer`; active HTML never enters the preview store. The iframe is
-sandboxed and accepts only the server-declared Artifact origin.
 
 ## Deterministic Dry-Lab Fixture Vertical
 

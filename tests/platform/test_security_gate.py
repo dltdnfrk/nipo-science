@@ -154,14 +154,14 @@ def test_gate_fails_closed_for_failed_vacuous_or_reserved_child_output() -> None
     forged = ChildResult(0, b'SECURITY_CASE={"case_id":"x"}\n')
 
     assert (
-        run_security_gate("T01", runner=_fixed_runner(failed), stream=io.BytesIO()) == 1
+        run_security_gate("T11", runner=_fixed_runner(failed), stream=io.BytesIO()) == 1
     )
     assert (
-        run_security_gate("T01", runner=_fixed_runner(vacuous), stream=io.BytesIO())
+        run_security_gate("T11", runner=_fixed_runner(vacuous), stream=io.BytesIO())
         == 1
     )
     assert (
-        run_security_gate("T01", runner=_fixed_runner(forged), stream=io.BytesIO()) == 1
+        run_security_gate("T11", runner=_fixed_runner(forged), stream=io.BytesIO()) == 1
     )
 
 
@@ -203,7 +203,7 @@ def test_gate_rejects_source_change_observed_during_child_execution(
 
 def test_gate_accepts_exact_case_names_and_rejects_unknown_case() -> None:
     assert (
-        run_security_gate("provider-tool-bypass", runner=_runner, stream=io.BytesIO())
+        run_security_gate("export-traversal", runner=_runner, stream=io.BytesIO())
         == 0
     )
     with pytest.raises(ValueError, match="unknown SECURITY case"):
@@ -267,8 +267,8 @@ def test_parser_rejects_relabel_swap_omit_and_stale_binding_replay() -> None:
         }
     )
     relabeled = cases.copy()
-    relabeled[0] = relabeled[0].model_copy(update={"threat_id": "T02"})
-    relabeled[1] = relabeled[1].model_copy(update={"threat_id": "T01"})
+    relabeled[0] = relabeled[0].model_copy(update={"threat_id": "T08"})
+    relabeled[1] = relabeled[1].model_copy(update={"threat_id": "T07"})
 
     for candidate in (changed_source, swapped, relabeled):
         with pytest.raises(EvidenceIntegrityError):
@@ -345,7 +345,7 @@ def test_bounded_runner_fails_on_timeout_and_output_limit(tmp_path: Path) -> Non
     assert timeout.failure == "SECURITY child timed out"
     assert overflow.failure == "SECURITY child exceeded output limit"
     stream = io.BytesIO()
-    assert run_security_gate("T01", runner=_fixed_runner(timeout), stream=stream) == 1
+    assert run_security_gate("T11", runner=_fixed_runner(timeout), stream=stream) == 1
     assert b"SECURITY_CASE=" not in stream.getvalue()
 
 

@@ -24,14 +24,7 @@ image admission, and Output Watcher registration.
 
 Provider qualification authority, immutable receipt history, dedicated
 database adoption, dedicated Run dispatch, isolated cleanup, exact Run binding,
-permanent historical verification, and `0004_provider_security` convergence are
-fixed by ADR-0010 and operated through
-`docs/operations/provider-qualification.md`. The authority, adopter,
-dispatcher, and cleanup worker are separate credential boundaries. Cleanup uses
-the exact `science_workbench_provider_cleanup` `NOBYPASSRLS` capability, with no
-direct table access, only through four fixed due-selection, validation, and
-completion functions; the ordinary application cannot insert Runs. Production runtime policy is deployment-supplied,
-and the checked-in Darwin policy is development/test evidence only. Passing the
-repository code-path gates does not substitute for a successful external live
-qualification. A stale deployment already stamped with an older 0003 is never
-given fabricated legacy evidence; missing history requires backup remediation.
+permanent historical verification, and `0004_provider_security` convergence
+were fixed by ADR-0010. ADR-0011 supersedes ADR-0010, and the hosted provider
+plane — the authority, adopter, dispatcher, cleanup worker, and their
+operations runbook — is retired.

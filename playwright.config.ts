@@ -75,33 +75,4 @@ export default defineConfig({
     trace: "on",
     video: "retain-on-failure",
   },
-  webServer: [
-    {
-      command: ".venv/bin/python -m tools.run_artifact_ui_fixture",
-      env: {
-        ARTIFACT_UI_PORT: String(port),
-        ARTIFACT_UI_PRINCIPAL: principalToken,
-        PYTHONDONTWRITEBYTECODE: "1",
-      },
-      reuseExistingServer: false,
-      timeout: 15_000,
-      url: `${baseURL}/artifacts`,
-    },
-    {
-      command: ".venv/bin/python -m tools.run_product_ui_fixture",
-      env: {
-        PRODUCT_UI_PORT: String(productPort),
-        PRODUCT_UI_FIXTURE_CREDENTIALS_DIRECTORY: productCredentialsDirectory,
-        PRODUCT_UI_FIXTURE_CREDENTIALS_FILE: productCredentialsFile,
-        PRODUCT_UI_FIXTURE_CREDENTIALS_TEMP_FILE: productCredentialsTempFile,
-        // Fixed .cache path is shared across runs; never delete the directory itself.
-        PRODUCT_UI_FIXTURE_REMOVE_CREDENTIALS_DIRECTORY: "0",
-        PYTHONPATH: `${process.cwd()}/packages/science:${process.cwd()}`,
-        PYTHONDONTWRITEBYTECODE: "1",
-      },
-      reuseExistingServer: false,
-      timeout: 15_000,
-      url: `http://127.0.0.1:${productPort}/workspace`,
-    },
-  ],
 });

@@ -1752,11 +1752,6 @@ def ci_commands(root: Path) -> tuple[CiCommand, ...]:
         CiCommand(CiJob.UPLOAD, (*make, "test-upload"), CountKind.PYTEST),
         CiCommand(CiJob.ARTIFACTS, (*make, "test-artifacts"), CountKind.PYTEST),
         CiCommand(CiJob.SCIENCE, (*make, "test-science"), CountKind.PYTEST),
-        CiCommand(
-            CiJob.ARTIFACT_UI,
-            (*make, "test-e2e-artifacts"),
-            CountKind.PYTEST,
-        ),
         CiCommand(CiJob.RETENTION, (*make, "test-retention"), CountKind.PYTEST),
         CiCommand(
             CiJob.GENERATED_DRIFT,
@@ -1770,12 +1765,8 @@ def ci_commands(root: Path) -> tuple[CiCommand, ...]:
             CountKind.CHECKS,
         ),
         CiCommand(CiJob.DRY_LAB, (*make, "test-dry-lab"), CountKind.PYTEST),
-        CiCommand(CiJob.PRODUCT_UI, (*make, "test-product-ui"), CountKind.PYTEST),
         CiCommand(
             CiJob.LOCAL_WORKBENCH, (*make, "test-local-workbench"), CountKind.PYTEST
-        ),
-        CiCommand(
-            CiJob.PROVIDER_RUNTIME, (*make, "test-provider-runtime"), CountKind.PYTEST
         ),
         CiCommand(
             CiJob.SECURITY,

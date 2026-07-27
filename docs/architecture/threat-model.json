@@ -3,12 +3,12 @@
   "risk_method": "qualitative pre-control severity; release accepts no untested High item",
   "threats": [
     {
-      "id": "T01", "name": "tenant-escape", "severity": "High", "owner": "tenant-security",
+      "id": "T01", "name": "tenant-escape", "severity": "Dropped", "owner": "tenant-security",
       "controls": ["server-derived-org-id", "postgres-rls-and-composite-tenant-fks", "tenant-scoped-queue-cache-object-keys", "cross-tenant-404"],
-      "executable_test": "make test-security CASE=tenant-escape", "evidence_path": "tools/evidence/security/T01-tenant-escape.json"
+      "dropped": "ADR-0011 local-first single-user: one operator, no hosted tenancy (Stage 1)"
     },
     {
-      "id": "T02", "name": "oauth-token-theft", "severity": "High", "owner": "runtime-security",
+      "id": "T02", "name": "oauth-token-theft", "severity": "Dropped", "owner": "runtime-security",
       "controls": [
         "kms-encrypted-per-user-runtime-home",
         "refresh-token-never-enters-provider-runtime-process",
@@ -16,27 +16,27 @@
         "token-pattern-redaction-and-canary-scan",
         "wipe-on-disconnect-or-reauth-failure"
       ],
-      "executable_test": "make test-security CASE=oauth-token-theft", "evidence_path": "tools/evidence/security/T02-oauth-token-theft.json"
+      "dropped": "ADR-0011 local-first single-user: hosted OAuth broker retired (Stage 1)"
     },
     {
-      "id": "T03", "name": "provider-built-in-tool-bypass", "severity": "High", "owner": "runtime-platform",
+      "id": "T03", "name": "provider-built-in-tool-bypass", "severity": "Dropped", "owner": "runtime-platform",
       "controls": ["disable-shell-web-search-mcp-plugins-worktrees", "startup-and-per-run-capability-probes", "application-sole-tool-executor", "fail-closed-on-unknown-event"],
-      "executable_test": "make test-security CASE=provider-tool-bypass", "evidence_path": "tools/evidence/security/T03-provider-tool-bypass.json"
+      "dropped": "ADR-0011 local-first single-user: hosted provider runtime retired (Stage 1)"
     },
     {
-      "id": "T04", "name": "provider-vendor-compromise", "severity": "High", "owner": "supply-chain-security",
+      "id": "T04", "name": "provider-vendor-compromise", "severity": "Dropped", "owner": "supply-chain-security",
       "controls": ["pinned-approved-runtime-binary", "signature-sbom-and-vulnerability-admission", "provider-only-egress", "no-tenant-or-control-plane-credential", "live-cleanup-conformance"],
-      "executable_test": "make test-security CASE=vendor-runtime-compromise", "evidence_path": "tools/evidence/security/T04-vendor-runtime-compromise.json"
+      "dropped": "ADR-0011 local-first single-user: hosted provider runtime retired (Stage 1)"
     },
     {
-      "id": "T05", "name": "prompt-injection", "severity": "High", "owner": "agent-security",
+      "id": "T05", "name": "prompt-injection", "severity": "Dropped", "owner": "agent-security",
       "controls": ["tool-output-and-files-treated-as-data", "typed-action-proposals", "policy-evaluated-outside-model", "secret-and-network-scope-never-model-selected"],
-      "executable_test": "make test-security CASE=prompt-injection", "evidence_path": "tools/evidence/security/T05-prompt-injection.json"
+      "dropped": "ADR-0011 local-first single-user: hosted provider runtime retired (Stage 1)"
     },
     {
-      "id": "T06", "name": "ssrf", "severity": "High", "owner": "connector-security",
+      "id": "T06", "name": "ssrf", "severity": "Dropped", "owner": "connector-security",
       "controls": ["registry-fixed-https-host-method-path", "dns-ip-validation-on-connect-and-redirect", "block-private-linklocal-loopback-metadata", "origin-change-strips-auth-and-needs-new-approval"],
-      "executable_test": "make test-security CASE=ssrf", "evidence_path": "tools/evidence/security/T06-ssrf.json"
+      "dropped": "ADR-0011 local-first single-user: connectors out of scope (Stage 1)"
     },
     {
       "id": "T07", "name": "malicious-files-and-archives", "severity": "High", "owner": "ingestion-security",
@@ -74,14 +74,14 @@
       "executable_test": "make test-security CASE=supply-chain", "evidence_path": "tools/evidence/security/T13-supply-chain.json"
     },
     {
-      "id": "T14", "name": "qualification-signer-substitution-or-replay", "severity": "High", "owner": "runtime-security",
+      "id": "T14", "name": "qualification-signer-substitution-or-replay", "severity": "Dropped", "owner": "runtime-security",
       "controls": ["signer-private-key-absent-from-evaluator-runtime-and-database", "strict-public-key-set", "historical-verification-key-retained-permanently-or-by-archive-verifier", "subject-and-revision-bound-receipt", "append-only-receipt-history", "ordered-profile-receipt-adoption-not-atomic-triple", "adoption-failure-leaves-no-database-receipt-or-pointer", "deployment-supplied-protected-runtime-policy-file-pinned-by-sha256", "exact-runtime-identity-verification", "authority-socket-owner-and-mode-validation"],
-      "executable_test": "make test-provider-runtime", "evidence_path": "tools/evidence/provider-qualification-contract.json"
+      "dropped": "ADR-0011 local-first single-user: provider qualification authority retired (Stage 1)"
     },
     {
-      "id": "T15", "name": "database-role-qualification-forgery", "severity": "High", "owner": "data-security",
+      "id": "T15", "name": "database-role-qualification-forgery", "severity": "Dropped", "owner": "data-security",
       "controls": ["ordinary-app-role-cannot-write-receipts-current-pointer-or-runs", "dedicated-noinherit-login-to-science-workbench-qualification-nologin-role", "dedicated-noinherit-login-to-science-workbench-dispatcher-nologin-role", "dedicated-noinherit-login-to-science-workbench-provider-cleanup-nologin-nobypassrls-role", "cleanup-role-has-no-direct-table-access", "cleanup-executes-only-four-fixed-security-definer-due-functions", "fixed-adopter-append-and-cas-no-callback", "adopter-cas-rechecks-exact-connection-snapshot-including-created-at", "dedicated-dispatcher-exact-run-insert", "dedicated-cleanup-credential-absent-from-app-and-provider-runtime", "forced-requester-rls", "0004-provider-security-converges-stale-0003-without-fabricating-lost-evidence", "exact-current-receipt-status-and-selected-model-run-trigger", "immutable-run-binding"],
-      "executable_test": "make test-provider-runtime", "evidence_path": "tools/evidence/provider-qualification-contract.json"
+      "dropped": "ADR-0011 local-first single-user: provider qualification authority retired (Stage 1)"
     }
   ]
 }

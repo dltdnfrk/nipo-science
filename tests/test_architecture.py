@@ -76,41 +76,41 @@ class ArchitectureVerifierTests(unittest.TestCase):
 
     def test_rejects_missing_high_threat_evidence(self) -> None:
         # Given: one referenced High-threat evidence artifact is absent.
-        evidence = self.root.parents[1] / "tools/evidence/security/T01-tenant-escape.json"
+        evidence = self.root.parents[1] / "tools/evidence/security/T07-malicious-files-and-archives.json"
         evidence.unlink()
 
         # When/Then: verification names the dangling reference.
-        self.assert_rejected("missing-evidence:T01")
+        self.assert_rejected("missing-evidence:T07")
 
     def test_rejects_missing_high_threat_evidence_checksum(self) -> None:
         # Given: raw evidence exists without its checksum sidecar.
-        checksum = self.root.parents[1] / "tools/evidence/security/T01-tenant-escape.sha256"
+        checksum = self.root.parents[1] / "tools/evidence/security/T07-malicious-files-and-archives.sha256"
         checksum.unlink()
 
         # When/Then: verification rejects the unbound artifact.
-        self.assert_rejected("missing-evidence-checksum:T01")
+        self.assert_rejected("missing-evidence-checksum:T07")
 
     def test_rejects_high_threat_evidence_digest_mismatch(self) -> None:
         # Given: raw evidence changed after its checksum was recorded.
-        evidence = self.root.parents[1] / "tools/evidence/security/T01-tenant-escape.json"
+        evidence = self.root.parents[1] / "tools/evidence/security/T07-malicious-files-and-archives.json"
         with evidence.open("ab") as stream:
             _ = stream.write(b"\n")
 
         # When/Then: verification detects the mutation.
-        self.assert_rejected("evidence-digest-mismatch:T01")
+        self.assert_rejected("evidence-digest-mismatch:T07")
 
     def test_rejects_high_threat_evidence_path_traversal(self) -> None:
         # Given: a path has the expected prefix but escapes the evidence tree.
         self.replace_once(
             "threat-model.json",
             (
-                "tools/evidence/security/T01-tenant-escape.json",
+                "tools/evidence/security/T07-malicious-files-and-archives.json",
                 "tools/evidence/../../outside.json",
             ),
         )
 
         # When/Then: prefix-only path validation is insufficient and rejected.
-        self.assert_rejected("invalid-evidence-path:T01")
+        self.assert_rejected("invalid-evidence-path:T07")
 
     def test_rejects_oauth_refresh_token_exfiltration_control_omission(self) -> None:
         # Given: OAuth token theft lacks its refresh-token confinement control.
@@ -150,7 +150,7 @@ class ArchitectureVerifierTests(unittest.TestCase):
         self.replace_once(
             "threat-model.json",
             (
-                '"executable_test": "make test-security CASE=oauth-token-theft"',
+                '"executable_test": "make test-security CASE=malicious-files-and-archives"',
                 '"executable_test": ""',
             ),
         )

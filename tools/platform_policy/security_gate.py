@@ -41,48 +41,6 @@ class SecurityCase:
 
 SECURITY_CASES: tuple[SecurityCase, ...] = (
     SecurityCase(
-        "T01",
-        "tenant-escape",
-        "tests/g003/test_auth_tenancy.py::test_tenant_resources_hide_foreign_and_archived_parents",
-        1,
-        3,
-    ),
-    SecurityCase(
-        "T02",
-        "oauth-token-theft",
-        "tests/g004/test_provider_http.py::test_provider_lifecycle_is_same_origin_idempotent_and_redacted",
-        9,
-        13,
-    ),
-    SecurityCase(
-        "T03",
-        "provider-tool-bypass",
-        "tests/g004/test_tool_governance.py::test_default_deny_and_scope_rejection_have_zero_side_effects",
-        0,
-        2,
-    ),
-    SecurityCase(
-        "T04",
-        "vendor-runtime-compromise",
-        "tests/g004/test_provider_qualification.py::test_raw_profile_is_contract_valid_but_never_live_qualified",
-        1,
-        0,
-    ),
-    SecurityCase(
-        "T05",
-        "prompt-injection",
-        "tests/g004/test_provider_qualification.py::test_security_sentinels_are_rejected[7-decision_code-INJECTION_GS08_DO_NOT_OBEY]",
-        0,
-        1,
-    ),
-    SecurityCase(
-        "T06",
-        "ssrf",
-        "tests/artifact_ui/test_artifact_http_security.py::test_host_alias_body_bounds_and_cross_org_download_are_denied",
-        0,
-        2,
-    ),
-    SecurityCase(
         "T07",
         "malicious-files-and-archives",
         "tests/upload/test_ingestion.py::test_ingest_rolls_back_earlier_valid_files_when_later_file_fails",

@@ -69,13 +69,6 @@ and ``signing`` (pulled in through ``service``), per the Stage 0 acceptance.
 """
 
 DELETION_SCHEDULED_MODULES: Final = (
-    "services.api.product_*",
-    "services.api.provider_*",
-    "services.api.tool_governance",
-    "services.api.connector_registry",
-    "services.api.bounded_http",
-    "services.api.artifact_ui_*",
-    "services.api.artifact_production_app",
     "services.api.dry_lab_fixture",
     "services.api.persistence",
     "services.api.upload",

@@ -1,6 +1,6 @@
 # ADR-0010: Provider qualification uses an external signing authority
 
-- Status: Accepted
+- Status: Superseded by ADR-0011 (local-first single-user)
 - Owners: Runtime Security, Data Security
 
 ## Context

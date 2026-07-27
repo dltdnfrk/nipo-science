@@ -8,10 +8,12 @@ from typing import Final
 # document under docs/architecture/decisions/ as history; removal from this
 # frozenset never deletes the ADR file. ADR-0011 (local-first-single-user) is
 # registered in docs/architecture/architecture.json but deliberately absent
-# from the three sets below: rewriting them for the local-first topology is
-# Stage 4 work, and adding the decision now would force threat-model.json and
+# from REQUIRED_DECISIONS/REQUIRED_FIELDS: rewriting them for the local-first
+# topology is Stage 4 work, and adding the decision now would force
 # data-classification.json changes that must land in the same commit to keep
-# verify-architecture (CI-006) green.
+# verify-architecture (CI-006) green. REQUIRED_THREATS was narrowed at Stage 1
+# to the threats whose executable cases survive the hosted application-plane
+# retirement; T01-T06 and T14/T15 remain in threat-model.json as Dropped.
 REQUIRED_DECISIONS: Final = frozenset(
     {
         "isolated-monorepo-service-boundaries",
@@ -27,12 +29,6 @@ REQUIRED_DECISIONS: Final = frozenset(
 )
 REQUIRED_THREATS: Final = frozenset(
     {
-        "tenant-escape",
-        "oauth-token-theft",
-        "provider-built-in-tool-bypass",
-        "provider-vendor-compromise",
-        "prompt-injection",
-        "ssrf",
         "malicious-files-and-archives",
         "sandbox-escape",
         "stale-workers-and-lease-fencing",

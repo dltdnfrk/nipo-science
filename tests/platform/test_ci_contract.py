@@ -2283,64 +2283,7 @@ def test_checked_in_ci_catalog_matches_runtime_and_normative_authorities() -> No
     assert set(verified) == set(CiJob)
     assert mapped_requirements == ()
     assert set(catalog.unverified_requirement_ids) == set(expected_requirements)
-    assert set(security.control_ids) == {f"T{number:02d}" for number in range(1, 14)}
-
-
-def test_provider_repository_evidence_is_current_but_not_authoritative() -> None:
-    root = Path(__file__).parents[2]
-    evidence_path = root / "tools/evidence/provider-qualification-contract.json"
-    document = cast("dict[str, object]", json.loads(evidence_path.read_bytes()))
-    catalog = load_checked_in_ci_catalog(root / ".ci/ci-contract.json")
-    expected_requirements = {
-        "AC-PROVIDER-AUTHORITY",
-        "AC-PROVIDER-MIGRATION",
-        "AC-PROVIDER-RUN-BINDING",
-    }
-
-    assert document["authoritativeLiveQualification"] is False
-    assert set(cast("list[str]", document["requirements"])) == expected_requirements
-    assert expected_requirements <= ci_contract.TRUSTED_REQUIREMENT_IDS
-    assert expected_requirements <= set(catalog.unverified_requirement_ids)
-    assert catalog.requirement_case_bindings == ()
-    assert cast("dict[str, object]", document["ciAuthority"]) == {
-        "trustedRequirementIdsPresent": True,
-        "checkedInBootstrapCatalog": "unverified",
-        "checkedInRequirementBindings": 0,
-        "freshExternalRequirementBindingsPresent": False,
-        "explanation": (
-            "The checked-in catalog is intentionally non-authoritative. Exact "
-            "semantic requirement bindings must be supplied by the fresh external "
-            "CI authority and parent-observed at execution time."
-        ),
-    }
-
-    logs_by_digest: dict[str, bytes] = {}
-    verifications = cast("list[dict[str, object]]", document["verification"])
-    for verification in verifications:
-        log_path = root / cast("str", verification["rawLog"])
-        raw_log = log_path.read_bytes()
-        digest = hashlib.sha256(raw_log).hexdigest()
-        assert verification["exitCode"] == 0
-        assert digest == verification["rawLogSha256"]
-        logs_by_digest[digest] = raw_log
-
-    mapped_requirements: set[str] = set()
-    case_mappings = cast("list[dict[str, object]]", document["repositoryCaseMap"])
-    for mapping in case_mappings:
-        mapped_requirements.add(cast("str", mapping["requirementId"]))
-        cases = cast("list[dict[str, object]]", mapping["cases"])
-        for case in cases:
-            source = root / cast("str", case["sourcePath"])
-            test = root / cast("str", case["testPath"])
-            source_digest = hashlib.sha256(source.read_bytes()).hexdigest()
-            test_digest = hashlib.sha256(test.read_bytes()).hexdigest()
-            assert source_digest == case["sourceSha256"]
-            assert test_digest == case["testSha256"]
-            log_digest = cast("str", case["observedInRawLogSha256"])
-            raw_log = logs_by_digest[log_digest]
-            node_id = cast("str", case["testNodeId"])
-            assert f"{node_id} PASSED".encode() in raw_log
-    assert mapped_requirements == expected_requirements
+    assert set(security.control_ids) == {f"T{number:02d}" for number in range(7, 14)}
 
 
 def security_catalog_authority(catalog_id: str) -> RequiredSecurityCatalog:

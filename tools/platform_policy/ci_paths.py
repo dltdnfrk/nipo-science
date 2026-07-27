@@ -59,20 +59,6 @@ G005_LOCAL_PYTHON_PATHS: Final = (
     "tests/e2e/local_workbench_fixture.py",
 )
 
-G004_ARTIFACT_UI_PYTHON_PATHS: Final = (
-    "services/api/artifact_ui_app.py",
-    "services/api/artifact_ui_http.py",
-    "services/api/product_artifact_fixtures.py",
-    "services/api/product_artifact_http.py",
-    "services/api/product_artifact_types.py",
-    "services/api/product_artifact_validation.py",
-    "services/api/product_artifact_views.py",
-    "services/api/product_artifacts.py",
-    "services/api/product_pdf_validation.py",
-    "services/api/product_preview.py",
-    "tools/run_artifact_ui_fixture.py",
-    "tests/artifact_ui",
-)
 
 RELEASE_PYTHON_PATHS: Final = (
     G001_PYTHON_PATHS
@@ -80,6 +66,5 @@ RELEASE_PYTHON_PATHS: Final = (
     + G002_UPLOAD_PYTHON_PATHS
     + G002_ARTIFACT_PYTHON_PATHS
     + G003_SCIENCE_PYTHON_PATHS
-    + G004_ARTIFACT_UI_PYTHON_PATHS
     + G005_LOCAL_PYTHON_PATHS
 )

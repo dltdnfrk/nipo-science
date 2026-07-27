@@ -187,11 +187,9 @@ class EvidenceCategory(StrEnum):
     UNIT = "unit"
     INTEGRATION = "integration"
     CONTRACT = "contract"
-    E2E = "e2e"
     SECURITY = "security"
     RECOVERY = "recovery"
     PERFORMANCE = "performance"
-    PROVIDER = "provider"
     RELEASE = "release"
 
 
@@ -211,15 +209,12 @@ CI_JOB_CATEGORIES: dict[CiJob, EvidenceCategory] = {
     CiJob.UPLOAD: EvidenceCategory.INTEGRATION,
     CiJob.ARTIFACTS: EvidenceCategory.INTEGRATION,
     CiJob.SCIENCE: EvidenceCategory.INTEGRATION,
-    CiJob.ARTIFACT_UI: EvidenceCategory.E2E,
     CiJob.RETENTION: EvidenceCategory.RECOVERY,
     CiJob.GENERATED_DRIFT: EvidenceCategory.CONTRACT,
     CiJob.SBOM: EvidenceCategory.SECURITY,
     CiJob.SECRET_SCAN: EvidenceCategory.SECURITY,
     CiJob.DRY_LAB: EvidenceCategory.INTEGRATION,
-    CiJob.PRODUCT_UI: EvidenceCategory.E2E,
     CiJob.LOCAL_WORKBENCH: EvidenceCategory.INTEGRATION,
-    CiJob.PROVIDER_RUNTIME: EvidenceCategory.PROVIDER,
     CiJob.SECURITY: EvidenceCategory.SECURITY,
     CiJob.RECOVERY: EvidenceCategory.RECOVERY,
     CiJob.PERFORMANCE: EvidenceCategory.PERFORMANCE,

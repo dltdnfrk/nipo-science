@@ -27,13 +27,6 @@ _CLOSURE_MODULE_NAMES = (
 )
 
 _DELETION_FILES = (
-    "services/api/product_app.py",
-    "services/api/provider_runtime.py",
-    "services/api/tool_governance.py",
-    "services/api/connector_registry.py",
-    "services/api/bounded_http.py",
-    "services/api/artifact_ui_app.py",
-    "services/api/artifact_production_app.py",
     "services/api/dry_lab_fixture.py",
     "services/api/persistence/__init__.py",
     "services/api/upload/__init__.py",
@@ -62,7 +55,7 @@ def _write_minimal_repo(tmp_path: Path) -> None:
 
 
 def test_unit_current_repository_satisfies_quarantine() -> None:
-    # Given: the real repository tree at Stage 0 (no deletion has landed).
+    # Given: the real repository tree at Stage 1 (hosted application plane retired).
 
     # When: the quarantine check scans it.
     violations = scan(REPO_ROOT)
@@ -105,8 +98,8 @@ def test_unit_saas_zone_internal_imports_are_allowed(tmp_path: Path) -> None:
     _write_minimal_repo(tmp_path)
     _write(
         tmp_path,
-        "services/api/product_app.py",
-        "import services.api.provider_runtime\n",
+        "services/api/dry_lab_fixture.py",
+        "import services.api.upload\n",
     )
 
     # When / Then: intra-zone imports are not flagged (the zone goes wholesale).
@@ -116,8 +109,8 @@ def test_unit_saas_zone_internal_imports_are_allowed(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "statement",
     [
-        "from services.api.product_app import create_app\n",
-        "import services.api.provider_runtime\n",
+        "from services.api.dry_lab_fixture import run_server\n",
+        "import services.api.upload\n",
         "from services.api.artifacts import postgres_store\n",
         "import services.local.scanner\n",
         "from services.api.persistence import auth_sessions\n",
@@ -205,14 +198,14 @@ def test_unit_missing_closure_module_is_reported(tmp_path: Path) -> None:
 def test_unit_stale_deletion_pattern_is_reported(tmp_path: Path) -> None:
     # Given: a deletion stage landed without updating the inventory.
     _write_minimal_repo(tmp_path)
-    (tmp_path / "services/api/provider_runtime.py").unlink()
+    (tmp_path / "services/api/dry_lab_fixture.py").unlink()
 
     # When: the quarantine check scans the tree.
     violations = scan(tmp_path)
 
     # Then: the stale pattern forces an inventory update in the same commit.
-    assert "saas-quarantine-stale-pattern:services.api.provider_*" in violations
-    assert "services.api.provider_*" in DELETION_SCHEDULED_MODULES
+    assert "saas-quarantine-stale-pattern:services.api.dry_lab_fixture" in violations
+    assert "services.api.dry_lab_fixture" in DELETION_SCHEDULED_MODULES
 
 
 def test_unit_cli_reports_violations_and_clean_trees(tmp_path: Path) -> None:
@@ -226,7 +219,7 @@ def test_unit_cli_reports_violations_and_clean_trees(tmp_path: Path) -> None:
     _write(
         tmp_path,
         "apps/local/nipo_local/app.py",
-        "import services.api.bounded_http\n",
+        "import services.api.upload\n",
     )
 
     # Then: the CLI fails.
