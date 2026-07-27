@@ -1,0 +1,18 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/nipo-gjc/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/nipo-gjc
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 8 items
+
+artifacts/ulw-l01/probes_test.py::test_probe_a_legacy_parent_mkdir_under_permissive_umask_is_group_readable PASSED [ 12%]
+artifacts/ulw-l01/probes_test.py::test_probe_b_start_local_api_on_readonly_parent_fails_closed PASSED [ 25%]
+artifacts/ulw-l01/probes_test.py::test_probe_c_start_local_api_repairs_permissive_root PASSED [ 37%]
+artifacts/ulw-l01/probes_test.py::test_probe_d_guide_honesty_disclosures_present_claims_absent PASSED [ 50%]
+artifacts/ulw-l01/probes_test.py::test_probe_e_hostile_env_host_sweep_cannot_widen_bind PASSED [ 62%]
+artifacts/ulw-l01/probes_test.py::test_probe_docs_honesty_l01_claim_boundary PASSED [ 75%]
+artifacts/ulw-l01/probes_test.py::test_probe_default_root_is_outside_documents PASSED [ 87%]
+artifacts/ulw-l01/probes_test.py::test_probe_write_token_file_still_refuses_missing_root PASSED [100%]
+
+============================== 8 passed in 0.40s ===============================

@@ -690,6 +690,27 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 .empty-state h3 { color: var(--text-strong); }
 .empty-state p, .loading-state p { color: var(--text-muted); font-size: 15px; }
+.first-run-guide {
+  display: grid;
+  gap: 12px;
+  padding: 22px 20px;
+  text-align: left;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+}
+.first-run-guide h3 { color: var(--text-strong); }
+.first-run-guide__lede { color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+.first-run-guide__facts {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0 0 0 1.2em;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.first-run-guide__actions { flex-wrap: wrap; margin-top: 4px; }
 
 .breadcrumb { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; font-size: 13px; color: var(--text-muted); }
 .breadcrumb ol { display: flex; gap: 8px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }

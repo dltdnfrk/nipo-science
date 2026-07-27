@@ -1,0 +1,27 @@
+docs honesty L01 (SPEC §14 + requirements.yaml)
+================================================
+Positive claims mapped to tests:
+1. ensure-before-token via LocalPaths.ensure
+   -> test_start_local_api_ensures_owner_only_root_before_token_write
+   -> code: start_local_api calls paths.ensure() before bind/token
+2. token writer refuses to create root (umask cannot widen via token path)
+   -> test_token_file_write_refuses_to_create_the_data_root
+   -> test_a_permissive_umask_cannot_widen_the_layout
+   -> probe a proves pre-fix parent-mkdir WOULD widen under umask 0
+3. guided first-run panel disclosures (root, loopback, in_process, Keychain)
+   -> test_guided_first_run_copy_is_present_and_discloses_isolation
+   -> probe d guide honesty
+4. loopback-only + no remote knob + cross-origin refused
+   -> named test_listening_socket / test_binding_refuses_* / test_no_remote_access_* / test_cross_origin_*
+5. default root outside synced dirs
+   -> DEFAULT_ROOT = Path.home() / ".nipo-science"; probe_default_root
+
+Residual retained (honest):
+- SPEC: "L01 remains partial only in that a packaged installer is out of scope"
+- requirements.yaml partially_implemented.L01 = installation_first_run_and_loopback_interface_present_first_run_packaging_installer_out_of_scope
+- L01 NOT in implemented_and_verified
+
+Overclaims flagged: none
+- No claim of shipped packaged installer
+- No sandbox/confinement claim in first-run guide
+- umask claim is accurate given ensure chmod + token refuses mkdir

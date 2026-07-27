@@ -1,0 +1,409 @@
+{
+  "kind": "api-test-report",
+  "story": "L01 first-run (ensure-before-token + loopback + guided panel + docs residual)",
+  "goal": "G003",
+  "lane": "ultragoal-red-team-qa-l01",
+  "agent": "19-QaL01",
+  "base": "3449ded + frozen L01 change set (ensure-before-token, guided first-run, docs)",
+  "verdict": "pass",
+  "summary": {
+    "namedNodeE2e": "pass",
+    "adversarialProbes": "pass",
+    "docsHonesty": "pass",
+    "uiStructural": "pass",
+    "namedNodePassCount": 19,
+    "probePassCount": 8,
+    "blockerCount": 0,
+    "nodeCheckAppJs": "pass",
+    "productMutation": "none"
+  },
+  "contractCoverage": [
+    {
+      "id": "cc-acl01-owner-only-root",
+      "contractRef": "AC-L01:fresh-install-creates-owner-only-data-root",
+      "obligation": "Fresh install creates an owner-only (0700) data root and blob directory; ensure is the sole layout creator and chmods after mkdir so umask cannot widen",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-ensure-creates",
+        "se-named-umask",
+        "se-named-start-ensures-before-token",
+        "se-named-token-refuses-root-create"
+      ],
+      "adversarialCaseRefs": [
+        "adv-a-legacy-mkdir-umask-gap",
+        "adv-c-repair-on-start"
+      ]
+    },
+    {
+      "id": "cc-acl01-outside-synced",
+      "contractRef": "AC-L01:data-root-outside-implicitly-synced-directory",
+      "obligation": "Default data root is ~/.nipo-science under home, never under Documents/Desktop implicit sync paths; guide discloses the location",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-first-run-guide",
+        "se-probe-default-root"
+      ],
+      "adversarialCaseRefs": [
+        "adv-d-guide-honesty",
+        "adv-docs-boundary"
+      ],
+      "notes": "Enforced by DEFAULT_ROOT constant + guide copy; no runtime re-check if an operator overrides resolve_paths into a synced tree (override is a test seam, not a product flag)."
+    },
+    {
+      "id": "cc-acl01-loopback-only",
+      "contractRef": "AC-L01:binds-no-socket-outside-loopback",
+      "obligation": "Listening socket is 127.0.0.1; require_loopback/bind_loopback refuse every non-loopback host including wildcard, IPv6 any, private, and padded literals",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-listening-loopback",
+        "se-named-binding-refuses-non-loopback"
+      ],
+      "adversarialCaseRefs": [
+        "adv-e-hostile-env-host-sweep"
+      ]
+    },
+    {
+      "id": "cc-acl01-no-remote-access-knob",
+      "contractRef": "AC-L01:no-config-env-or-flag-enables-remote-access",
+      "obligation": "No public parameter, env var, or flag accepts a non-loopback bind; hostile HOST-shaped env vars cannot widen bind",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-no-remote-env"
+      ],
+      "adversarialCaseRefs": [
+        "adv-e-hostile-env-host-sweep"
+      ]
+    },
+    {
+      "id": "cc-acl01-cross-origin-refused",
+      "contractRef": "AC-L01:cross-origin-state-change-rejected",
+      "obligation": "Cross-origin state-changing request to the local interface is 403 cross_origin_denied with zero durable side effects",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-cross-origin"
+      ],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl01-ensure-before-token",
+      "contractRef": "SPEC §14 L01 / plan Slice 3: ensure-before-token ordering",
+      "obligation": "start_local_api calls paths.ensure() before token write; write_token_file refuses missing parent and never mkdir; pre-fix parent-mkdir path under umask 0 would leave group/other-readable root",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-start-ensures-before-token",
+        "se-named-token-refuses-root-create",
+        "se-named-umask"
+      ],
+      "adversarialCaseRefs": [
+        "adv-a-legacy-mkdir-umask-gap",
+        "adv-b-readonly-parent-fail-closed",
+        "adv-c-repair-on-start",
+        "adv-write-token-refuses"
+      ]
+    },
+    {
+      "id": "cc-acl01-first-run-guide",
+      "contractRef": "SPEC §14 L01 / AC-L05-B residual disclosure: guided first-run panel",
+      "obligation": "Empty workspace shows guided first-run panel disclosing data root, loopback-only bind, in_process residual, and Keychain residual; never claims sandbox/격리/confinement",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-first-run-guide",
+        "se-node-check-appjs"
+      ],
+      "adversarialCaseRefs": [
+        "adv-d-guide-honesty"
+      ]
+    },
+    {
+      "id": "cc-acl01-repair-existing-root",
+      "contractRef": "L01 / LocalPaths.ensure repair semantics",
+      "obligation": "ensure repairs a pre-rule 0755 root to 0700; start_local_api re-applies ensure so a later-widened root is repaired before serving",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-named-ensure-repairs"
+      ],
+      "adversarialCaseRefs": [
+        "adv-c-repair-on-start"
+      ]
+    },
+    {
+      "id": "cc-docs-l01-partial-residual",
+      "contractRef": "SPEC §14 / requirements.yaml partially_implemented.L01",
+      "obligation": "L01 remains partial only for packaged installer out of scope; every positive §14 first-run claim maps to a named test; L01 not listed under implemented_and_verified",
+      "status": "pass",
+      "surfaceEvidenceRefs": [
+        "se-docs-honesty"
+      ],
+      "adversarialCaseRefs": [
+        "adv-docs-boundary"
+      ],
+      "notes": "Residual retained honestly. No overclaim of a shipped packaged installer. Positive claims (ensure-before-token, token writer refuses root create, guided panel disclosures, loopback) each map to named nodes or probes."
+    }
+  ],
+  "surfaceEvidence": [
+    {
+      "id": "se-named-start-ensures-before-token",
+      "contractRef": "AC-L01 / ensure-before-token",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_start_local_api_ensures_owner_only_root_before_token_write",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-no-remote-env",
+      "contractRef": "AC-L01:no-config-env-or-flag-enables-remote-access",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_no_remote_access_env_or_flag_widens_bind",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-token-refuses-root-create",
+      "contractRef": "SPEC §14 / write_token_file refuses parent create",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_token_file_write_refuses_to_create_the_data_root",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-listening-loopback",
+      "contractRef": "AC-L01:binds-no-socket-outside-loopback",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_listening_socket_is_bound_to_the_loopback_address",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-binding-refuses-non-loopback",
+      "contractRef": "AC-L01:binds-no-socket-outside-loopback",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host (all 10 params)",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-cross-origin",
+      "contractRef": "AC-L01:cross-origin-state-change-rejected",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_api.py::test_cross_origin_state_change_is_refused_and_changes_nothing",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-ensure-creates",
+      "contractRef": "AC-L01:fresh-install-creates-owner-only-data-root",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_config.py::test_ensure_creates_an_owner_only_root_and_blob_directory",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-umask",
+      "contractRef": "AC-L01 / umask independence",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_config.py::test_a_permissive_umask_cannot_widen_the_layout",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-ensure-repairs",
+      "contractRef": "L01 / ensure repair",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_config.py::test_ensure_repairs_a_root_created_before_the_rule",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-named-first-run-guide",
+      "contractRef": "SPEC §14 guided first-run panel",
+      "surface": "web-ui-source",
+      "invocation": "pytest apps/local/tests/test_webui.py::test_guided_first_run_copy_is_present_and_discloses_isolation",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/named-l01.log"
+      ]
+    },
+    {
+      "id": "se-node-check-appjs",
+      "contractRef": "web UI source structure",
+      "surface": "web-ui-source",
+      "invocation": "node --check apps/web/local/app.js",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/node-check-appjs.log"
+      ]
+    },
+    {
+      "id": "se-probe-default-root",
+      "contractRef": "AC-L01:data-root-outside-implicitly-synced-directory",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l01/probes_test.py::test_probe_default_root_is_outside_documents",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log"
+      ]
+    },
+    {
+      "id": "se-docs-honesty",
+      "contractRef": "SPEC §14 / requirements.yaml L01 residual",
+      "surface": "docs",
+      "invocation": "pytest artifacts/ulw-l01/probes_test.py::test_probe_docs_honesty_l01_claim_boundary",
+      "verdict": "pass",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log",
+        "artifacts/ulw-l01/logs/docs-honesty-notes.log"
+      ]
+    }
+  ],
+  "adversarialCases": [
+    {
+      "id": "adv-a-legacy-mkdir-umask-gap",
+      "title": "Pre-fix write_token_file parent-mkdir under umask 0 leaves group/other-readable root",
+      "method": "Probe-local recreation of removed path.parent.mkdir(parents=True, exist_ok=True) path only; no product mutation / no git stash of api.py",
+      "result": "pass",
+      "detail": "Under umask 0o000 the legacy mkdir produced a root with group and other bits set (not 0700), proving the guarded gap is real and mutation-capable. Current product write_token_file refuses missing parent instead.",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log",
+        "artifacts/ulw-l01/probes_test.py"
+      ]
+    },
+    {
+      "id": "adv-b-readonly-parent-fail-closed",
+      "title": "start_local_api with read-only parent fails closed with no partial root",
+      "method": "Parent chmod 0500; start_local_api on child root; assert OSError and empty parent",
+      "result": "pass",
+      "detail": "ensure cannot create the root under a non-writable parent; no partial directory remains.",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log"
+      ]
+    },
+    {
+      "id": "adv-c-repair-on-start",
+      "title": "ensure then chmod 0755 then start_local_api repairs root to 0700",
+      "method": "paths.ensure(); chmod root+blobs 0755; start_local_api; assert 0700/0700/token 0600",
+      "result": "pass",
+      "detail": "start_local_api re-enters ensure and repairs a widened root before publishing the token.",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log"
+      ]
+    },
+    {
+      "id": "adv-d-guide-honesty",
+      "title": "First-run guide disclosures present; 격리/sandbox/confine absent in guide block",
+      "method": "Source-slice renderFirstRunGuide body; require ~/.nipo-science, 루프백, in_process, Keychain; forbid sandbox/격리/confine/confinement",
+      "result": "pass",
+      "detail": "Guide block is honest. Note (non-blocking): other app.js surfaces use the word 격리 in residual-disclosure copy (e.g. '격리 없음'); those are outside the first-run guide contract and still refuse sandbox claims.",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log"
+      ]
+    },
+    {
+      "id": "adv-e-hostile-env-host-sweep",
+      "title": "Hostile HOST-shaped env sweep beyond named-test list still cannot widen bind",
+      "method": "Set UVICORN_HOST, SERVER_HOST, BIND_ADDR, FASTAPI_HOST, ASGI_HOST, NIPO_ALLOW_REMOTE, etc. to wildcard; bind_loopback/start_local_api with 0.0.0.0/::/192.0.2.1 raise NonLoopbackBindError; control 127.0.0.1 still binds",
+      "result": "pass",
+      "detail": "Bind path ignores env entirely; only the explicit host argument is considered and non-loopback is refused.",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log"
+      ]
+    },
+    {
+      "id": "adv-docs-boundary",
+      "title": "SPEC §14 + requirements.yaml L01 residual and claim mapping",
+      "method": "Assert packaged-installer residual retained; L01 not in implemented_and_verified; positive claims map to ensure-before-token / guide / DEFAULT_ROOT code",
+      "result": "pass",
+      "detail": "No overclaim of full L01 or shipped installer. See docsClaimMap.",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log",
+        "artifacts/ulw-l01/logs/docs-honesty-notes.log"
+      ]
+    },
+    {
+      "id": "adv-write-token-refuses",
+      "title": "Product write_token_file still refuses missing root",
+      "method": "write_token_file against absent root raises OSError matching 'local data root does not exist'; root stays absent",
+      "result": "pass",
+      "detail": "Cross-check of product path after probe-local legacy simulation.",
+      "artifactRefs": [
+        "artifacts/ulw-l01/logs/probes-adversarial.log"
+      ]
+    }
+  ],
+  "docsClaimMap": [
+    {
+      "claim": "starting the local API creates the owner-only data root through LocalPaths.ensure before any token write",
+      "mappedTo": [
+        "test_start_local_api_ensures_owner_only_root_before_token_write",
+        "api.py start_local_api: paths.ensure() before bind/token"
+      ],
+      "status": "supported"
+    },
+    {
+      "claim": "the token writer refuses to create the root itself, so a permissive umask can never widen the layout",
+      "mappedTo": [
+        "test_token_file_write_refuses_to_create_the_data_root",
+        "test_a_permissive_umask_cannot_widen_the_layout",
+        "adv-a-legacy-mkdir-umask-gap (gap reality)"
+      ],
+      "status": "supported"
+    },
+    {
+      "claim": "empty workspace shows a guided first-run panel disclosing data-root location outside synced directories, loopback-only interface, and in_process + Keychain residuals",
+      "mappedTo": [
+        "test_guided_first_run_copy_is_present_and_discloses_isolation",
+        "adv-d-guide-honesty",
+        "test_probe_default_root_is_outside_documents"
+      ],
+      "status": "supported"
+    },
+    {
+      "claim": "L01 remains partial only in that a packaged installer is out of scope",
+      "mappedTo": [
+        "requirements.yaml partially_implemented.L01",
+        "adv-docs-boundary"
+      ],
+      "status": "supported-residual-retained"
+    },
+    {
+      "claim": "AC-L01: owner-only root + loopback-only + no remote knob + cross-origin refused",
+      "mappedTo": [
+        "named ensure/umask/loopback/env/cross-origin nodes"
+      ],
+      "status": "supported"
+    }
+  ],
+  "overclaims": [],
+  "notes": [
+    "Packaged installer residual is honestly retained; L01 not listed under implemented_and_verified.",
+    "No product-file modification by this lane; probes only under artifacts/ulw-l01/.",
+    "node --check apps/web/local/app.js exit 0; styles.css not a JS module (node --check N/A).",
+    "Guide-block honesty is scoped to renderFirstRunGuide; other UI residual disclosures may use the word 격리 to say isolation is absent — not a first-run overclaim."
+  ],
+  "blockers": [],
+  "artifactRefs": [
+    "artifacts/ulw-l01/qa-l01-report.json",
+    "artifacts/ulw-l01/probes_test.py",
+    "artifacts/ulw-l01/logs/named-l01.log",
+    "artifacts/ulw-l01/logs/probes-adversarial.log",
+    "artifacts/ulw-l01/logs/node-check-appjs.log",
+    "artifacts/ulw-l01/logs/docs-honesty-notes.log"
+  ]
+}

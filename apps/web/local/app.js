@@ -959,6 +959,76 @@
     return row;
   }
 
+  /**
+   * Guided first-run panel for an empty project list.
+   *
+   * Shown only when the workspace has zero projects. Discloses the data root,
+   * loopback-only bind, in_process execution residual, and the Keychain
+   * master-key residual (SPEC section 11).
+   */
+  function renderFirstRunGuide() {
+    const createCta = el("button", {
+      class: "button button--primary",
+      type: "button",
+      text: "첫 프로젝트 만들기",
+      "data-action": "first-run-create-project",
+      on: {
+        click: () => {
+          const heading = document.getElementById("create-project-heading");
+          const input = document.getElementById("new-project-name");
+          if (heading) heading.scrollIntoView({ block: "start", behavior: "smooth" });
+          if (input) input.focus();
+        },
+      },
+    });
+    const settingsCta = el("a", {
+      class: "button",
+      href: "#/settings/models",
+      text: "모델/제공자 설정 열기",
+      "data-action": "first-run-open-settings",
+    });
+
+    return el(
+      "div",
+      {
+        class: "first-run-guide",
+        "data-first-run": "true",
+        role: "region",
+        "aria-labelledby": "first-run-heading",
+      },
+      [
+        el("h3", { id: "first-run-heading", text: "시작하기 전에" }),
+        el("p", {
+          class: "first-run-guide__lede",
+          text: "이 설치본은 이 컴퓨터에서만 동작하는 단일 사용자 로컬 환경입니다. 아래를 확인한 뒤 첫 프로젝트를 만드세요.",
+        }),
+        el("ul", { class: "first-run-guide__facts" }, [
+          el("li", {
+            text:
+              "데이터는 홈 디렉터리의 로컬 데이터 루트(~/.nipo-science)에 저장됩니다. " +
+              "클라우드 동기화 폴더 밖에 있으며, 소유자 전용 권한으로 유지됩니다.",
+          }),
+          el("li", {
+            text:
+              "서버는 루프백 전용으로만 바인딩되며, 외부 접속을 여는 설정·환경 변수·플래그는 없습니다.",
+          }),
+          el("li", {
+            "data-isolation": "in_process",
+            text:
+              "분석은 공시된 in_process 방식으로 이 설치본의 프로세스 안에서 실행됩니다. " +
+              "프로세스 경계를 넘는 통제를 주장하지 않으며, 연구자 계정의 권한을 그대로 사용합니다.",
+          }),
+          el("li", {
+            text:
+              "제공자 키를 봉인하는 Keychain 마스터 키 항목은 신뢰 앱 목록 없이 만들어지므로, " +
+              "이 앱만 읽을 수 있다고 말하지 않습니다. 같은 계정으로 도는 다른 프로세스도 접근할 수 있습니다.",
+          }),
+        ]),
+        el("div", { class: "actions first-run-guide__actions" }, [createCta, settingsCta]),
+      ],
+    );
+  }
+
   async function renderWorkspace() {
     document.title = "워크스페이스 — Nipo Science local";
     workspaceTitle.textContent = "워크스페이스";
@@ -1042,7 +1112,7 @@
           }),
         ]),
         projects.length === 0
-          ? emptyState("아직 프로젝트가 없습니다", "아래에서 첫 프로젝트를 만들어 시작하세요.")
+          ? renderFirstRunGuide()
           : el("ul", { class: "object-list" }, projects.map((item) => projectRow(item, reload))),
       ]),
       el("section", { class: "section", "aria-labelledby": "create-project-heading" }, [

@@ -317,7 +317,7 @@
   "conformance": {
     "implemented_and_verified": ["L04", "L05", "L06", "L07", "L08", "L09", "L11", "L12"],
     "partially_implemented": {
-      "L01": "loopback_interface_serves_the_front_end_at_its_own_origin_first_run_install_flow_absent"
+      "L01": "installation_first_run_and_loopback_interface_present_first_run_packaging_installer_out_of_scope"
     },
     "not_implemented": ["L02", "L03", "L10"],
     "contracts_present_but_unreachable_from_the_local_app": [],

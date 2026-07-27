@@ -17,9 +17,11 @@ elsewhere in this repository.
 import asyncio
 import hashlib
 import http.client
+import inspect
 import io
 import ipaddress
 import json
+import os
 import socket
 import sqlite3
 import stat
@@ -53,6 +55,7 @@ from nipo_local.api import (
     create_app,
     default_deps,
     start_local_api,
+    write_token_file,
 )
 from nipo_local.apiquery import LocalReadModel
 from nipo_local.apiserver import (
@@ -598,6 +601,65 @@ def test_bound_loopback_socket_reports_a_loopback_name() -> None:
         listener.close()
 
 
+def test_no_remote_access_env_or_flag_widens_bind(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """No public parameter, env var, or flag accepts a non-loopback bind."""
+    start_names = set(inspect.signature(start_local_api).parameters)
+    bind_names = set(inspect.signature(bind_loopback).parameters)
+    assert start_names == {"paths", "deps", "host", "port", "web"}
+    assert bind_names == {"host", "port"}
+    wildcard = "0.0.0.0"  # noqa: S104 - the hostile value this test proves is refused
+    for name, value in (
+        ("NIPO_HOST", wildcard),
+        ("NIPO_BIND", wildcard),
+        ("NIPO_BIND_HOST", wildcard),
+        ("HOST", wildcard),
+        ("BIND_HOST", wildcard),
+        ("NIPO_REMOTE", "1"),
+        ("NIPO_ALLOW_REMOTE", "1"),
+        ("NIPO_LISTEN", wildcard),
+    ):
+        monkeypatch.setenv(name, value)
+    with pytest.raises(NonLoopbackBindError):
+        _ = bind_loopback("0.0.0.0", 0)  # noqa: S104 - the address under test
+    with pytest.raises(NonLoopbackBindError):
+        _ = bind_loopback("::", 0)
+    paths = resolve_paths(tmp_path / "root")
+    paths.ensure()
+    store = LocalArtifactStore(paths)
+    registry = ProviderRegistry(paths, InMemoryCredentialBackend(), {})
+    read_model = LocalReadModel(paths)
+    try:
+        with pytest.raises(NonLoopbackBindError):
+            _ = start_local_api(
+                paths,
+                default_deps(store, registry, read_model, paths),
+                host="0.0.0.0",  # noqa: S104 - the address under test
+            )
+        with pytest.raises(NonLoopbackBindError):
+            _ = start_local_api(
+                paths,
+                default_deps(store, registry, read_model, paths),
+                host="::",
+            )
+        # A default-host start under the same hostile environment still binds
+        # loopback: no environment variable can ever become the default host.
+        running = start_local_api(
+            paths,
+            default_deps(store, registry, read_model, paths),
+        )
+        try:
+            bound = running.server.base_url
+            assert "127.0.0.1" in bound
+        finally:
+            running.server.stop()
+    finally:
+        store.close()
+        read_model.close()
+
+
 # --------------------------------------------------------------------------
 # The local session credential
 # --------------------------------------------------------------------------
@@ -691,6 +753,52 @@ def test_closing_the_api_removes_the_credential_file(tmp_path: Path) -> None:
     assert path.exists()
     harness.close()
     assert not path.exists()
+
+
+def test_start_local_api_ensures_owner_only_root_before_token_write(
+    tmp_path: Path,
+) -> None:
+    """A fresh root is owner-only even under a fully permissive umask."""
+    paths = resolve_paths(tmp_path / "root")
+    assert not paths.root.exists()
+    # Deps are held but unused at start: create_app only retains them. Using
+    # real store/registry constructors would call paths.ensure() first and hide
+    # whether start_local_api itself creates the owner-only layout.
+    deps = LocalApiDeps(
+        store=cast("LocalArtifactStore", object()),
+        registry=cast("ProviderRegistry", object()),
+        read_model=cast("LocalReadModel", object()),
+        paths=paths,
+        clock=SystemClock(),
+        ids=Uuid7Factory(),
+    )
+    previous = os.umask(0o000)
+    api: RunningLocalApi | None = None
+    try:
+        api = start_local_api(paths, deps)
+        assert stat.S_IMODE(paths.root.stat().st_mode) == 0o700
+        assert stat.S_IMODE(paths.blobs.stat().st_mode) == 0o700
+        assert stat.S_IMODE(api.token_path.stat().st_mode) == 0o600
+        assert api.token_path.parent == paths.root
+        assert api.token_path.parent.is_dir()
+    finally:
+        _ = os.umask(previous)
+        if api is not None:
+            api.close()
+
+
+def test_token_file_write_refuses_to_create_the_data_root(tmp_path: Path) -> None:
+    """write_token_file fails closed when the data root does not exist yet."""
+    paths = resolve_paths(tmp_path / "missing")
+    assert not paths.root.exists()
+    with pytest.raises(OSError, match="local data root does not exist"):
+        _ = write_token_file(
+            paths,
+            LocalToken("probe-token-value"),
+            "http://127.0.0.1:9",
+        )
+    assert not paths.root.exists()
+    assert not (tmp_path / "missing").exists()
 
 
 def test_the_token_never_appears_in_any_response(local: Harness) -> None:

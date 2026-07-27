@@ -288,6 +288,7 @@ guessing at a download URL.
 """
 
 _MODE_MESSAGE: Final = "local credential file is not owner-only"
+_TOKEN_PARENT_MESSAGE: Final = "local data root does not exist"  # noqa: S105 - a message, not a secret
 _REDACTED_REPR: Final = "LocalToken(value=<redacted>)"
 
 
@@ -371,6 +372,13 @@ def token_file(paths: LocalPaths) -> Path:
 def write_token_file(paths: LocalPaths, token: LocalToken, base_url: str) -> Path:
     """Publish the credential owner-only, from the instant the file exists.
 
+    The data root must already exist. This function never creates it: a
+    parent.mkdir here would apply the process umask and could leave a
+    world-readable layout on a fresh install. Call
+    :meth:`~nipo_local.config.LocalPaths.ensure` first (as
+    :func:`start_local_api` does) so the root and blob directories are
+    owner-only before any credential lands.
+
     Args:
         paths: The resolved local layout.
         token: The per-run credential.
@@ -380,11 +388,13 @@ def write_token_file(paths: LocalPaths, token: LocalToken, base_url: str) -> Pat
         The path written.
 
     Raises:
-        OSError: The file could not be created owner-only. It is removed
-            first, so a widened file is never left behind.
+        OSError: The data root is missing, or the file could not be
+            created owner-only. A widened file is removed first so it is
+            never left behind.
     """
     path = token_file(paths)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.parent.is_dir():
+        raise OSError(_TOKEN_PARENT_MESSAGE)
     path.unlink(missing_ok=True)
     payload = json.dumps(
         {"base_url": base_url, "header": TOKEN_HEADER, "token": token.value},
@@ -2587,6 +2597,12 @@ def start_local_api(
 ) -> RunningLocalApi:
     """Bind loopback, publish a fresh credential, and start serving.
 
+    The owner-only data root is ensured *before* the socket is bound and
+    before the token file is written. A fresh install must never create
+    the data root as a side effect of the token write under the process
+    umask; :meth:`~nipo_local.config.LocalPaths.ensure` is the sole layout
+    creator and chmods each directory to owner-only after mkdir.
+
     The socket is bound *before* the application is built, because the
     accepted origins and `Host` authorities are derived from the port the
     kernel actually assigned rather than from one this process hoped for.
@@ -2604,6 +2620,7 @@ def start_local_api(
         The running API, its credential, and the path that credential was
         published to.
     """
+    paths.ensure()
     listener = bind_loopback(host, port)
     try:
         bound = cast("tuple[object, ...]", listener.getsockname())

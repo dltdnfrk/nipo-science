@@ -1,0 +1,29 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/nipo-gjc/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/nipo-gjc
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 19 items
+
+apps/local/tests/test_api.py::test_start_local_api_ensures_owner_only_root_before_token_write PASSED [  5%]
+apps/local/tests/test_api.py::test_no_remote_access_env_or_flag_widens_bind PASSED [ 10%]
+apps/local/tests/test_api.py::test_token_file_write_refuses_to_create_the_data_root PASSED [ 15%]
+apps/local/tests/test_api.py::test_listening_socket_is_bound_to_the_loopback_address PASSED [ 21%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[0.0.0.0] PASSED [ 26%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[::] PASSED [ 31%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[0] PASSED [ 36%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[192.0.2.1] PASSED [ 42%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[10.0.0.1] PASSED [ 47%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[example.com] PASSED [ 52%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[] PASSED [ 57%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[ 127.0.0.1] PASSED [ 63%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[127.0.0.1 ] PASSED [ 68%]
+apps/local/tests/test_api.py::test_binding_refuses_every_non_loopback_host[localhost.evil.test] PASSED [ 73%]
+apps/local/tests/test_api.py::test_cross_origin_state_change_is_refused_and_changes_nothing PASSED [ 78%]
+apps/local/tests/test_config.py::test_ensure_creates_an_owner_only_root_and_blob_directory PASSED [ 84%]
+apps/local/tests/test_config.py::test_a_permissive_umask_cannot_widen_the_layout PASSED [ 89%]
+apps/local/tests/test_config.py::test_ensure_repairs_a_root_created_before_the_rule PASSED [ 94%]
+apps/local/tests/test_webui.py::test_guided_first_run_copy_is_present_and_discloses_isolation PASSED [100%]
+
+============================== 19 passed in 0.31s ==============================

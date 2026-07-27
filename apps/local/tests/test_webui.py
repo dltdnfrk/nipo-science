@@ -324,3 +324,51 @@ def test_the_plan_approval_screen_renders_digest_code_elements() -> None:
     assert '"data-action": "create-plan"' in source
     assert '"data-action": "approve-plan"' in source
     assert "플랜 작성" in source
+
+
+def test_guided_first_run_copy_is_present_and_discloses_isolation() -> None:
+    # L01 first-run: zero projects must show a guided panel that names the data
+    # root, loopback-only bind, and in_process residual without claiming a
+    # sandbox or confinement. Projects present must take the list branch.
+    source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+    styles = (SHIPPED_ROOT / "styles.css").read_text(encoding="utf-8")
+
+    assert "function renderFirstRunGuide" in source
+    guide_start = source.index("function renderFirstRunGuide")
+    guide_end = source.index("async function renderWorkspace", guide_start)
+    guide = source[guide_start:guide_end]
+
+    assert "~/.nipo-science" in guide
+    assert "루프백" in guide
+    assert "in_process" in guide
+    assert (
+        'data-isolation": "in_process"' in guide
+        or '"data-isolation": "in_process"' in guide
+    )
+    assert "Keychain" in guide
+    assert "첫 프로젝트 만들기" in guide
+    assert "모델/제공자 설정 열기" in guide
+    assert "#/settings/models" in guide
+    assert "create-project-heading" in guide or "new-project-name" in guide
+    assert "sandbox" not in guide.lower()
+    assert "격리" not in guide
+    assert "confinement" not in guide.lower()
+
+    workspace_start = source.index("async function renderWorkspace")
+    workspace_end = source.index(
+        "// -------------------------------------------------------- project detail --",
+        workspace_start,
+    )
+    workspace = source[workspace_start:workspace_end]
+
+    assert "projects.length === 0" in workspace
+    assert "renderFirstRunGuide()" in workspace
+    assert 'emptyState("아직 프로젝트가 없습니다"' not in workspace
+    # Non-empty list takes the object-list branch; the guide is not on that path.
+    assert "projects.map((item) => projectRow(item, reload))" in workspace
+    assert (
+        "renderFirstRunGuide()"
+        not in workspace.split("projects.map((item) => projectRow(item, reload))")[1]
+    )
+
+    assert ".first-run-guide" in styles
