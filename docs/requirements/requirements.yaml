@@ -315,11 +315,11 @@
     "export_pins_versions": true
   },
   "conformance": {
-    "implemented_and_verified": ["L04", "L05", "L06", "L07", "L08", "L09", "L11", "L12"],
+    "implemented_and_verified": ["L03", "L04", "L05", "L06", "L07", "L08", "L09", "L11", "L12"],
     "partially_implemented": {
       "L01": "installation_first_run_and_loopback_interface_present_first_run_packaging_installer_out_of_scope"
     },
-    "not_implemented": ["L02", "L03", "L10"],
+    "not_implemented": ["L02", "L10"],
     "contracts_present_but_unreachable_from_the_local_app": [],
     "disclosed_divergences": [
       "execution_isolation_is_in_process",

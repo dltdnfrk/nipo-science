@@ -1,0 +1,51 @@
+{
+  "kind": "owner-disposition",
+  "story": "L03 measurement-file product intake",
+  "goal": "G001",
+  "lane": "ulw-l03",
+  "sourceReport": "artifacts/ulw-l03/qa-l03-report.json",
+  "decidedAt": "2026-07-27",
+  "dispositions": [
+    {
+      "id": "blk-d2",
+      "probe": "test_probe_d2_calibration_digest_is_researcher_claim_accepted_201",
+      "kind": "by-design-documented",
+      "decision": "calibration_sha256 is a field of CalibrationEntry beside reference (packages/science/science_workbench_science/inputs.py:53). It is the researcher's claim about the calibration REFERENCE material, never the data file. The product pattern-validates it and pins it into provenance but MUST NOT recompute it against measurement bytes. Disposition is document the design explicitly and flip probe D2 to assert the documented accept behavior.",
+      "filesChanged": [
+        "docs/spec/SPEC-v0.5.md",
+        "artifacts/ulw-l03/probes_test.py",
+        "artifacts/ulw-l03/owner-disposition.json"
+      ],
+      "evidenceRefs": [
+        "docs/spec/SPEC-v0.5.md section 14 (calibration_sha256 researcher-claim sentence)",
+        "packages/science/science_workbench_science/inputs.py:53 CalibrationMetadata.calibration_sha256",
+        "artifacts/ulw-l03/probes_test.py::test_probe_d2_calibration_digest_is_researcher_claim_accepted_201"
+      ]
+    },
+    {
+      "id": "blk-e",
+      "probe": "test_probe_e_swapped_calibration_digest_run_start_refuses",
+      "kind": "hardening-implemented",
+      "decision": "Run-start optionally pins the uploaded input digest. CreateRunRequest gains optional input_sha256; when present, _start_run recomputes hashlib.sha256(source.model_dump_json().encode('utf-8')).hexdigest() immediately after _probe_input and before any store lookup, refusing 409 INPUT_DIGEST_MISMATCH on mismatch so the approval stays unspent. Absent field keeps frozen-wire behavior. The local interface submits the upload receipt digest whenever it holds one.",
+      "filesChanged": [
+        "apps/local/nipo_local/apitypes.py",
+        "apps/local/nipo_local/api.py",
+        "apps/local/tests/test_input_api.py",
+        "apps/web/local/app.js",
+        "docs/spec/SPEC-v0.5.md",
+        "artifacts/ulw-l03/probes_test.py",
+        "artifacts/ulw-l03/owner-disposition.json"
+      ],
+      "evidenceRefs": [
+        "docs/spec/SPEC-v0.5.md section 14 (run-start input_sha256 pin sentence)",
+        "apps/local/nipo_local/apitypes.py CreateRunRequest.input_sha256",
+        "apps/local/nipo_local/apitypes.py ApiErrorCode.INPUT_DIGEST_MISMATCH",
+        "apps/local/nipo_local/api.py _start_run input_sha256 guard",
+        "apps/web/local/app.js onStartRun input_sha256 pin from inputReceipt",
+        "artifacts/ulw-l03/probes_test.py::test_probe_e_swapped_calibration_digest_run_start_refuses",
+        "apps/local/tests/test_input_api.py::test_run_start_with_pinned_input_sha256_matches_and_completes",
+        "apps/local/tests/test_input_api.py::test_run_start_with_mismatched_input_sha256_refuses_before_any_side_effect"
+      ]
+    }
+  ]
+}

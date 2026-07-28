@@ -89,7 +89,11 @@ PRINTABLE_ASCII: Final = range(0x21, 0x7F)
 REQUEST_LINE_PARTS: Final = 3
 
 MAX_HEADER_BYTES: Final = 16 * 1024
-MAX_BODY_BYTES: Final = 8 * 1024 * 1024
+MAX_BODY_BYTES: Final = 32 * 1024 * 1024
+# Raised from 8 MiB for the L03 product intake: base64(16 MiB data) ≈ 21.4 MiB
+# + manifest + JSON envelope fits under 32 MiB with headroom for run-start
+# (worst-case accepted ProbeInput JSON ≤ 24 MiB). Pre-app refusal for every
+# request body, including upload and run-start.
 # `HTTPStatus.REQUEST_ENTITY_TOO_LARGE` was renamed in a later Python; the
 # numeric status is the stable spelling across the versions this repo supports.
 TOO_LARGE: Final = HTTPStatus(413)

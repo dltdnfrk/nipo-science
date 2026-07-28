@@ -1,0 +1,101 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/nipo-gjc/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/nipo-gjc
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 10 items
+
+artifacts/ulw-l03/probes_test.py::test_probe_a_oversized_base64_prefused_before_decode_allocation PASSED [ 10%]
+artifacts/ulw-l03/probes_test.py::test_probe_b_decoded_size_guard_both_directions_zero_staging PASSED [ 20%]
+artifacts/ulw-l03/probes_test.py::test_probe_c_traversal_and_lookalike_filenames_refused PASSED [ 30%]
+artifacts/ulw-l03/probes_test.py::test_probe_d1_table_kind_with_spectrum_manifest_is_kind_mismatch PASSED [ 40%]
+artifacts/ulw-l03/probes_test.py::test_probe_d2_calibration_digest_mismatching_data_file_is_refused FAILED [ 50%]
+artifacts/ulw-l03/probes_test.py::test_probe_e_swapped_calibration_digest_run_start_refuses FAILED [ 60%]
+artifacts/ulw-l03/probes_test.py::test_probe_f_canary_sweep_refusal_bodies_never_echo PASSED [ 70%]
+artifacts/ulw-l03/probes_test.py::test_probe_g_worst_case_spectrum_point_boundary PASSED [ 80%]
+artifacts/ulw-l03/probes_test.py::test_probe_h_staging_residue_audit_mixed_uploads PASSED [ 90%]
+artifacts/ulw-l03/probes_test.py::test_probe_docs_honesty_l03_claims PASSED [100%]
+
+=================================== FAILURES ===================================
+______ test_probe_d2_calibration_digest_mismatching_data_file_is_refused _______
+
+local = <qa_l03_test_input_api.Harness object at 0x10b47a6c0>
+
+    def test_probe_d2_calibration_digest_mismatching_data_file_is_refused(
+        local: Harness,
+    ) -> None:
+        """Assignment contract: a manifest whose calibration_sha256 does not match
+        the actual data file must refuse metadata_rejected with a science token.
+    
+        At HEAD loaders.py only pattern-validates the digest (a claim about the
+        calibration reference, never recomputed against the uploaded bytes), so
+        this probe is expected to FAIL until digest verification exists.
+        """
+        project_id = local.make_project()
+        data = SPECTRUM_CSV.encode()
+        actual_digest = hashlib.sha256(data).hexdigest()
+        assert CALIBRATION_DIGEST != actual_digest  # the shipped manifest mismatches
+        before = local.counts()
+        reply = local.upload_probe(project_id, data=data, manifest=SPECTRUM_MANIFEST)
+>       assert reply.status == 422, (
+            f"digest-mismatched manifest was accepted with status {reply.status}; "
+            "no calibration_sha256-vs-data verification exists at intake"
+        )
+E       AssertionError: digest-mismatched manifest was accepted with status 201; no calibration_sha256-vs-data verification exists at intake
+E       assert 201 == 422
+E        +  where 201 = Reply(status=201, headers={'content-type': 'application/json', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; frame-ancestors 'none'", 'x-frame-options': 'DENY', 'cross-origin-resource-policy': 'same-origin', 'vary': 'Origin', 'content-length': '695', 'connection': 'close'}, body=b'{"scientific_input":{"table":null,"spectrum":{"wavelengths":[400.0,410.0,420.0,430.0,440.0,450.0,460.0],"intensities":[0.1,0.35,0.2,0.55,0.25,0.3,0.15],"metadata":{"units":[{"quantity":"wavelength","ucum_code":"nm"},{"quantity":"intensity","ucum_code":"1"}],"calibration":{"method":"two-point NIST-traceable","reference":"SRM 2242a","calibrated_at":"2026-01-04T09:30:00Z","calibration_sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},"lineage_version_ids":["018f47a0-7b9c-7aaa-8def-0123456789ab"],"research_only":true,"non_clinical":true}},"image":null,"report":null},"input_sha256":"7c442a386d2201c4e60743f9d2f22d9766d94212d89a392fa2984b72971ce54a","kind":"spectrum"}').status
+
+artifacts/ulw-l03/probes_test.py:216: AssertionError
+__________ test_probe_e_swapped_calibration_digest_run_start_refuses ___________
+
+local = <qa_l03_test_input_api.Harness object at 0x10b5625a0>
+
+    def test_probe_e_swapped_calibration_digest_run_start_refuses(
+        local: Harness,
+    ) -> None:
+        """Assignment contract: ProbeInput tampered between upload and run-start
+        (calibration digest swapped for another well-formed digest) must refuse
+        with zero durable side effects.
+    
+        At HEAD run-start revalidation is structural only
+        (ProbeInput.model_validate_json) and the approval binds the intent digest,
+        not the input digest, so this probe is expected to FAIL until the held
+        input digest is pinned at run-start.
+        """
+        project_id = local.make_project()
+        session_id = local.make_session(project_id)
+        uploaded = local.upload_probe(project_id)
+        assert uploaded.status == 201
+        scientific_input = as_dict(uploaded.payload()["scientific_input"])
+        spectrum = as_dict(scientific_input["spectrum"])
+        metadata = as_dict(spectrum["metadata"])
+        calibration = as_dict(metadata["calibration"])
+        assert calibration["calibration_sha256"] == CALIBRATION_DIGEST
+        calibration["calibration_sha256"] = SWAPPED_DIGEST
+        plan = local.create_plan(project_id, session_id)
+        approval = local.approve_plan(project_id, str(plan["plan_id"]))
+        before = local.counts()
+        run = local.start_run(
+            project_id,
+            session_id,
+            str(approval["approval_id"]),
+            scientific_input,
+        )
+>       assert run.status in {400, 422}, (
+            f"tampered ProbeInput (swapped calibration digest) started a run with "
+            f"status {run.status}; run-start does not pin the uploaded input digest"
+        )
+E       AssertionError: tampered ProbeInput (swapped calibration digest) started a run with status 201; run-start does not pin the uploaded input digest
+E       assert 201 in {400, 422}
+E        +  where 201 = Reply(status=201, headers={'content-type': 'application/json', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; frame-ancestors 'none'", 'x-frame-options': 'DENY', 'cross-origin-resource-policy': 'same-origin', 'vary': 'Origin', 'content-length': '337', 'connection': 'close'}, body=b'{"run_id":"019fa5d8-3fe9-7046-bc8e-8503222b8439","execution_id":"019fa5d8-3fd5-72d9-8f00-a12f885d97b6","state":"completed","output_version_ids":["019fa5d8-3feb-7945-b879-eca7cd6ad8cc","019fa5d8-3fed-7ba7-ba07-a382a0190ae5","019fa5d8-3fee-77a7-a57f-dac93bcebd7a","019fa5d8-3fef-7e8f-a95c-472e28c4fd0a"],"execution_isolation":"in_process"}').status
+
+artifacts/ulw-l03/probes_test.py:258: AssertionError
+=========================== short test summary info ============================
+FAILED artifacts/ulw-l03/probes_test.py::test_probe_d2_calibration_digest_mismatching_data_file_is_refused - AssertionError: digest-mismatched manifest was accepted with status 201; no calibration_sha256-vs-data verification exists at intake
+assert 201 == 422
+ +  where 201 = Reply(status=201, headers={'content-type': 'application/json', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; frame-ancestors 'none'", 'x-frame-options': 'DENY', 'cross-origin-resource-policy': 'same-origin', 'vary': 'Origin', 'content-length': '695', 'connection': 'close'}, body=b'{"scientific_input":{"table":null,"spectrum":{"wavelengths":[400.0,410.0,420.0,430.0,440.0,450.0,460.0],"intensities":[0.1,0.35,0.2,0.55,0.25,0.3,0.15],"metadata":{"units":[{"quantity":"wavelength","ucum_code":"nm"},{"quantity":"intensity","ucum_code":"1"}],"calibration":{"method":"two-point NIST-traceable","reference":"SRM 2242a","calibrated_at":"2026-01-04T09:30:00Z","calibration_sha256":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},"lineage_version_ids":["018f47a0-7b9c-7aaa-8def-0123456789ab"],"research_only":true,"non_clinical":true}},"image":null,"report":null},"input_sha256":"7c442a386d2201c4e60743f9d2f22d9766d94212d89a392fa2984b72971ce54a","kind":"spectrum"}').status
+FAILED artifacts/ulw-l03/probes_test.py::test_probe_e_swapped_calibration_digest_run_start_refuses - AssertionError: tampered ProbeInput (swapped calibration digest) started a run with status 201; run-start does not pin the uploaded input digest
+assert 201 in {400, 422}
+ +  where 201 = Reply(status=201, headers={'content-type': 'application/json', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; frame-ancestors 'none'", 'x-frame-options': 'DENY', 'cross-origin-resource-policy': 'same-origin', 'vary': 'Origin', 'content-length': '337', 'connection': 'close'}, body=b'{"run_id":"019fa5d8-3fe9-7046-bc8e-8503222b8439","execution_id":"019fa5d8-3fd5-72d9-8f00-a12f885d97b6","state":"completed","output_version_ids":["019fa5d8-3feb-7945-b879-eca7cd6ad8cc","019fa5d8-3fed-7ba7-ba07-a382a0190ae5","019fa5d8-3fee-77a7-a57f-dac93bcebd7a","019fa5d8-3fef-7e8f-a95c-472e28c4fd0a"],"execution_isolation":"in_process"}').status
+========================= 2 failed, 8 passed in 2.41s ==========================

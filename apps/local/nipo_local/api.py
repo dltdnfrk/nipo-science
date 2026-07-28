@@ -75,10 +75,14 @@ state-changing and therefore also refused cross-site. There is deliberately no
 route that decides *which* packs to remove: see :func:`_export_router`.
 """
 
+import base64
+import hashlib
 import json
 import os
 import secrets
+import shutil
 import stat
+import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from http import HTTPStatus
@@ -150,10 +154,14 @@ from .apitypes import (
     ExportPlanBody,
     HealthBody,
     KeyRejection,
+    LoaderRejection,
     LocalNameError,
     NameRejection,
     PackDocumentBody,
     PackEntryBody,
+    ProbeKind,
+    ProbeUploadBody,
+    ProbeUploadRequest,
     ProjectBody,
     ProjectList,
     ProvenanceBody,
@@ -206,6 +214,18 @@ from .exportrun import (
     produce_pack,
     read_pack,
     stream_pack,
+)
+from .loaders import (
+    DataFileNotFoundError,
+    LoaderError,
+    MalformedDataError,
+    ManifestKindMismatchError,
+    ManifestNotFoundError,
+    ManifestSchemaError,
+    ManifestSyntaxError,
+    MetadataPolicy,
+    MetadataRejectedError,
+    load_probe,
 )
 from .providers import (
     CredentialStoreCorruptError,
@@ -290,6 +310,38 @@ guessing at a download URL.
 _MODE_MESSAGE: Final = "local credential file is not owner-only"
 _TOKEN_PARENT_MESSAGE: Final = "local data root does not exist"  # noqa: S105 - a message, not a secret
 _REDACTED_REPR: Final = "LocalToken(value=<redacted>)"
+PRODUCT_UPLOAD_DATA_BYTES: Final = 16 * 1024 * 1024
+"""Decoded measurement-file cap on the product upload path.
+
+base64(16 MiB) ≈ 21.4 MiB + manifest + JSON overhead stays under the 32 MiB
+shared body cap; loaders.MAX_* stay at 64 MiB for module/CLI users.
+"""
+
+PRODUCT_UPLOAD_IMAGE_PIXELS: Final = 250_000
+"""Product-path pixel cap enforced after a successful image load.
+
+250k px at ~14 B per RGB triple is ~3.5 MB serialized ProbeInput, well under
+the 32 MiB body cap. Module loaders keep MAX_IMAGE_PIXELS = 4_000_000.
+"""
+
+PRODUCT_UPLOAD_SPECTRUM_POINTS: Final = 400_000
+"""Product-path spectrum point cap, pinned against real JSON expansion.
+
+A 16 MiB CSV can hold ~840k points; long float reprs push the serialized
+ProbeInput past the shared body budget. 400k points keeps the worst-case
+document under PRODUCT_PROBE_JSON_BYTES.
+"""
+
+PRODUCT_PROBE_JSON_BYTES: Final = 24 * 1024 * 1024
+"""Upper bound on serialized ProbeInput JSON returned by the upload route.
+
+24 MiB ≤ 32 MiB body cap with headroom for the run-start envelope fields.
+Measured via ``len(ProbeInput.model_dump_json().encode())`` after load.
+"""
+
+STAGING_DIR_NAME: Final = "staging"
+STAGING_DIR_MODE: Final = 0o700
+STAGING_FILE_MODE: Final = 0o600
 
 
 @final
@@ -304,8 +356,10 @@ class LocalApiError(Exception):
         | ExportRunRejection
         | ExportRejection
         | RunRejection
+        | LoaderRejection
         | None
     )
+    science_issue: str | None
 
     def __init__(
         self,
@@ -316,13 +370,17 @@ class LocalApiError(Exception):
         | ExportRunRejection
         | ExportRejection
         | RunRejection
+        | LoaderRejection
         | None = None,
+        *,
+        science_issue: str | None = None,
     ) -> None:
         """Record the refusal without retaining anything the caller sent."""
         super().__init__(str(code))
         self.status = status
         self.code = code
         self.reason = reason
+        self.science_issue = science_issue
 
 
 @final
@@ -744,7 +802,11 @@ async def _send_error(send: Send, error: LocalApiError) -> None:
 
 def _error_body(error: LocalApiError) -> bytes:
     """Serialize one refusal, quoting nothing the caller supplied."""
-    payload = ErrorBody(error=error.code, reason=error.reason)
+    payload = ErrorBody(
+        error=error.code,
+        reason=error.reason,
+        science_issue=error.science_issue,
+    )
     return payload.model_dump_json(exclude_none=True).encode("utf-8")
 
 
@@ -1441,6 +1503,208 @@ def _artifact_router(deps: LocalApiDeps) -> APIRouter:
     return router
 
 
+def _loader_refusal(
+    reason: LoaderRejection,
+    *,
+    science_issue: str | None = None,
+) -> LocalApiError:
+    """Refuse a measurement intake with a closed LoaderRejection token."""
+    return LocalApiError(
+        HTTPStatus.UNPROCESSABLE_ENTITY,
+        ApiErrorCode.INVALID_REQUEST,
+        reason,
+        science_issue=science_issue,
+    )
+
+
+def _decoded_size_from_base64(encoded: str) -> int:
+    """Return the byte length of base64 payload without decoding it.
+
+    Standard base64 expands 3 input bytes to 4 characters. Trailing ``=``
+    pads mark missing terminal bytes, so the decoded size is
+    ``len(encoded) * 3 // 4 - pad``. Computed before any allocation so a
+    hostile base64 bomb is refused against PRODUCT_UPLOAD_DATA_BYTES without
+    materializing the decoded buffer.
+    """
+    length = len(encoded)
+    pad = encoded.endswith("==") * 2 or encoded.endswith("=")
+    return length * 3 // 4 - pad
+
+
+def _checked_data_filename(value: str) -> str:
+    """Validate one upload leaf name; map any refusal to unsafe_filename."""
+    try:
+        return validate_local_name(value)
+    except LocalNameError as error:
+        raise _loader_refusal(LoaderRejection.UNSAFE_FILENAME) from error
+
+
+def _prepare_stage_dir(parent: Path, leaf: str) -> Path:
+    """Create one owner-only staging directory under an ensured parent.
+
+    ``mkdir`` then ``chmod`` like :meth:`LocalPaths.ensure`: the mode is
+    applied on the path itself, never trusted to ``mkdir``'s umask-masked
+    argument, so a permissive umask cannot widen the layout.
+    """
+    stage = parent / leaf
+    stage.mkdir(parents=True, exist_ok=True, mode=STAGING_DIR_MODE)
+    stage.chmod(STAGING_DIR_MODE)
+    return stage
+
+
+def _write_staging_file(stage: Path, leaf: str, payload: bytes) -> Path:
+    """Create one owner-only staging file from the first byte.
+
+    Matches :func:`write_token_file`: ``O_EXCL|O_NOFOLLOW``, ``fchmod`` before
+    the first write, never relying on umask-masked ``os.open`` mode alone.
+    Returns the staged path so the loader can consume it.
+    """
+    staged_path = stage / leaf
+    descriptor = os.open(
+        staged_path,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+        STAGING_FILE_MODE,
+    )
+    try:
+        os.fchmod(descriptor, STAGING_FILE_MODE)
+        with os.fdopen(descriptor, "wb") as handle:
+            _ = handle.write(payload)
+    except BaseException:
+        staged_path.unlink(missing_ok=True)
+        raise
+    return staged_path
+
+
+_LOADER_ERROR_TOKENS: Final[tuple[tuple[type[LoaderError], LoaderRejection], ...]] = (
+    (ManifestNotFoundError, LoaderRejection.MANIFEST_NOT_FOUND),
+    (DataFileNotFoundError, LoaderRejection.DATA_FILE_NOT_FOUND),
+    (ManifestSyntaxError, LoaderRejection.MANIFEST_SYNTAX),
+    (ManifestSchemaError, LoaderRejection.MANIFEST_SCHEMA),
+    (ManifestKindMismatchError, LoaderRejection.MANIFEST_KIND_MISMATCH),
+    (MalformedDataError, LoaderRejection.MALFORMED_DATA),
+)
+
+
+def _map_loader_error(error: LoaderError) -> LocalApiError:
+    """Translate one loader refusal onto a closed LoaderRejection wire token."""
+    if isinstance(error, MetadataRejectedError):
+        issue = error.issues[0].code if error.issues else None
+        return _loader_refusal(
+            LoaderRejection.METADATA_REJECTED,
+            science_issue=issue,
+        )
+    for error_type, token in _LOADER_ERROR_TOKENS:
+        if isinstance(error, error_type):
+            return _loader_refusal(token)
+    return _loader_refusal(LoaderRejection.MALFORMED_DATA)
+
+
+def _load_staged_probe(kind: str, data_path: Path) -> ProbeInput:
+    """Dispatch load_probe by the required-explicit kind (keyword-only)."""
+    policy = MetadataPolicy.STRICT
+    modality = ProbeKind(kind)
+    if modality is ProbeKind.SPECTRUM:
+        return load_probe(spectrum=data_path, policy=policy)
+    if modality is ProbeKind.TABLE:
+        return load_probe(table=data_path, policy=policy)
+    if modality is ProbeKind.IMAGE:
+        return load_probe(image=data_path, policy=policy)
+    return load_probe(report=data_path, policy=policy)
+
+
+def _enforce_product_caps(kind: str, probe: ProbeInput) -> None:
+    """Refuse product-path size limits that the module loaders leave open."""
+    modality = ProbeKind(kind)
+    if modality is ProbeKind.IMAGE and probe.image is not None:
+        pixels = probe.image.width * probe.image.height
+        if pixels > PRODUCT_UPLOAD_IMAGE_PIXELS:
+            raise _loader_refusal(LoaderRejection.IMAGE_EXCEEDS_PRODUCT_PIXEL_CAP)
+    if (
+        modality is ProbeKind.SPECTRUM
+        and probe.spectrum is not None
+        and len(probe.spectrum.wavelengths) > PRODUCT_UPLOAD_SPECTRUM_POINTS
+    ):
+        raise _loader_refusal(LoaderRejection.SPECTRUM_EXCEEDS_PRODUCT_POINT_CAP)
+    serialized = probe.model_dump_json().encode("utf-8")
+    if len(serialized) > PRODUCT_PROBE_JSON_BYTES:
+        raise _loader_refusal(LoaderRejection.DATA_TOO_LARGE)
+
+
+def _probe_upload(
+    deps: LocalApiDeps,
+    project_id: UUID,
+    body: ProbeUploadRequest,
+) -> ProbeUploadBody:
+    """Stage, load, and wipe one measurement; never create a durable record."""
+    _ = _live_project(deps, project_id)
+    filename = _checked_data_filename(body.data_filename)
+    decoded_size = _decoded_size_from_base64(body.data_base64)
+    if decoded_size > PRODUCT_UPLOAD_DATA_BYTES:
+        raise _loader_refusal(LoaderRejection.DATA_TOO_LARGE)
+    try:
+        data_bytes = base64.b64decode(body.data_base64, validate=True)
+    except ValueError as error:
+        raise _loader_refusal(LoaderRejection.INVALID_BASE64) from error
+    if len(data_bytes) > PRODUCT_UPLOAD_DATA_BYTES:
+        raise _loader_refusal(LoaderRejection.DATA_TOO_LARGE)
+
+    staging_root = deps.paths.root / STAGING_DIR_NAME
+    staging_root.mkdir(parents=True, exist_ok=True, mode=STAGING_DIR_MODE)
+    staging_root.chmod(STAGING_DIR_MODE)
+    stage = _prepare_stage_dir(staging_root, str(deps.ids.new_uuid7()))
+    manifest_leaf = f"{filename}.manifest.toml"
+    try:
+        data_path = _write_staging_file(stage, filename, data_bytes)
+        _ = _write_staging_file(
+            stage, manifest_leaf, body.manifest_toml.encode("utf-8")
+        )
+        try:
+            probe = _load_staged_probe(body.kind, data_path)
+        except LoaderError as error:
+            raise _map_loader_error(error) from error
+        _enforce_product_caps(body.kind, probe)
+        document = probe.model_dump_json()
+        digest = hashlib.sha256(document.encode("utf-8")).hexdigest()
+        return ProbeUploadBody(
+            scientific_input=cast(
+                "dict[str, object]",
+                json.loads(document),
+            ),
+            input_sha256=digest,
+            kind=body.kind,
+        )
+    finally:
+        if sys.exc_info()[0] is None:
+            # No refusal in flight: a wipe that fails leaves measurement bytes
+            # behind, so surface it instead of claiming a clean wipe.
+            shutil.rmtree(stage)
+        else:
+            # The refusal being raised takes precedence; the loader retrying
+            # an upload collides on O_EXCL and fails closed, so a leftover
+            # directory cannot silently widen into a reused identity.
+            shutil.rmtree(stage, ignore_errors=True)
+
+
+def _input_router(deps: LocalApiDeps) -> APIRouter:
+    """Build the project-scoped measurement-file intake route."""
+    router = APIRouter()
+
+    def probe_upload(
+        project_id: UUID,
+        body: ProbeUploadRequest,
+    ) -> ProbeUploadBody:
+        """Load one measurement file into typed ProbeInput JSON; no durable write."""
+        return _probe_upload(deps, project_id, body)
+
+    router.add_api_route(
+        "/projects/{project_id}/inputs/probe",
+        probe_upload,
+        methods=["POST"],
+        status_code=int(HTTPStatus.CREATED),
+    )
+    return router
+
+
 def _invalid_request() -> LocalApiError:
     """Refuse a malformed plan, intent, or probe without quoting the input."""
     return LocalApiError(HTTPStatus.UNPROCESSABLE_ENTITY, ApiErrorCode.INVALID_REQUEST)
@@ -1747,6 +2011,13 @@ def _start_run(
     """Start one approved analysis synchronously under a live Session."""
     intent = _research_intent(body.research_intent)
     source = _probe_input(body.scientific_input)
+    if body.input_sha256 is not None:
+        digest = hashlib.sha256(source.model_dump_json().encode("utf-8")).hexdigest()
+        if digest != body.input_sha256:
+            raise LocalApiError(
+                HTTPStatus.CONFLICT,
+                ApiErrorCode.INPUT_DIGEST_MISMATCH,
+            )
     scope = _live_project(deps, project_id)
     _ = _live_session(deps, scope, body.session_id)
     plan, approval = _require_unspent_approval(
@@ -2542,6 +2813,7 @@ def create_app(
         _project_router(deps),
         _session_router(deps),
         _artifact_router(deps),
+        _input_router(deps),
         _plan_router(deps),
         _run_router(deps),
         _review_router(deps),

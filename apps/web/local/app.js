@@ -71,11 +71,13 @@
   // -------------------------------------------------------------- API client --
 
   class LocalApiError extends Error {
-    constructor(status, code, reason) {
+    constructor(status, code, reason, scienceIssue) {
       super(code || `http_${status}`);
       this.status = status;
       this.code = code || "";
       this.reason = reason || "";
+      // Closed science-package issue token from intake refusals; never prose.
+      this.science_issue = scienceIssue || "";
     }
   }
 
@@ -118,8 +120,22 @@
     approval_expired: "승인 유효 기간이 지났습니다.",
     approval_consumed: "이미 사용된 승인입니다.",
     approval_digest_mismatch: "연구 의도가 승인된 플랜과 달라 거부되었습니다.",
+    input_digest_mismatch: "업로드 영수증의 입력 다이제스트와 제출한 측정 입력이 달라 거부되었습니다.",
     approval_forbidden: "이 승인을 사용할 수 없습니다.",
     run_rejected: "실행을 시작하지 않고 거부했습니다.",
+  };
+  const LOADER_REASON_TEXT = {
+    manifest_not_found: "매니페스트 파일을 찾지 못했습니다.",
+    data_file_not_found: "측정 데이터 파일을 찾지 못했습니다.",
+    manifest_syntax: "매니페스트 문법 오류입니다.",
+    manifest_schema: "매니페스트 형식이 올바르지 않습니다.",
+    manifest_kind_mismatch: "선택한 종류와 매니페스트의 종류가 다릅니다.",
+    malformed_data: "측정 데이터 형식이 올바르지 않습니다.",
+    metadata_rejected: "메타데이터가 거부되었습니다.",
+    data_too_large: "측정 파일이 허용 크기를 넘습니다.",
+    image_exceeds_product_pixel_cap: "이미지 픽셀 수가 허용 한도를 넘습니다.",
+    invalid_base64: "측정 데이터 인코딩이 올바르지 않습니다.",
+    unsafe_filename: "파일 이름을 사용할 수 없습니다.",
   };
 
   const NAME_REASON_TEXT = {
@@ -191,8 +207,13 @@
       NAME_REASON_TEXT[error.reason] ||
       KEY_REASON_TEXT[error.reason] ||
       EXPORT_REASON_TEXT[error.reason] ||
+      LOADER_REASON_TEXT[error.reason] ||
       (error.reason ? `거부 사유: ${error.reason}` : "");
-    return detail ? `${base} ${detail}` : base;
+    let message = detail ? `${base} ${detail}` : base;
+    if (error.science_issue) {
+      message = `${message} 과학 이슈: ${error.science_issue}`;
+    }
+    return message;
   }
 
   async function request(method, path, body) {
@@ -224,7 +245,9 @@
     if (!response.ok) {
       const code = payload && typeof payload.error === "string" ? payload.error : "";
       const reason = payload && typeof payload.reason === "string" ? payload.reason : "";
-      throw new LocalApiError(response.status, code, reason);
+      const scienceIssue =
+        payload && typeof payload.science_issue === "string" ? payload.science_issue : "";
+      throw new LocalApiError(response.status, code, reason, scienceIssue);
     }
     return payload;
   }
@@ -271,6 +294,8 @@
       request("POST", `/projects/${pid}/action-plans/${planId}/approvals`, {}),
     actionPlan: (pid, planId) => request("GET", `/projects/${pid}/action-plans/${planId}`),
     approval: (pid, approvalId) => request("GET", `/projects/${pid}/approvals/${approvalId}`),
+    createRun: (pid, body) => request("POST", `/projects/${pid}/runs`, body),
+    probeInput: (pid, body) => request("POST", `/projects/${pid}/inputs/probe`, body),
   };
 
   // ------------------------------------------------------------ DOM helpers --
@@ -1324,6 +1349,38 @@
     { value: "synthetic", label: "synthetic — 합성 데이터" },
     { value: "mixed", label: "mixed — 관측과 합성 혼합" },
   ];
+  const PROBE_KINDS = [
+    { value: "spectrum", label: "spectrum — 스펙트럼" },
+    { value: "table", label: "table — 표" },
+    { value: "image", label: "image — 이미지" },
+    { value: "report", label: "report — 보고서" },
+  ];
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== "string") {
+          reject(new Error("file_read_failed"));
+          return;
+        }
+        const comma = result.indexOf(",");
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error || new Error("file_read_failed"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(reader.error || new Error("file_read_failed"));
+      reader.readAsText(file);
+    });
+  }
 
   function emptyIntentDraft() {
     return {
@@ -1551,6 +1608,12 @@
     let approval = null;
     let needsNewPlan = false;
     let busy = false;
+    // ProbeInput is held only in this screen closure — never browser storage.
+    let scientificInput = null;
+    let inputReceipt = null;
+    let probeKind = "";
+    let dataFile = null;
+    let manifestFile = null;
 
     function touchIntent(mutator, options) {
       mutator();
@@ -1602,6 +1665,85 @@
       } catch (error) {
         showError(describeError(error));
       } finally {
+        busy = false;
+        paint();
+      }
+    }
+    async function onLoadMeasurement(event) {
+      event.preventDefault();
+      if (busy) return;
+      if (!probeKind) {
+        showError("측정 종류를 선택해 주세요.");
+        return;
+      }
+      if (!dataFile) {
+        showError("측정 데이터 파일을 골라 주세요.");
+        return;
+      }
+      if (!manifestFile) {
+        showError("매니페스트(.manifest.toml) 파일을 골라 주세요.");
+        return;
+      }
+      busy = true;
+      paint();
+      try {
+        const [dataBase64, manifestToml] = await Promise.all([
+          readFileAsBase64(dataFile),
+          readFileAsText(manifestFile),
+        ]);
+        const result = await api.probeInput(projectId, {
+          kind: probeKind,
+          data_filename: dataFile.name,
+          data_base64: dataBase64,
+          manifest_toml: manifestToml,
+        });
+        scientificInput = result.scientific_input;
+        inputReceipt = {
+          kind: String(result.kind ?? probeKind),
+          input_sha256: String(result.input_sha256 ?? ""),
+          data_filename: dataFile.name,
+        };
+        clearError();
+        announce("측정 파일을 불러왔습니다. 다이제스트를 확인한 뒤 실행을 시작하세요.");
+      } catch (error) {
+        scientificInput = null;
+        inputReceipt = null;
+        if (error instanceof LocalApiError) {
+          showError(describeError(error));
+        } else {
+          showError("측정 파일을 읽지 못했습니다. 파일 선택을 다시 확인해 주세요.");
+        }
+      } finally {
+        busy = false;
+        paint();
+      }
+    }
+
+    async function onStartRun(event) {
+      event.preventDefault();
+      if (busy || !approval || approval.consumed_at || !scientificInput) return;
+      busy = true;
+      paint();
+      try {
+        const runBody = {
+          session_id: sessionId,
+          approval_id: approval.approval_id,
+          research_intent: intentPayloadFromDraft(draft),
+          scientific_input: scientificInput,
+        };
+        const pinnedDigest =
+          inputReceipt && typeof inputReceipt.input_sha256 === "string"
+            ? inputReceipt.input_sha256.trim()
+            : "";
+        if (pinnedDigest) {
+          runBody.input_sha256 = pinnedDigest;
+        }
+        const created = await api.createRun(projectId, runBody);
+        clearError();
+        announce("실행을 시작했습니다.");
+        window.location.hash = `#/projects/${projectId}/runs/${created.run_id}`;
+      } catch (error) {
+        showError(describeError(error));
         busy = false;
         paint();
       }
@@ -1867,26 +2009,143 @@
         );
       }
 
-      // Run start is API-only until L03 lands with measurement-file upload.
-      // Do not invent a Run CTA here; a button would claim a product path that
-      // this screen does not yet own.
+      // L03: measurement load holds ProbeInput in screen state and unlocks Run
+      // only when an unspent approval is present. Never persists research bytes.
+      const approvalUnspent = Boolean(approval && !approval.consumed_at);
+      const canStartRun = approvalUnspent && scientificInput !== null;
       nodes.push(
         el("section", {
           class: "section",
-          "aria-labelledby": "plan-run-deferred-heading",
-          "data-plan-run": "deferred",
+          "aria-labelledby": "plan-run-heading",
+          "data-plan-run": "measurement",
         }, [
-          el("h2", { id: "plan-run-deferred-heading", text: "실행" }),
-          el("div", { class: "panel panel--attention" }, [
+          el("div", { class: "section__head" }, [
+            el("h2", { id: "plan-run-heading", text: "측정 입력 · 실행" }),
             el("p", {
+              class: "section__hint",
               text:
-                "승인된 플랜의 실행은 로컬 API로 가능하며, 측정 파일 업로드 화면(L03)과 함께 제공될 예정입니다.",
+                "측정 파일과 매니페스트를 불러 서버가 만든 입력을 받은 뒤, " +
+                "미사용 승인이 있을 때만 실행을 시작합니다. 파일 내용은 화면에 표시하지 않습니다.",
             }),
-            el("p", {
-              class: "meta",
-              text: "이 화면에는 실행 버튼이 없습니다. 이미 시작된 실행은 실행 기록에서 읽기 전용으로 볼 수 있습니다.",
-            }),
+          ]),
+          el("div", { class: "panel panel--raised", "data-measurement-load": "form" }, [
+            selectField(
+              "probe-kind",
+              "측정 종류",
+              "종류는 추론하지 않습니다. spectrum / table / image / report 중 하나를 직접 고르세요.",
+              probeKind,
+              PROBE_KINDS,
+              (value) => {
+                probeKind = value;
+              },
+            ),
+            el("div", { class: "field", "data-field": "measurement-data" }, [
+              el("label", {
+                class: "field__label",
+                for: "measurement-data-file",
+                text: "측정 데이터 파일",
+              }),
+              el("input", {
+                id: "measurement-data-file",
+                name: "measurement-data-file",
+                type: "file",
+                "aria-describedby": "measurement-data-help",
+                on: {
+                  change: (event) => {
+                    const files = event.currentTarget.files;
+                    dataFile = files && files[0] ? files[0] : null;
+                    paint();
+                  },
+                },
+              }),
+              el("p", {
+                id: "measurement-data-help",
+                class: "field__help",
+                text: dataFile
+                  ? `선택됨: ${dataFile.name}`
+                  : "분석에 쓸 측정 데이터 파일을 고르세요.",
+              }),
+            ]),
+            el("div", { class: "field", "data-field": "measurement-manifest" }, [
+              el("label", {
+                class: "field__label",
+                for: "measurement-manifest-file",
+                text: "매니페스트 (.manifest.toml)",
+              }),
+              el("input", {
+                id: "measurement-manifest-file",
+                name: "measurement-manifest-file",
+                type: "file",
+                accept: ".toml,text/plain,.manifest.toml",
+                "aria-describedby": "measurement-manifest-help",
+                on: {
+                  change: (event) => {
+                    const files = event.currentTarget.files;
+                    manifestFile = files && files[0] ? files[0] : null;
+                    paint();
+                  },
+                },
+              }),
+              el("p", {
+                id: "measurement-manifest-help",
+                class: "field__help",
+                text: manifestFile
+                  ? `선택됨: ${manifestFile.name}`
+                  : "데이터 파일과 짝이 되는 .manifest.toml 내용을 고르세요.",
+              }),
+            ]),
             el("div", { class: "actions actions--spaced-above" }, [
+              el("button", {
+                class: "button",
+                type: "button",
+                text: busy ? "불러오는 중…" : "측정 파일 불러오기",
+                "data-action": "load-measurement",
+                disabled: busy,
+                on: { click: onLoadMeasurement },
+              }),
+            ]),
+            inputReceipt
+              ? el("div", {
+                  class: "measurement-receipt",
+                  "data-measurement-load": "held",
+                }, [
+                  el("p", {
+                    class: "meta",
+                    text: "불러온 입력 요약 — 파일 내용은 보관·표시하지 않습니다.",
+                  }),
+                  keyValues([
+                    ["종류", inputReceipt.kind],
+                    ["파일명", inputReceipt.data_filename],
+                  ]),
+                  digestCode(
+                    "입력 SHA-256",
+                    inputReceipt.input_sha256,
+                    "input_sha256",
+                  ),
+                ])
+              : el("p", {
+                  class: "meta measurement-receipt__empty",
+                  "data-measurement-load": "empty",
+                  text: "아직 불러온 측정 입력이 없습니다.",
+                }),
+            approvalUnspent
+              ? null
+              : el("p", {
+                  class: "inline-note",
+                  "data-plan-run-gate": "approval-required",
+                  text: approval
+                    ? "이 승인은 이미 사용되었습니다. 실행하려면 플랜을 다시 승인해야 합니다."
+                    : "실행을 시작하려면 먼저 플랜을 승인해야 합니다.",
+                }),
+            el("div", { class: "actions actions--spaced-above" }, [
+              el("button", {
+                class: "button button--primary",
+                type: "button",
+                text: busy && canStartRun ? "실행 시작 중…" : "실행 시작",
+                "data-action": "start-run",
+                disabled: busy || !canStartRun,
+                on: { click: onStartRun },
+              }),
               el("a", {
                 class: "button",
                 href: `#/projects/${projectId}/runs`,

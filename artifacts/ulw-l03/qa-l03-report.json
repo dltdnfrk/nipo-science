@@ -1,0 +1,560 @@
+{
+  "kind": "api-test-report",
+  "story": "L03 measurement-file product intake (probe upload route + staging helpers + approval-screen UI + docs flip)",
+  "goal": "G001",
+  "lane": "ultragoal-red-team-qa-l03",
+  "agent": "32-QaL03",
+  "base": "b4cb661 + frozen L03 change set",
+  "verdict": "conditional",
+  "summary": {
+    "namedNodeE2e": "pass",
+    "adversarialProbes": "fail",
+    "docsHonesty": "pass",
+    "namedNodePassCount": 20,
+    "probePassCount": 8,
+    "probeFailCount": 2,
+    "blockerCount": 2,
+    "note": "AC-L03 as written in requirements.yaml is fully covered and green. The two adversarial failures are assignment-specified expectations that exceed AC-L03's normative text (calibration digest never recomputed against data bytes; run-start does not pin the uploaded input digest). Architect 33-ArchL03 reviewed both and rates them LOW hardening, not AC failures. Verdict is conditional on owner disposition of the two blockers."
+  },
+  "contractCoverage": [
+    {
+      "id": "cc-acl03-loads-typed-input",
+      "contractRef": "AC-L03:real-measurement-file-with-units-and-calibration-loads-into-typed-input",
+      "obligation": "A real measurement file with declared units and calibration loads into the typed scientific input; upload round-trip matches the path loader byte-for-byte on the ProbeInput digest",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-roundtrip-parity", "se-named-multipart-upload"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl03-loads-into-analyses",
+      "contractRef": "AC-L03:loads-into-the-typed-input-and-analyses",
+      "obligation": "The accepted typed input starts the approved run and completes the chain (4 output versions); full HTTP file->intent->approve->run->review->export path works",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-run-start-chain", "se-named-worst-case-run", "se-named-full-e2e"],
+      "adversarialCaseRefs": ["adv-g-point-boundary"]
+    },
+    {
+      "id": "cc-acl03-missing-units",
+      "contractRef": "AC-L03:missing-units-refused-with-science-issue-code-zero-durable",
+      "obligation": "Manifest without units refuses 422 invalid_request + metadata_rejected carrying science token units_required; no Artifact, no Version, no Run row",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-missing-units"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl03-missing-calibration",
+      "contractRef": "AC-L03:missing-calibration-refused-with-science-issue-code-zero-durable",
+      "obligation": "Manifest without [calibration] refuses 422 metadata_rejected carrying science token calibration_required; durable counts unchanged",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-missing-calibration"],
+      "adversarialCaseRefs": []
+    },
+    {
+      "id": "cc-acl03-malformed",
+      "contractRef": "AC-L03:malformed-refused-before-any-artifact",
+      "obligation": "Malformed CSV refuses 422 malformed_data before any store write; durable counts unchanged",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-malformed-csv"],
+      "adversarialCaseRefs": ["adv-f-canary-sweep"]
+    },
+    {
+      "id": "cc-plan-staging-zero-residue",
+      "contractRef": "plan Slice 1: staged load wipes staging, upload creates no durable record",
+      "obligation": "Every upload path (success or refusal) leaves the staging root empty and writes no durable row",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-roundtrip-parity", "se-probe-staging-audit"],
+      "adversarialCaseRefs": ["adv-a-decode-prefusal", "adv-b-size-guards", "adv-c-traversal-names", "adv-h-staging-audit"]
+    },
+    {
+      "id": "cc-plan-product-caps",
+      "contractRef": "plan Slice 1 + SPEC section 14: product caps 16 MiB file / 250,000 px / 400,000 points, strictly below loader module caps",
+      "obligation": "Over-cap uploads refuse with closed tokens (413 payload_too_large at wire cap; data_too_large; image_exceeds_product_pixel_cap; spectrum_exceeds_product_point_cap); caps hold at the exact boundary",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-body-cap-413", "se-named-oversized-decoded", "se-named-pixel-cap", "se-named-point-cap", "se-named-caps-below-modules"],
+      "adversarialCaseRefs": ["adv-a-decode-prefusal", "adv-b-size-guards", "adv-g-point-boundary"]
+    },
+    {
+      "id": "cc-plan-closed-loader-tokens",
+      "contractRef": "plan Slice 1: closed LoaderRejection tokens, kind required-explicit",
+      "obligation": "invalid_base64, unsafe_filename, manifest_kind_MISMATCH (kind=table vs spectrum manifest) refuse with closed tokens and zero durable writes",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-invalid-base64", "se-named-unsafe-filename", "se-named-kind-mismatch", "se-probe-kind-mismatch-table"],
+      "adversarialCaseRefs": ["adv-c-traversal-names", "adv-d1-kind-mismatch"]
+    },
+    {
+      "id": "cc-plan-no-echo",
+      "contractRef": "plan Slice 1 + LS03: refusal bodies never quote file bytes, paths, or manifest text",
+      "obligation": "No refusal body echoes uploaded bytes, filename, manifest content, staging paths, hostile unicode, or secret-shaped strings",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-no-echo", "se-probe-canary-sweep"],
+      "adversarialCaseRefs": ["adv-f-canary-sweep"]
+    },
+    {
+      "id": "cc-plan-run-start-revalidation",
+      "contractRef": "plan Slice 1: run-start revalidates the held ProbeInput document",
+      "obligation": "A structurally tampered ProbeInput (spectrum dropped) refuses 400/422 invalid_request with runs/executions/artifacts unchanged",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-named-tampered-run-start"],
+      "adversarialCaseRefs": ["adv-e-digest-swap"],
+      "notes": "Coverage is structural only: a well-formed tamper (swapped calibration digest) is NOT refused; see adv-e-digest-swap and blk-e."
+    },
+    {
+      "id": "cc-assignment-calibration-digest-verification",
+      "contractRef": "assignment probe (d): manifest calibration digest mismatching actual file -> metadata_rejected with science token",
+      "obligation": "A manifest claiming calibration whose digest mismatches the actual file refuses metadata_rejected carrying the science package's issue token",
+      "status": "fail",
+      "surfaceEvidenceRefs": ["se-probe-digest-mismatch"],
+      "adversarialCaseRefs": ["adv-d2-digest-mismatch"],
+      "notes": "No digest recomputation exists at intake (loaders.py pattern-validates only). The shipped reference manifest itself carries a digest that does not match its data file and is accepted everywhere. AC-L03's normative text requires presence+pattern only; architect concurs. See blk-d2."
+    },
+    {
+      "id": "cc-assignment-input-digest-pinned-at-run-start",
+      "contractRef": "assignment probe (e): swapped calibration digest in held ProbeInput -> run-start refuses, zero side effects",
+      "obligation": "Run-start refuses a ProbeInput tampered between upload and run-start even when the tamper keeps the document structurally valid",
+      "status": "fail",
+      "surfaceEvidenceRefs": ["se-probe-digest-swap-run"],
+      "adversarialCaseRefs": ["adv-e-digest-swap"],
+      "notes": "Run-start revalidation is ProbeInput.model_validate_json (structural); the approval binds the intent digest, not input_sha256. The swapped digest ran to completion and is pinned in durable run provenance (disclosure, not prevention). See blk-e."
+    },
+    {
+      "id": "cc-docs-l03-flip",
+      "contractRef": "SPEC section 14 + requirements.yaml conformance flip for L03",
+      "obligation": "L03 listed implemented_and_verified in both authorities; stated product caps match code constants; every L03 claim maps to a run test; no AC-L03-B invented",
+      "status": "pass",
+      "surfaceEvidenceRefs": ["se-docs-honesty", "se-ui-node-check"],
+      "adversarialCaseRefs": ["adv-docs-honesty"]
+    }
+  ],
+  "surfaceEvidence": [
+    {
+      "id": "se-named-roundtrip-parity",
+      "contractRef": "AC-L03:loads-typed-input",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_load_probe_via_staging_round_trip_matches_path_loader",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-multipart-upload",
+      "contractRef": "AC-L03:loads-typed-input",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_multipart_probe_upload_returns_scientific_input_and_creates_no_artifact",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-missing-units",
+      "contractRef": "AC-L03:missing-units",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_missing_units_refuses_with_science_issue_code",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-missing-calibration",
+      "contractRef": "AC-L03:missing-calibration",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_missing_calibration_refuses_with_science_issue_code",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-malformed-csv",
+      "contractRef": "AC-L03:malformed",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_malformed_csv_refuses_before_any_store_write",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-body-cap-413",
+      "contractRef": "plan Slice 1: wire body cap",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_probe_upload_over_body_cap_is_413_payload_too_large",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-oversized-decoded",
+      "contractRef": "plan Slice 1: decoded-size pre-refusal",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_oversized_decoded_payload_refused_before_allocation",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-invalid-base64",
+      "contractRef": "plan Slice 1: closed tokens",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_invalid_base64_is_refused",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-unsafe-filename",
+      "contractRef": "plan Slice 1: closed tokens",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_unsafe_filename_is_refused",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-kind-mismatch",
+      "contractRef": "plan Slice 1: closed tokens",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_kind_manifest_mismatch_is_refused",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-no-echo",
+      "contractRef": "plan Slice 1: no echo in refusals",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_probe_upload_error_body_never_echoes_path_or_bytes",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-pixel-cap",
+      "contractRef": "plan Slice 1 + SPEC section 14: 250,000 px cap",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_image_over_product_pixel_cap_is_refused_with_closed_reason",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-point-cap",
+      "contractRef": "plan Slice 1 + SPEC section 14: 400,000 point cap",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_spectrum_over_product_point_cap_is_refused",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-caps-below-modules",
+      "contractRef": "plan Slice 1: product caps strictly below loader module caps",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_upload_caps_are_strictly_below_loader_module_caps",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-run-start-chain",
+      "contractRef": "AC-L03:loads-into-analyses",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_run_start_with_uploaded_probe_json_completes_chain_outputs",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-worst-case-run",
+      "contractRef": "AC-L03:loads-into-analyses",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_run_start_body_accepts_worst_case_uploaded_probe_json",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-tampered-run-start",
+      "contractRef": "plan Slice 1: run-start revalidation",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_run_start_revalidates_probe_and_refuses_tampered_document",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-archived-refuses",
+      "contractRef": "plan Slice 1: archived project refuses upload",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_archived_project_refuses_probe_upload",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-unknown-project",
+      "contractRef": "plan Slice 1: unknown project is not_found",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_unknown_project_probe_upload_is_not_found",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-named-full-e2e",
+      "contractRef": "AC-L03:loads-into-analyses (full product path)",
+      "surface": "api",
+      "invocation": "pytest apps/local/tests/test_input_api.py::test_http_file_to_intent_to_approve_to_run_to_review_to_export",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/input-api-named.log"]
+    },
+    {
+      "id": "se-probe-decode-prefusal",
+      "contractRef": "assignment probe (a): arithmetic pre-refusal before decode allocation",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_a_oversized_base64_prefused_before_decode_allocation",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"],
+      "notes": "base64.b64decode monkeypatched with a call spy: zero decode calls on the over-cap request, 422 data_too_large, no staging entries, durable counts unchanged. No decoded buffer is ever allocated, so no MemoryError path exists on this branch."
+    },
+    {
+      "id": "se-probe-size-guards",
+      "contractRef": "assignment probe (b): both size guards refuse, zero staging",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_b_decoded_size_guard_both_directions_zero_staging",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"],
+      "notes": "For validate=True base64 the length arithmetic is exact (len*3//4 - pad), so the post-decode size check is defense-in-depth and is not separately reachable from the wire; both over-cap directions still refuse data_too_large with zero staging residue."
+    },
+    {
+      "id": "se-probe-traversal",
+      "contractRef": "assignment probe (c): traversal/reserved/lookalike filenames",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_c_traversal_and_lookalike_filenames_refused",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"],
+      "notes": "../../etc/passwd, ..\\..\\etc\\passwd, C:\\windows, C:windows, CON, con.csv, NUL, and an NFD cafe-lookalike all refuse unsafe_filename; data-root file set byte-identical before/after; staging empty."
+    },
+    {
+      "id": "se-probe-kind-mismatch-table",
+      "contractRef": "assignment probe (d) part 1: kind=table with spectrum manifest",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_d1_table_kind_with_spectrum_manifest_is_kind_mismatch",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "se-probe-digest-mismatch",
+      "contractRef": "assignment probe (d) part 2: calibration digest mismatching actual file",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_d2_calibration_digest_mismatching_data_file_is_refused",
+      "verdict": "fail",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"],
+      "notes": "Observed: 201 accepted. The shipped reference manifest's calibration_sha256 does not equal sha256(data bytes) and is accepted at intake; loaders.py and the science package contain no digest recomputation. Failure log captures the accepted ProbeInput carrying the mismatched digest."
+    },
+    {
+      "id": "se-probe-digest-swap-run",
+      "contractRef": "assignment probe (e): swapped calibration digest at run-start",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_e_swapped_calibration_digest_run_start_refuses",
+      "verdict": "fail",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"],
+      "notes": "Observed: 201 completed run with 4 output versions; durable counts grew. Failure log captures the completed-run receipt. The tampered digest is carried into durable provenance (disclosure), not refused (prevention)."
+    },
+    {
+      "id": "se-probe-canary-sweep",
+      "contractRef": "assignment probe (f): canary sweep over refusal bodies",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_f_canary_sweep_refusal_bodies_never_echo",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"],
+      "notes": "Hostile unicode (including RLO + NUL) and four runtime-assembled secret-shaped strings placed in data bytes, manifest text, filename, and a smuggled extra wire field; raw and JSON-escaped forms absent from every refusal body; no staging path echoed. No secret-shaped literal is stored verbatim in the probe file or this report."
+    },
+    {
+      "id": "se-probe-point-boundary",
+      "contractRef": "assignment probe (g): worst-case spectrum boundary",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_g_worst_case_spectrum_point_boundary",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"],
+      "notes": "Exactly 400,000 points: upload 201, serialized ProbeInput under PRODUCT_PROBE_JSON_BYTES, run-start 201 completed. 400,001 points: 422 spectrum_exceeds_product_point_cap, counts unchanged."
+    },
+    {
+      "id": "se-probe-staging-audit",
+      "contractRef": "assignment probe (h): staging residue audit",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_h_staging_residue_audit_mixed_uploads",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "se-docs-honesty",
+      "contractRef": "SPEC section 14 + requirements.yaml L03 conformance",
+      "surface": "api",
+      "invocation": "pytest artifacts/ulw-l03/probes_test.py::test_probe_docs_honesty_l03_claims + source read of SPEC section 14 and requirements.yaml",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "docs/spec/SPEC-v0.5.md", "docs/requirements/requirements.yaml"]
+    },
+    {
+      "id": "se-ui-node-check",
+      "contractRef": "plan Slice 1 UI: approval screen loads data file + manifest sidecar",
+      "surface": "web",
+      "invocation": "node --check apps/web/local/app.js; source grep: probeInput POST /projects/{pid}/inputs/probe wired (app.js:297), manifest sidecar picker present (app.js:2060-2085)",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/ui-node-check.log", "apps/web/local/app.js"]
+    }
+  ],
+  "adversarialCases": [
+    {
+      "id": "adv-a-decode-prefusal",
+      "contractRef": "assignment probe (a)",
+      "scenario": "~22.4 MB valid-alphabet base64 claiming >16 MiB decoded, sent under the 32 MiB wire cap, with base64.b64decode spied in-process",
+      "expectedBehavior": "422 data_too_large from length arithmetic; decode never entered (no decoded allocation, no MemoryError path); no staging dir; durable counts unchanged",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "adv-b-size-guards",
+      "contractRef": "assignment probe (b)",
+      "scenario": "Request 1 over-cap by arithmetic; request 2 valid base64 decoding to exactly cap+1 bytes",
+      "expectedBehavior": "Both refused data_too_large; zero staging residue; counts unchanged",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"],
+      "notes": "Arithmetic is exact for validate=True base64; post-decode check is defense-in-depth, not separately wire-reachable."
+    },
+    {
+      "id": "adv-c-traversal-names",
+      "contractRef": "assignment probe (c)",
+      "scenario": "data_filename in {../../etc/passwd, ..\\..\\etc\\passwd, C:\\windows, C:windows, CON, con.csv, NUL, NFD cafe-lookalike}",
+      "expectedBehavior": "Each 422 unsafe_filename; no file created outside (or inside) staging; data-root file set unchanged",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "adv-d1-kind-mismatch",
+      "contractRef": "assignment probe (d) part 1",
+      "scenario": "kind=table on the wire with a spectrum manifest",
+      "expectedBehavior": "422 manifest_kind_mismatch; counts unchanged",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "adv-d2-digest-mismatch",
+      "contractRef": "assignment probe (d) part 2",
+      "scenario": "Manifest calibration_sha256 that does not match sha256 of the uploaded data file",
+      "expectedBehavior": "422 metadata_rejected carrying the science package's issue token; zero durable writes",
+      "observedBehavior": "201 accepted; no digest recomputation exists at intake or in the science package; the shipped reference manifest itself mismatches and is accepted",
+      "verdict": "fail",
+      "severity": "low-hardening (per 33-ArchL03: AC-L03 requires presence+pattern, not recomputation)",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "adv-e-digest-swap",
+      "contractRef": "assignment probe (e)",
+      "scenario": "Upload 201, then swap calibration_sha256 for another well-formed digest in the held ProbeInput JSON, then plan->approve->run-start",
+      "expectedBehavior": "Run-start refuses (400/422) with zero durable side effects",
+      "observedBehavior": "201 completed run, 4 output versions committed; run-start revalidation is structural only and the approval binds the intent digest, not input_sha256",
+      "verdict": "fail",
+      "severity": "low-hardening (per 33-ArchL03: tampered digest is pinned in durable provenance = disclosure, not prevention; structural tamper IS refused per named test)",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "adv-f-canary-sweep",
+      "contractRef": "assignment probe (f)",
+      "scenario": "Hostile unicode + runtime-assembled secret-shaped strings in uploaded bytes, manifest, filename, and a smuggled extra wire field across four distinct refusal paths",
+      "expectedBehavior": "Closed codes only; canaries (raw and JSON-escaped) never present in any refusal body; no staging path echoed",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "adv-g-point-boundary",
+      "contractRef": "assignment probe (g)",
+      "scenario": "Spectrum at exactly PRODUCT_UPLOAD_SPECTRUM_POINTS (400,000) uploaded then run-start; then 400,001 points uploaded",
+      "expectedBehavior": "At cap: upload 201 and run-start 201 completed; one over: 422 spectrum_exceeds_product_point_cap",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "adv-h-staging-audit",
+      "contractRef": "assignment probe (h)",
+      "scenario": "Three mixed uploads (success, malformed data, traversal filename) then staging audit",
+      "expectedBehavior": "{data_root}/staging contains no leftover dirs; no staged file anywhere in the data root",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py"]
+    },
+    {
+      "id": "adv-docs-honesty",
+      "contractRef": "docs honesty assignment item 3",
+      "scenario": "Cross-read SPEC section 14 and requirements.yaml against code constants and the run test set",
+      "expectedBehavior": "L03 implemented in both authorities; caps 16 MiB / 250,000 px / 400,000 pts match PRODUCT_* constants; every L03 claim maps to a run test; no AC-L03-B invented",
+      "verdict": "pass",
+      "artifactRefs": ["artifacts/ulw-l03/logs/probes-adversarial.log", "docs/spec/SPEC-v0.5.md", "docs/requirements/requirements.yaml"]
+    }
+  ],
+  "blockers": [
+    {
+      "id": "blk-d2",
+      "kind": "contract-ambiguity",
+      "summary": "Assignment expects intake to refuse a manifest whose calibration_sha256 mismatches the actual data file (metadata_rejected + science token). Code at HEAD only pattern-validates the digest; nothing recomputes it against data bytes, so the upload is accepted (probe D2 fails with observed 201). AC-L03's normative text (requirements.yaml:405) requires refusal only for missing units / missing calibration / malformed input, so this is an assignment-vs-authority mismatch, not a demonstrated AC violation. Architect 33-ArchL03 concurs (LOW hardening). Owner decision needed: either add digest-vs-data verification at intake, or record that calibration_sha256 is a researcher claim about the calibration reference (never the data file) and amend the assignment expectation/docs to say so explicitly.",
+      "evidence": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py::test_probe_d2_calibration_digest_mismatching_data_file_is_refused", "apps/local/nipo_local/loaders.py:510-533"]
+    },
+    {
+      "id": "blk-e",
+      "kind": "contract-ambiguity",
+      "summary": "Assignment expects run-start to refuse a held ProbeInput whose calibration digest was swapped post-upload, with zero side effects. Run-start revalidation is structural only (ProbeInput.model_validate_json) and the one-use approval binds the ResearchIntent digest, not input_sha256, so the tampered document runs to completion (probe E fails with observed 201, 4 versions committed). The swapped digest is pinned into durable run provenance (disclosure, not prevention). Structural tamper IS refused (named test green). Architect 33-ArchL03 rates LOW hardening, not an AC failure. Owner decision needed: pin input_sha256 (or the full ProbeInput document) at approval/run-start, or document that post-upload input tampering is detectable-in-provenance by design.",
+      "evidence": ["artifacts/ulw-l03/logs/probes-adversarial.log", "artifacts/ulw-l03/probes_test.py::test_probe_e_swapped_calibration_digest_run_start_refuses", "apps/local/nipo_local/api.py:1714-1721", "apps/local/nipo_local/api.py:1997-2036"]
+    }
+  ],
+  "docsHonesty": {
+    "checked": [
+      "docs/spec/SPEC-v0.5.md section 14 Conformance status (L03 implemented sentence + product caps sentence)",
+      "docs/requirements/requirements.yaml conformance.implemented_and_verified includes L03",
+      "docs/requirements/requirements.yaml AC-L03 statement (line 405)",
+      "docs/spec/SPEC-v0.5.md + requirements.yaml contain no AC-L03-B identifier",
+      "apps/web/local/app.js approval-screen measurement picker + probeInput route wiring (node --check clean)"
+    ],
+    "claimToTestMap": [
+      "SPEC section 14 'approval screen loads a data file with its manifest sidecar through the local interface' -> app.js:297 probeInput wiring + app.js:2060-2085 manifest picker (se-ui-node-check)",
+      "SPEC section 14 'server parses it with the science loaders under the strict metadata policy' -> test_load_probe_via_staging_round_trip_matches_path_loader (se-named-roundtrip-parity)",
+      "SPEC section 14 'refusals carry the loader's and the science package's own issue tokens with zero durable records' -> test_missing_units/missing_calibration/malformed_csv + counts equality (se-named-missing-units, se-named-missing-calibration, se-named-malformed-csv)",
+      "SPEC section 14 'the accepted typed input starts the approved run' -> test_run_start_with_uploaded_probe_json_completes_chain_outputs + full e2e (se-named-run-start-chain, se-named-full-e2e)",
+      "SPEC section 14 'bounds uploads at 16 MiB per file, 250,000 image pixels, and 400,000 spectrum points' -> constants PRODUCT_UPLOAD_DATA_BYTES/IMAGE_PIXELS/SPECTRUM_POINTS + cap tests + boundary probe (se-named-body-cap-413, se-named-pixel-cap, se-named-point-cap, se-probe-point-boundary)",
+      "SPEC section 14 'science modules keep their larger module-level limits' -> test_upload_caps_are_strictly_below_loader_module_caps (se-named-caps-below-modules)",
+      "requirements.yaml AC-L03 'loads into the typed input and analyses' -> run-start chain + full e2e (se-named-run-start-chain, se-named-worst-case-run, se-named-full-e2e)",
+      "requirements.yaml AC-L03 'refused ... creates no Artifact, no Version, and no Run record in a publishable state' -> durable counts equality asserted in every refusal test (all se-named refusal rows)"
+    ],
+    "mismatches": [],
+    "nonBlockerNotes": [
+      "No AC-L03-B identifier exists in SPEC-v0.5.md or requirements.yaml; the acceptance-ID list (SPEC section 13) jumps from AC-L03 to AC-L04 as expected.",
+      "Probe B note: base64 length arithmetic is exact for validate=True input, so the post-decode size guard in api.py:1647 is unreachable defense-in-depth from the wire; both guards refuse with the same closed token.",
+      "The named worst-case run-start test exercises 50,000 points (min(cap, 50_000)) for speed; probe G closes the gap by running the exact 400,000-point boundary through upload and run-start."
+    ]
+  },
+  "runs": {
+    "inputApiNamedNodes": {
+      "command": "PYTHONPATH=\"apps/local:packages/science:.\" PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest apps/local/tests/test_input_api.py::(20 explicit nodes) -v",
+      "result": "20 passed in 2.23s",
+      "log": "artifacts/ulw-l03/logs/input-api-named.log"
+    },
+    "adversarialProbes": {
+      "command": "PYTHONPATH=\"apps/local:packages/science:.\" PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest artifacts/ulw-l03/probes_test.py -v",
+      "result": "8 passed, 2 failed in 2.41s (failures are the recorded adversarial findings blk-d2 and blk-e)",
+      "log": "artifacts/ulw-l03/logs/probes-adversarial.log"
+    },
+    "nodeCheck": {
+      "command": "node --check apps/web/local/app.js",
+      "result": "exit 0",
+      "log": "artifacts/ulw-l03/logs/ui-node-check.log"
+    }
+  },
+  "artifactRefs": [
+    {
+      "id": "ref-qa-report",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l03/qa-l03-report.json",
+      "description": "L03 red-team QA matrix and verdict"
+    },
+    {
+      "id": "ref-named-log",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l03/logs/input-api-named.log",
+      "description": "20 named input-api e2e nodes, all explicit, all green"
+    },
+    {
+      "id": "ref-probes-log",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l03/logs/probes-adversarial.log",
+      "description": "10 adversarial probes: 8 green, 2 recorded failures (blk-d2, blk-e) with captured wire bodies"
+    },
+    {
+      "id": "ref-probes-src",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l03/probes_test.py",
+      "description": "Probe source for AC-L03 red-team cases; secret-shaped canaries assembled at runtime, never stored verbatim"
+    },
+    {
+      "id": "ref-ui-log",
+      "kind": "api-test-report",
+      "path": "artifacts/ulw-l03/logs/ui-node-check.log",
+      "description": "node --check app.js + probe route wiring grep"
+    }
+  ]
+}

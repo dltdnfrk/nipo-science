@@ -1,0 +1,5 @@
+node --check apps/web/local/app.js
+exit=0
+
+grep -n inputs/probe apps/web/local/app.js
+297:    probeInput: (pid, body) => request("POST", `/projects/${pid}/inputs/probe`, body),

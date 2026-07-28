@@ -288,21 +288,59 @@ def test_the_plan_approval_route_is_registered() -> None:
     assert "#/projects/${projectId}/sessions/${session.id}/plan" in source
 
 
-def test_the_plan_approval_screen_has_no_run_cta() -> None:
-    # Run start is API-only until L03. A Run button on this screen would claim a
-    # product path that the approved plan explicitly deferred.
+def test_the_plan_approval_screen_has_measurement_load_and_run_cta() -> None:
+    # L03 unlocks Run on the approval screen only after a held ProbeInput and
+    # an unspent approval. Structure must expose the measurement-load section
+    # and the start-run path without inventing inline styles or dropping the
+    # in_process disclosure elsewhere in the shell.
     source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+    styles = (SHIPPED_ROOT / "styles.css").read_text(encoding="utf-8")
     start = source.index("async function renderPlanApproval")
     marker = "-" * 60
     end = source.index(f"// {marker} project gate --", start)
     screen = source[start:end]
 
-    assert '"data-plan-run": "deferred"' in screen
-    assert 'data-action": "start-run"' not in screen
-    assert 'data-action": "run-plan"' not in screen
-    assert "실행 시작" not in screen
-    assert "측정 파일 업로드 화면(L03)" in screen
-    assert "승인된 플랜의 실행은 로컬 API로 가능하며" in screen
+    assert '"data-plan-run": "measurement"' in screen
+    assert '"data-plan-run": "deferred"' not in screen
+    assert "측정 파일 업로드 화면(L03)" not in screen
+    assert "승인된 플랜의 실행은 로컬 API로 가능하며" not in screen
+
+    assert "측정 데이터 파일" in screen
+    assert "매니페스트" in screen
+    assert "측정 파일 불러오기" in screen
+    assert '"data-action": "load-measurement"' in screen
+    assert '"data-action": "start-run"' in screen
+    assert "실행 시작" in screen
+    assert "data-measurement-load" in screen
+    assert "scientificInput" in screen
+    assert "localStorage.setItem" not in screen
+    assert "sessionStorage" not in screen
+    assert "api.probeInput" in screen or "probeInput:" in source
+    assert "inputs/probe" in source
+    assert "scientific_input" in screen
+    assert "input_sha256" in screen
+    assert "LOADER_REASON_TEXT" in source
+    assert "science_issue" in source
+    assert "manifest_not_found" in source
+    assert "metadata_rejected" in source
+    assert "image_exceeds_product_pixel_cap" in source
+
+    # Intent edits still invalidate the approval binding (existing L04 contract).
+    assert "수정된 의도는 새 승인이 필요합니다" in screen
+    assert "needsNewPlan" in screen
+
+    # No inline style attributes in this screen or the stylesheet for it.
+    assert "style:" not in screen
+    assert "style=" not in screen
+    assert ".measurement-receipt" in styles
+    assert 'input[type="file"]' in styles
+
+    # Isolation honesty remains part of the shipped shell (not this panel alone).
+    assert "in_process" in source
+    assert (
+        'data-isolation": "in_process"' in source
+        or '"data-isolation": "in_process"' in source
+    )
 
 
 def test_the_plan_approval_screen_renders_digest_code_elements() -> None:

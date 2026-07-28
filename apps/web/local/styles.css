@@ -455,6 +455,35 @@ p { margin: 0; }
   font-size: 13px;
   line-height: 1.45;
 }
+.measurement-receipt {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-subtle);
+  min-width: 0;
+}
+.measurement-receipt__empty { margin-top: 12px; }
+.field input[type="file"] {
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  font-size: 14px;
+}
+.field input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  min-height: 28px;
+  padding: 4px 10px;
+  color: var(--text-strong);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  font: inherit;
+  cursor: pointer;
+}
 
 .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
 .form-row .field { flex: 1 1 240px; }

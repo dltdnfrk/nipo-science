@@ -24,7 +24,7 @@ import re
 import unicodedata
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, ClassVar, Final, final
+from typing import Annotated, ClassVar, Final, Literal, final
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -135,6 +135,7 @@ class ApiErrorCode(StrEnum):
     APPROVAL_EXPIRED = "approval_expired"
     APPROVAL_CONSUMED = "approval_consumed"
     APPROVAL_DIGEST_MISMATCH = "approval_digest_mismatch"
+    INPUT_DIGEST_MISMATCH = "input_digest_mismatch"
     APPROVAL_FORBIDDEN = "approval_forbidden"
     RUN_REJECTED = "run_rejected"
 
@@ -168,6 +169,38 @@ class RunRejection(StrEnum):
     """Why a Run start was refused after the approval gate, never quoting input."""
 
     EXECUTION_REPLAYED = "execution_replayed"
+
+
+class LoaderRejection(StrEnum):
+    """Why a measurement-file intake was refused, never quoting the file.
+
+    Tokens map 1:1 onto :class:`~nipo_local.loaders.LoaderError` subclasses
+    at HEAD, plus product-path size and encoding refusals that the path
+    loaders do not own. Error bodies carry these literals only; they never
+    carry paths, file bytes, or free-form prose.
+    """
+
+    MANIFEST_NOT_FOUND = "manifest_not_found"
+    DATA_FILE_NOT_FOUND = "data_file_not_found"
+    MANIFEST_SYNTAX = "manifest_syntax"
+    MANIFEST_SCHEMA = "manifest_schema"
+    MANIFEST_KIND_MISMATCH = "manifest_kind_mismatch"
+    MALFORMED_DATA = "malformed_data"
+    METADATA_REJECTED = "metadata_rejected"
+    DATA_TOO_LARGE = "data_too_large"
+    IMAGE_EXCEEDS_PRODUCT_PIXEL_CAP = "image_exceeds_product_pixel_cap"
+    SPECTRUM_EXCEEDS_PRODUCT_POINT_CAP = "spectrum_exceeds_product_point_cap"
+    INVALID_BASE64 = "invalid_base64"
+    UNSAFE_FILENAME = "unsafe_filename"
+
+
+class ProbeKind(StrEnum):
+    """Required-explicit measurement modality on the product intake wire."""
+
+    SPECTRUM = "spectrum"
+    TABLE = "table"
+    IMAGE = "image"
+    REPORT = "report"
 
 
 @final
@@ -310,8 +343,10 @@ class ErrorBody(LocalModel):
         | ExportRunRejection
         | ExportRejection
         | RunRejection
+        | LoaderRejection
         | None
     ) = None
+    science_issue: str | None = None
 
 
 class HealthBody(LocalModel):
@@ -844,12 +879,16 @@ class CreateRunRequest(LocalModel):
 
     `research_intent` must recompute to the digest the approval pinned;
     `scientific_input` is the ProbeInput JSON document the analysis consumes.
+    When present, `input_sha256` must equal the server-side digest of
+    `scientific_input`'s canonical serialization as returned by the upload
+    receipt, and a mismatch refuses the run before any store read.
     """
 
     session_id: SubmittedUuid
     approval_id: SubmittedUuid
     research_intent: ResearchIntentBody
     scientific_input: dict[str, object]
+    input_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
 class RunCreatedBody(LocalModel):
@@ -860,3 +899,33 @@ class RunCreatedBody(LocalModel):
     state: str
     output_version_ids: tuple[UUID, ...]
     execution_isolation: str
+
+
+class ProbeUploadRequest(LocalModel):
+    """Strict JSON intake for one measurement file and its sidecar manifest.
+
+    `kind` is required-explicit: the server never infers modality from the
+    filename or the manifest alone. `data_filename` is a leaf name only; the
+    server re-validates it with the same local-name rules Project/Session
+    titles use before any filesystem touch. `data_base64` is the measurement
+    bytes; `manifest_toml` is the sidecar text that will be written beside
+    them as `{data_filename}.manifest.toml`.
+    """
+
+    kind: Literal["spectrum", "table", "image", "report"]
+    data_filename: str = Field(min_length=1, max_length=MAX_SUBMITTED_NAME_CHARACTERS)
+    data_base64: str = Field(min_length=1)
+    manifest_toml: str = Field(min_length=1)
+
+
+class ProbeUploadBody(LocalModel):
+    """One successfully loaded measurement, with no durable record created.
+
+    `scientific_input` is the ProbeInput JSON document the UI holds and later
+    submits on the frozen run-start wire. `input_sha256` is the digest of that
+    document's canonical serialization, recomputed server-side.
+    """
+
+    scientific_input: dict[str, object]
+    input_sha256: str
+    kind: Literal["spectrum", "table", "image", "report"]
