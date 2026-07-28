@@ -145,6 +145,7 @@ from .apitypes import (
     CreateProjectRequest,
     CreateRunRequest,
     CreateSessionRequest,
+    CreateTurnRequest,
     DeletedPackBody,
     DownloadGrantBody,
     ErrorBody,
@@ -177,6 +178,8 @@ from .apitypes import (
     SessionList,
     SetKeyRequest,
     StoredPackBody,
+    TurnBody,
+    TurnFailedBody,
     VersionBody,
     VersionList,
     normalized_name_key,
@@ -227,7 +230,18 @@ from .loaders import (
     MetadataRejectedError,
     load_probe,
 )
+from .modelcall import (
+    Completed,
+    ModelCallClient,
+    ModelCallError,
+    ModelCallFailure,
+    ModelRequest,
+    TextDelta,
+    TurnRecord,
+)
+from .modelcall import Message as CallMessage
 from .providers import (
+    CredentialBackendError,
     CredentialStoreCorruptError,
     EmptyKeyError,
     InvisibleCharacterError,
@@ -237,8 +251,10 @@ from .providers import (
     ModelNotEnabledError,
     ProviderError,
     ProviderRegistry,
+    ProviderStatus,
     SurroundingWhitespaceError,
     UnknownProviderError,
+    parse_model_id,
 )
 from .reviewer import RULE_COVERAGE, summary_verdict
 from .reviewrun import (
@@ -255,6 +271,7 @@ from .store import (
     LocalArtifactStore,
     PlanApprovalRecord,
     ProjectRecord,
+    RunTurnDraft,
     SessionRecord,
 )
 from .webui import StaticAsset, StaticSurface, inject_token
@@ -540,6 +557,14 @@ class LocalApiDeps:
     org_id: UUID = LOCAL_ORG_ID
     requester_id: UUID = LOCAL_USER_ID
     runs: RunSurface | None = None
+    turn_client: ModelCallClient | None = None
+    """The client the turn route streams through.
+
+    `None` binds the route to `ModelCallClient(registry)` with the default
+    endpoint table; a test injects a client over loopback endpoints so no
+    turn ever leaves this machine. The client never chooses a provider --
+    the route hands it exactly the requested `provider:model` id.
+    """
 
 
 def _ticket_refusal(code: ApiErrorCode) -> Callable[[], LocalApiError]:
@@ -2102,6 +2127,268 @@ def _run_router(deps: LocalApiDeps) -> APIRouter:
     return router
 
 
+def _turn_refusal(failure: ModelCallFailure) -> Response:
+    """Answer one provider-side failure token with the closed `turn_failed` shape.
+
+    `timeout` maps to 504 and every other provider-neutral failure token to
+    502. The body carries the failure token and nothing else.
+    """
+    status = (
+        HTTPStatus.GATEWAY_TIMEOUT
+        if failure is ModelCallFailure.TIMEOUT
+        else HTTPStatus.BAD_GATEWAY
+    )
+    body = TurnFailedBody(reason=failure)
+    return Response(
+        content=body.model_dump_json().encode("utf-8"),
+        status_code=int(status),
+        media_type="application/json",
+    )
+
+
+def _turn_failed(error: ModelCallError) -> Response:
+    """Answer one provider error with the closed `turn_failed` shape.
+
+    The error is already constant-assembled inside :mod:`nipo_local.modelcall`,
+    so no provider prose, header, or echoed credential can reach it here.
+    """
+    return _turn_refusal(error.failure)
+
+
+def _parse_turn_model(model_id: str) -> str:
+    """Shape-check one requested selection without any provider contact.
+
+    Returns the provider id the parsed id names. Every refusal here is
+    caller-side: no provider is contacted, no credential is unsealed, and
+    no row is written.
+    """
+    try:
+        spec, _ = parse_model_id(model_id)
+    except MalformedModelIdError as error:
+        raise LocalApiError(
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            ApiErrorCode.MODEL_ID_MALFORMED,
+        ) from error
+    except UnknownProviderError as error:
+        raise LocalApiError(
+            HTTPStatus.NOT_FOUND,
+            ApiErrorCode.UNKNOWN_PROVIDER,
+        ) from error
+    return spec.provider_id
+
+
+def _turn_selection(deps: LocalApiDeps, model_id: str) -> str:
+    """Gate the requested selection's availability before provider contact.
+
+    Every refusal here is caller-side: no provider is contacted, no
+    credential is unsealed, and no row is written. Status resolution goes
+    through :meth:`ProviderRegistry.status`, which answers from `has` and the
+    environment without decrypting anything. Returns the provider id the
+    parsed id named.
+    """
+    provider_id = _parse_turn_model(model_id)
+    spec, _ = parse_model_id(model_id)
+    try:
+        if model_id not in deps.registry.enabled_models():
+            raise LocalApiError(
+                HTTPStatus.CONFLICT,
+                ApiErrorCode.MODEL_NOT_ENABLED,
+            )
+        if (
+            spec.requires_key
+            and deps.registry.status(spec.provider_id) is ProviderStatus.NOT_SET_UP
+        ):
+            raise LocalApiError(
+                HTTPStatus.CONFLICT,
+                ApiErrorCode.PROVIDER_NOT_CONFIGURED,
+            )
+    except LocalStateUnreadableError as error:
+        raise LocalApiError(
+            HTTPStatus.SERVICE_UNAVAILABLE,
+            ApiErrorCode.LOCAL_STATE_UNREADABLE,
+        ) from error
+    except CredentialBackendError as error:
+        raise LocalApiError(
+            HTTPStatus.SERVICE_UNAVAILABLE,
+            ApiErrorCode.CREDENTIAL_BACKEND_UNAVAILABLE,
+        ) from error
+    return provider_id
+
+
+def _turn_draft(  # noqa: PLR0913 - one parameter per wire field keeps the call site honest
+    deps: LocalApiDeps,
+    scope: ArtifactScope,
+    run_id: UUID,
+    record: TurnRecord,
+    *,
+    prompt_digest: str,
+    response_digest: str,
+) -> RunTurnDraft:
+    """Assemble the non-secret turn draft the store positions in-transaction."""
+    return RunTurnDraft(
+        org_id=scope.org_id,
+        project_id=scope.project_id,
+        run_id=run_id,
+        turn_id=deps.ids.new_uuid7(),
+        provider_id=record.provider_id,
+        model_id=record.model_id,
+        model_name=record.model_name,
+        adapter=record.adapter.value,
+        connection=record.connection,
+        request_count=record.request_count,
+        response_bytes=record.response_bytes,
+        text_characters=record.text_characters,
+        stop_reason=record.stop_reason,
+        input_tokens=record.input_tokens,
+        output_tokens=record.output_tokens,
+        prompt_sha256=prompt_digest,
+        response_sha256=response_digest,
+        created_at=deps.clock.now(),
+    )
+
+
+def _create_turn(  # noqa: C901 - the refusal matrix IS the contract; splitting it would hide it
+    deps: LocalApiDeps,
+    project_id: UUID,
+    run_id: UUID,
+    body: CreateTurnRequest,
+) -> TurnBody | Response:
+    """Run one synchronous turn against exactly the requested selection.
+
+    The first completed turn pins (provider_id, model_id) for the Run; a
+    later turn naming anything else is refused `model_selection_locked`
+    before any availability check or provider contact, so the lock's answer
+    never depends on whether the other model is enabled. A row exists in
+    `run_turns` iff the provider call completed and the response was fully
+    aggregated; every other outcome persists nothing, consumes nothing, and
+    never retries or reselects a provider, model, or credential. The
+    assistant text is returned in this response and stored nowhere.
+    """
+    scope = _live_project(deps, project_id)
+    run = deps.store.run(scope, run_id)
+    if run is None:
+        raise LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND)
+    provider_id = _parse_turn_model(body.model_id)
+    pinned = deps.store.first_run_turn(scope, run_id)
+    if pinned is not None and (
+        pinned.provider_id != provider_id or pinned.model_id != body.model_id
+    ):
+        raise LocalApiError(
+            HTTPStatus.CONFLICT,
+            ApiErrorCode.MODEL_SELECTION_LOCKED,
+        )
+    _ = _turn_selection(deps, body.model_id)
+    client = deps.turn_client
+    if client is None:
+        client = ModelCallClient(deps.registry)
+    request = ModelRequest(
+        messages=tuple(
+            CallMessage(role=message.role, content=message.content)
+            for message in body.messages
+        ),
+        max_output_tokens=body.max_output_tokens,
+    )
+    parts: list[str] = []
+    record: TurnRecord | None = None
+    try:
+        for event in client.stream(body.model_id, request):
+            if isinstance(event, TextDelta):
+                parts.append(event.text)
+            elif isinstance(event, Completed):
+                record = event.turn
+    except ModelCallError as error:
+        return _turn_failed(error)
+    if record is None:  # pragma: no cover - stream always ends completed/failed
+        raise LocalApiError(
+            HTTPStatus.INTERNAL_SERVER_ERROR,
+            ApiErrorCode.INTERNAL_ERROR,
+        )
+    text = "".join(parts)
+    # `prompt_sha256` covers the canonical request document exactly as
+    # validated; `response_sha256` covers the exact UTF-8 bytes of the
+    # answer returned below. Both are recomputable from what the caller sent
+    # and received, which is the audit linkage that replaces retained prose.
+    prompt_digest = hashlib.sha256(
+        body.model_dump_json().encode("utf-8"),
+    ).hexdigest()
+    response_digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    if record.model_id != body.model_id:
+        # The provider answered as a model other than the one requested; the
+        # run's pin must never record a selection the caller did not make.
+        return _turn_refusal(ModelCallFailure.MALFORMED_RESPONSE)
+    draft = _turn_draft(
+        deps,
+        scope,
+        run_id,
+        record,
+        prompt_digest=prompt_digest,
+        response_digest=response_digest,
+    )
+    outcome, stored = deps.store.record_run_turn(scope, draft)
+    if outcome is not StoreOutcome.CREATED or stored is None:
+        raise LocalApiError(
+            HTTPStatus.CONFLICT,
+            ApiErrorCode.RUN_REJECTED,
+            RunRejection.TURN_CONFLICT,
+        )
+    turn = stored
+    return TurnBody(
+        turn_id=turn.turn_id,
+        run_id=turn.run_id,
+        seq=turn.seq,
+        provider_id=turn.provider_id,
+        model_id=turn.model_id,
+        model_name=turn.model_name,
+        adapter=turn.adapter,
+        connection=turn.connection,
+        request_count=turn.request_count,
+        response_bytes=turn.response_bytes,
+        text_characters=turn.text_characters,
+        stop_reason=turn.stop_reason,
+        input_tokens=turn.input_tokens,
+        output_tokens=turn.output_tokens,
+        prompt_sha256=turn.prompt_sha256,
+        response_sha256=turn.response_sha256,
+        created_at=turn.created_at,
+        text=text,
+    )
+
+
+def _turn_router(deps: LocalApiDeps) -> APIRouter:
+    """Build the run-bound model turn route.
+
+    One synchronous turn: the credential is resolved at call time, the
+    stream is aggregated server-side, and the answer returns as one JSON
+    body. There is no streaming to the browser, no retry, and no second
+    provider, model, or credential attempt -- `request_count` on the
+    persisted record is the observable form of that rule. A caller that
+    disconnects mid-request simply never receives the response; a stream
+    cut on the provider side surfaces as `transport` (or `timeout`) and
+    persists no row.
+    """
+    router = APIRouter()
+
+    def create_turn(
+        project_id: UUID,
+        run_id: UUID,
+        body: CreateTurnRequest,
+    ) -> TurnBody | Response:
+        """Run one turn and return the aggregated answer and its record."""
+        return _create_turn(deps, project_id, run_id, body)
+
+    router.add_api_route(
+        "/projects/{project_id}/runs/{run_id}/turns",
+        create_turn,
+        methods=["POST"],
+        status_code=int(HTTPStatus.CREATED),
+        # The union return annotation is TurnBody on success or an already
+        # built refusal Response; a response model cannot express that, and
+        # the refusal path must stay the closed TurnFailedBody shape.
+        response_model=None,
+    )
+    return router
+
+
 _REVIEW_REFUSALS: Final[dict[ReviewRejection, tuple[HTTPStatus, ApiErrorCode]]] = {
     ReviewRejection.RUN_NOT_FOUND: (HTTPStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND),
     ReviewRejection.PROJECT_ARCHIVED: (
@@ -2816,6 +3103,7 @@ def create_app(
         _input_router(deps),
         _plan_router(deps),
         _run_router(deps),
+        _turn_router(deps),
         _review_router(deps),
         _export_router(deps, tickets),
     ):

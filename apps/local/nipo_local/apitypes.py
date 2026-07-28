@@ -31,6 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .exportpack import ExportRejection
 from .exportrun import ExportRunRejection
+from .modelcall import ModelCallFailure
 
 MAX_NAME_CHARACTERS: Final = 255
 """Longest storable Project name or Session title, matching the store."""
@@ -52,6 +53,9 @@ MAX_ENABLED_MODELS: Final = 256
 
 MAX_API_KEY_CHARACTERS: Final = 512
 """Upper bound on a submitted key; the registry owns every other key rule."""
+
+MAX_TURN_MESSAGES: Final = 1024
+"""Upper bound on one turn's message list, so a body cannot grow unbounded."""
 
 MAX_EXPORT_SELECTION: Final = 1024
 """Upper bound on one Export selection, so a request cannot grow unbounded.
@@ -112,6 +116,9 @@ class ApiErrorCode(StrEnum):
     KEY_REJECTED = "key_rejected"
     MODEL_ID_MALFORMED = "model_id_malformed"
     MODEL_NOT_ENABLED = "model_not_enabled"
+    PROVIDER_NOT_CONFIGURED = "provider_not_configured"
+    MODEL_SELECTION_LOCKED = "model_selection_locked"
+    TURN_FAILED = "turn_failed"
     CREDENTIAL_BACKEND_UNAVAILABLE = "credential_backend_unavailable"
     LOCAL_STATE_UNREADABLE = "local_state_unreadable"
     STORE_UNAVAILABLE = "store_unavailable"
@@ -169,6 +176,7 @@ class RunRejection(StrEnum):
     """Why a Run start was refused after the approval gate, never quoting input."""
 
     EXECUTION_REPLAYED = "execution_replayed"
+    TURN_CONFLICT = "turn_conflict"
 
 
 class LoaderRejection(StrEnum):
@@ -929,3 +937,72 @@ class ProbeUploadBody(LocalModel):
     scientific_input: dict[str, object]
     input_sha256: str
     kind: Literal["spectrum", "table", "image", "report"]
+
+
+class TurnMessage(LocalModel):
+    """One conversational message on the turn wire.
+
+    `role` is closed at the boundary: an unknown role is a malformed request
+    answered `invalid_request` before any provider is contacted, rather than
+    a refusal discovered by the provider.
+    """
+
+    role: Literal["user", "assistant"]
+    content: str
+
+
+class CreateTurnRequest(LocalModel):
+    """One run-bound model turn request.
+
+    `model_id` is required always, in the exact `<provider_id>:<model_name>`
+    form the composer persists. There is no default-model substitution: a
+    body that names no model is malformed, never a request the server picks
+    a model for.
+    """
+
+    model_id: str = Field(min_length=1)
+    messages: list[TurnMessage] = Field(min_length=1, max_length=MAX_TURN_MESSAGES)
+    max_output_tokens: int = Field(gt=0)
+
+
+class TurnBody(LocalModel):
+    """One completed model turn: the durable non-secret record plus the text.
+
+    Every field except `text` is exactly what the `run_turns` row persists.
+    `text` is the assistant's aggregated answer; it is returned in this
+    response and stored nowhere, and `response_sha256` is the digest of its
+    exact UTF-8 bytes so the durable record stays recomputable against what
+    the researcher received.
+    """
+
+    turn_id: UUID
+    run_id: UUID
+    seq: int
+    provider_id: str
+    model_id: str
+    model_name: str
+    adapter: str
+    connection: str
+    request_count: int
+    response_bytes: int
+    text_characters: int
+    stop_reason: str | None
+    input_tokens: int | None
+    output_tokens: int | None
+    prompt_sha256: str
+    response_sha256: str
+    created_at: datetime
+    text: str
+
+
+class TurnFailedBody(LocalModel):
+    """The only failure shape the turn route emits for a provider-side failure.
+
+    `reason` carries the provider-neutral
+    :class:`~nipo_local.modelcall.ModelCallFailure` token verbatim. It can
+    never carry provider prose, headers, an echoed body, or key material:
+    the token's values are literals in this repository.
+    """
+
+    error: Literal[ApiErrorCode.TURN_FAILED] = ApiErrorCode.TURN_FAILED
+    reason: ModelCallFailure

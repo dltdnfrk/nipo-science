@@ -1,0 +1,11 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/nipo-gjc/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/nipo-gjc
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 1 item
+
+artifacts/ulw-l10/probes_test.py::test_probe_a_concurrent_double_turn_one_run PASSED [100%]
+
+============================== 1 passed in 8.27s ===============================

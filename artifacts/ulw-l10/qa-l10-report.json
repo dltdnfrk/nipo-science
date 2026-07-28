@@ -1,0 +1,126 @@
+{
+  "receipt": {"kind": "api-test-report", "lane": "38-QaL10", "story": "L10", "goal": "G002 part-2", "base": "8bfdb47 + frozen uncommitted set + L10 concurrency fix (RunTurnDraft, seq inside record_run_turn)", "date": "2026-07-28", "recheck": "40-QaL10R2"},
+  "verdict": "PASS",
+  "summary": "All test_turn_api nodes (including the new regression test_concurrent_turns_both_record_and_lose_no_completed_turn) and all 6 adversarial probes pass; AC-L10 clauses and docs claims are test-backed. Blocker L10-QA-CONCURRENT-TURN-LOSS is RESOLVED by the fix: seq is assigned inside record_run_turn's BEGIN IMMEDIATE (RunTurnDraft API). Probe (a) re-check: 48/48 concurrent double-turn attempts (4 runs x 12) returned [201, 201] with rows seq [1,2], 2 provider hits, pin kept; the probe file needed no expectation change (its existing assertions already encode the fixed semantics). Spot-run of the assigned command: 8 passed in 11.98s (artifacts/ulw-l10/logs/probe-a-recheck.log).",
+  "contractCoverage": [
+    {
+      "clause": "AC-L10: a model turn uses exactly the provider and model the researcher selected",
+      "status": "covered",
+      "evidence": ["test_turn_api.py::test_turn_uses_exactly_the_selected_model_id PASSED", "wire log: exactly 1 request to OPENAI_PATH with the stored credential"]
+    },
+    {
+      "clause": "AC-L10: persists that selection with the Run",
+      "status": "covered",
+      "evidence": ["test_turn_api.py::test_turn_persists_selection_on_the_run_projection PASSED", "projection pinned_provider_id/pinned_model_id from the seq=1 row; turns expose no text"]
+    },
+    {
+      "clause": "AC-L10: quota, authentication, cancellation, unavailability, and terminal failure surface as provider-neutral states",
+      "status": "covered",
+      "evidence": ["10 parametrized token nodes PASSED", "test_response_too_large_token_maps_to_turn_failed_wire PASSED", "probe_c PASSED (Amendment-4 cancellation class: slow stream cut mid-frame -> 502 turn_failed/transport)", "probe_f PASSED (wire reason set == ModelCallFailure values, 11 tokens, no drift)"]
+    },
+    {
+      "clause": "AC-L10: without selecting another provider, model, or credential",
+      "status": "covered",
+      "evidence": ["test_quota_failure_is_provider_neutral_and_contacts_no_fallback PASSED", "test_authentication_failure_does_not_try_another_provider_or_env_key_slot PASSED", "exactly one provider request per turn; env-slot key never substituted"]
+    },
+    {
+      "clause": "AC-L10: leave existing Artifact Versions unchanged",
+      "status": "covered",
+      "evidence": ["test_terminal_turn_failure_leaves_artifact_versions_unchanged PASSED", "test_failed_turn_persists_no_row_and_no_pin PASSED", "probe_c PASSED (harness.counts() identical before/after)"]
+    },
+    {
+      "clause": "Amendment 4 pre-egress refusal matrix (404 not_found x2, 409 project_archived, 422 model_id_malformed, 404 unknown_provider, 409 model_not_enabled, 409 provider_not_configured, 409 model_selection_locked)",
+      "status": "covered",
+      "evidence": ["7 named refusal nodes PASSED with wire_log == ()", "probe_d PASSED", "probe_e PASSED"]
+    },
+    {
+      "clause": "Amendment 4 matrix cells: 503 credential_backend_unavailable, 413 payload_too_large on the turn route",
+      "status": "gap_observation",
+      "evidence": ["no test under apps/local/tests exercises credential_backend_unavailable on the turn route; payload_too_large is covered only for the upload route (test_input_api). Code path exists (api.py _turn_selection). Not claimed by SPEC section 14 and not part of AC-L10 wording; plan-contract cells without named tests."]
+    },
+    {
+      "clause": "Amendment 5 durable contract: run_turns carries exactly the non-secret TurnRecord fields plus digests; pin IS the seq=1 row",
+      "status": "covered",
+      "evidence": ["store.py:489-510 schema matches the pinned column list verbatim; no text column exists", "UNIQUE (org_id, run_id, seq) backstop present", "probe_b PASSED"]
+    },
+    {
+      "clause": "Amendment 7: closed ApiErrorCode additions + UI closed-code map; timeout->504, others->502",
+      "status": "covered",
+      "evidence": ["apitypes.py:119-121 PROVIDER_NOT_CONFIGURED / MODEL_SELECTION_LOCKED / TURN_FAILED", "app.js:169-176 Korean closed-code map entries; node --check apps/web/local/app.js OK", "timeout token node asserted 504 PASSED"]
+    }
+  ],
+  "surfaceEvidence": [
+    {"surface": "POST /api/v1/projects/{pid}/runs/{rid}/turns (real socket, real store, WireServer providers)", "result": "26/26 named nodes PASSED in 15.29s", "log": "artifacts/ulw-l10/logs/test_turn_api.log"},
+    {"surface": "GET run projection (Run-bound AC-L10 evidence)", "result": "pin and turns verified across 5 tests + probes b,c,d; no text field, no canary", "log": "artifacts/ulw-l10/logs/probes.log"},
+    {"surface": "apps/web/local/app.js", "result": "node --check OK; closed-code map carries the three new L10 codes", "log": "inline (allowed check)"}
+  ],
+  "adversarialCases": [
+    {
+      "id": "probe_a_concurrent_double_turn",
+      "expectation": "two threads, one run, same model: exactly two rows seq 1..2, no duplicate seq, no lost pin",
+      "observed": "RESOLVED after fix. Originally: 5 of 36 attempts returned [201, 503 store_unavailable] with one row because _create_turn computed seq outside the store lock. Fix: store assigns the position inside the claiming transaction (RunTurnDraft; record_run_turn BEGIN IMMEDIATE); residual record conflicts map to closed 409 run_rejected/turn_conflict. Re-check: 48/48 attempts (4 runs x 12 pairs) returned [201, 201], rows seq [1,2], exactly 2 provider hits per attempt, pinned_model_id stayed openai:gpt-test; zero 503/409 anomalies. Regression node test_concurrent_turns_both_record_and_lose_no_completed_turn PASSED.",
+      "status": "PASSED",
+      "severity": "resolved (was: high, completed paid turn silently lost under concurrency)",
+      "evidence": "artifacts/ulw-l10/logs/probe-a-recheck.log; original failure: artifacts/ulw-l10/logs/probes.log; artifacts/ulw-l10/logs/probe-a-rerun2.log"
+    },
+    {
+      "id": "probe_b_hostile_canary_echo",
+      "expectation": "provider-key-shaped canary in prompt; 201 text may echo it; run_turns row and projection never carry it",
+      "observed": "201 body echoed the canary (provider double), zero row values and zero projection bytes contained it; no text-like column exists. Canary cited only as sha256:8dc9b5fb456f1c89; assembled from fragments in the probe, never stored verbatim.",
+      "status": "PASSED",
+      "evidence": "artifacts/ulw-l10/logs/probes.log"
+    },
+    {
+      "id": "probe_c_slow_stream_cut",
+      "expectation": "slow stream cut mid-frame -> transport/timeout failure, no row, no pin, artifact_versions unchanged",
+      "observed": "502 turn_failed/transport; run_turns empty; projection pin null and turns []; harness.counts() identical before/after.",
+      "status": "PASSED",
+      "evidence": "artifacts/ulw-l10/logs/probes.log"
+    },
+    {
+      "id": "probe_d_pin_variants",
+      "expectation": "same model with new max_output_tokens allowed; model_id differing by case/whitespace refused with zero provider contact",
+      "observed": "max_output_tokens 512 accepted as seq=2. All five case/whitespace variants refused pre-egress with closed codes (actual: 404 unknown_provider for case variants, 409 model_not_enabled for whitespace variants - the assignment predicted locked/malformed; the substantive requirement, closed refusal provable by WireServer hit count, held: hits stayed exactly 2).",
+      "status": "PASSED",
+      "evidence": "artifacts/ulw-l10/logs/probes.log"
+    },
+    {
+      "id": "probe_e_archived_and_traversal",
+      "expectation": "archived project -> 409 with WireServer hits 0; traversal-shaped provider id -> closed refusal, no path-like echo",
+      "observed": "409 project_archived with 0 provider hits and no rows; '../..:../../etc/passwd' -> 404 unknown_provider whose body contains no '..', 'etc', or 'passwd'.",
+      "status": "PASSED",
+      "evidence": "artifacts/ulw-l10/logs/probes.log"
+    },
+    {
+      "id": "probe_f_reason_token_completeness",
+      "expectation": "wire reason values equal exactly modelcall.ModelCallFailure's values",
+      "observed": "Set equality holds (11 tokens), TurnFailedBody.reason is typed as the enum itself (out-of-enum token impossible by construction), and the 10 parametrized cases + response_too_large cover all 11 tokens.",
+      "status": "PASSED",
+      "evidence": "artifacts/ulw-l10/logs/probes.log"
+    }
+  ],
+  "docsHonesty": {
+    "spec_section_14_l10_sentence": "every clause maps to a run test: exact selection (test_turn_uses_exactly_the_selected_model_id), request_count==1 no-fallback (same + quota/auth tests), pin on Run (test_turn_persists_selection_on_the_run_projection), later-selection refused pre-egress (test_second_turn_with_different_model_is_refused_pre_egress), all failure classes -> turn_failed with no AV change and no record (11 token nodes + terminal/failed-turn nodes), non-secret digests only / text not stored (store.py:489-510 has no text column; test_turn_error_bodies_and_run_turns_rows_carry_no_canary_key; probe_b)",
+    "requirements_yaml": "L10 present in implemented_and_verified (line 318); statement (line 399) and AC-L10 (line 416) match tested behavior; grep confirms no AC-L10-B anywhere in requirements.yaml or SPEC-v0.5.md",
+    "text_not_stored_claim": "verified against store.py run_turns DDL: 19 columns, none named or shaped for assistant text; prompt_sha256/response_sha256 are the only prose linkage",
+    "gaps": ["Amendment-4 cells 503 credential_backend_unavailable and 413 payload_too_large have no turn-route test (not doc-claimed; flagged as plan-contract observation)"]
+  },
+  "blockers": [],
+  "resolvedBlockers": [
+    {
+      "id": "L10-QA-CONCURRENT-TURN-LOSS",
+      "severity": "high",
+      "resolution": "Fixed: seq assigned inside record_run_turn's BEGIN IMMEDIATE via RunTurnDraft; new regression node test_concurrent_turns_both_record_and_lose_no_completed_turn passes; residual record conflicts map to closed 409 run_rejected/turn_conflict. Verified by probe (a) re-check: 48/48 attempts clean (artifacts/ulw-l10/logs/probe-a-recheck.log).",
+      "originalEvidence": ["artifacts/ulw-l10/logs/probes.log", "artifacts/ulw-l10/logs/probe-a-rerun2.log"]
+    }
+  ],
+  "artifactRefs": [
+    "artifacts/ulw-l10/probes_test.py",
+    "artifacts/ulw-l10/logs/test_turn_api.log",
+    "artifacts/ulw-l10/logs/probes.log",
+    "artifacts/ulw-l10/logs/probe-a-rerun.log",
+    "artifacts/ulw-l10/logs/probe-a-rerun2.log",
+    "artifacts/ulw-l10/logs/probe-a-recheck.log",
+    "artifacts/ulw-l10/qa-l10-report.json"
+  ]
+}

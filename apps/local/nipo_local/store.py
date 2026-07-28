@@ -217,6 +217,7 @@ import re
 import sqlite3
 import tempfile
 import time
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime
@@ -245,7 +246,7 @@ from services.api.artifacts.store_contract import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Sequence
 
     from .config import LocalPaths
 
@@ -477,6 +478,37 @@ SCHEMA: Final = (
       created_at TEXT NOT NULL,
       PRIMARY KEY (org_id, run_id, sequence),
       UNIQUE (org_id, run_id, artifact_version_id)
+    ) STRICT
+    """,
+    # One row per completed model turn. `UNIQUE (org_id, run_id, seq)` is the
+    # monotonic-position backstop, and the `seq = 1` row IS the Run's pinned
+    # selection: the first completed turn fixes (provider_id, model_id) and
+    # every later turn must match it exactly. No column can carry assistant
+    # text or key material -- the two digests are the audit linkage that
+    # stands in for retained prose.
+    """
+    CREATE TABLE IF NOT EXISTS run_turns (
+      org_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      run_id TEXT NOT NULL,
+      turn_id TEXT NOT NULL,
+      seq INTEGER NOT NULL,
+      provider_id TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      model_name TEXT NOT NULL,
+      adapter TEXT NOT NULL,
+      connection TEXT NOT NULL,
+      request_count INTEGER NOT NULL,
+      response_bytes INTEGER NOT NULL,
+      text_characters INTEGER NOT NULL,
+      stop_reason TEXT,
+      input_tokens INTEGER,
+      output_tokens INTEGER,
+      prompt_sha256 TEXT NOT NULL,
+      response_sha256 TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (org_id, turn_id),
+      UNIQUE (org_id, run_id, seq)
     ) STRICT
     """,
     # `UNIQUE (org_id, project_id, pinned_input_sha256)` is the deduplication
@@ -765,6 +797,75 @@ class RunOutputRecord(LocalRecord):
     artifact_id: Uuid7
     artifact_version_id: Uuid7
     content_sha256: Sha256
+    created_at: datetime
+
+
+class RunTurnDraft(LocalRecord):
+    """One completed model turn before its per-Run position is assigned.
+
+    The position is not part of the caller's statement: `record_run_turn`
+    assigns it inside the claiming transaction, so two turns that complete
+    concurrently serialize into positions 1 and 2 instead of one being
+    discarded. Carries exactly the non-secret fields of :class:`RunTurnRecord`.
+    """
+
+    org_id: Uuid7
+    project_id: Uuid7
+    run_id: Uuid7
+    turn_id: Uuid7
+    provider_id: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    model_id: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    model_name: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    adapter: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    connection: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    request_count: int = Field(ge=0)
+    response_bytes: int = Field(ge=0)
+    text_characters: int = Field(ge=0)
+    stop_reason: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=MAX_LOCAL_NAME_CHARACTERS,
+    )
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    prompt_sha256: Sha256
+    response_sha256: Sha256
+    created_at: datetime
+
+
+class RunTurnRecord(LocalRecord):
+    """The durable, non-secret record of one completed model turn.
+
+    `seq` is the per-Run monotonic position, and the `seq = 1` row is the
+    Run's pinned selection: the first completed turn fixes the provider and
+    model, and the turn route refuses every later selection that does not
+    match it exactly. There is deliberately no text field: the assistant's
+    answer is returned in the HTTP response and never retained, and the two
+    digests are the audit linkage that takes its place.
+    """
+
+    org_id: Uuid7
+    project_id: Uuid7
+    run_id: Uuid7
+    turn_id: Uuid7
+    seq: int = Field(ge=1)
+    provider_id: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    model_id: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    model_name: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    adapter: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    connection: str = Field(min_length=1, max_length=MAX_LOCAL_NAME_CHARACTERS)
+    request_count: int = Field(ge=0)
+    response_bytes: int = Field(ge=0)
+    text_characters: int = Field(ge=0)
+    stop_reason: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=MAX_LOCAL_NAME_CHARACTERS,
+    )
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    prompt_sha256: Sha256
+    response_sha256: Sha256
     created_at: datetime
 
 
@@ -1109,6 +1210,45 @@ SELECT json_object(
 FROM run_outputs o
 WHERE o.org_id = ? AND o.project_id = ? AND o.run_id = ?
 ORDER BY o.sequence
+"""
+
+# Turn order is the per-Run sequence, stated explicitly for the same reason
+# `run_outputs` states `sequence`: SQL guarantees no row order without it.
+RUN_TURN_LIST_JSON: Final = """
+SELECT json_object(
+  'org_id', t.org_id, 'project_id', t.project_id, 'run_id', t.run_id,
+  'turn_id', t.turn_id, 'seq', t.seq,
+  'provider_id', t.provider_id, 'model_id', t.model_id,
+  'model_name', t.model_name, 'adapter', t.adapter,
+  'connection', t.connection, 'request_count', t.request_count,
+  'response_bytes', t.response_bytes, 'text_characters', t.text_characters,
+  'stop_reason', t.stop_reason, 'input_tokens', t.input_tokens,
+  'output_tokens', t.output_tokens,
+  'prompt_sha256', t.prompt_sha256, 'response_sha256', t.response_sha256,
+  'created_at', t.created_at
+)
+FROM run_turns t
+WHERE t.org_id = ? AND t.project_id = ? AND t.run_id = ?
+ORDER BY t.seq
+"""
+
+# The pinned selection is the first completed turn by definition, so the pin
+# read is the seq = 1 row rather than a separate column anywhere.
+RUN_TURN_FIRST_JSON: Final = """
+SELECT json_object(
+  'org_id', t.org_id, 'project_id', t.project_id, 'run_id', t.run_id,
+  'turn_id', t.turn_id, 'seq', t.seq,
+  'provider_id', t.provider_id, 'model_id', t.model_id,
+  'model_name', t.model_name, 'adapter', t.adapter,
+  'connection', t.connection, 'request_count', t.request_count,
+  'response_bytes', t.response_bytes, 'text_characters', t.text_characters,
+  'stop_reason', t.stop_reason, 'input_tokens', t.input_tokens,
+  'output_tokens', t.output_tokens,
+  'prompt_sha256', t.prompt_sha256, 'response_sha256', t.response_sha256,
+  'created_at', t.created_at
+)
+FROM run_turns t
+WHERE t.org_id = ? AND t.project_id = ? AND t.run_id = ? AND t.seq = 1
 """
 
 REVIEW_JSON: Final = """
@@ -2051,6 +2191,78 @@ class LocalArtifactStore:
             for row in rows
         )
 
+    def record_run_turn(
+        self,
+        scope: ArtifactScope,
+        turn: RunTurnDraft,
+    ) -> tuple[StoreOutcome, RunTurnRecord | None]:
+        """Assign the next per-Run position and record one completed turn.
+
+        The position is computed *inside* the claiming transaction: two
+        turns that complete their provider calls concurrently serialize
+        into consecutive positions, and neither completed turn is lost.
+        Every rejecting outcome rolls back and writes nothing, which is the
+        durable half of "a failed turn persists no row". Returns the stored
+        record with its assigned position on success.
+        """
+        stored: list[RunTurnRecord] = []
+        outcome = self._transact(
+            lambda: self._record_turn_locked(scope, turn, stored.append),
+            StoreOutcome.CREATED,
+            StoreOutcome.ASSOCIATION_EXISTS,
+        )
+        return outcome, stored[0] if outcome is StoreOutcome.CREATED else None
+
+    def run_turns(
+        self,
+        scope: ArtifactScope,
+        run_id: UUID,
+    ) -> tuple[RunTurnRecord, ...]:
+        """List one Run's completed turns in ascending sequence order.
+
+        Archival is not a filter here for the same reason it is not on
+        `run_outputs`: the turn rows are the Run's recorded selection and a
+        reader must be able to see them on an archived Project.
+        """
+        with self._lock:
+            try:
+                rows = _fetch_all(
+                    self._connection.execute(
+                        RUN_TURN_LIST_JSON,
+                        (str(scope.org_id), str(scope.project_id), str(run_id)),
+                    )
+                )
+            except sqlite3.Error as error:
+                raise ArtifactStoreError from error
+        return tuple(
+            RunTurnRecord.model_validate_json(TEXT.validate_python(row[0]))
+            for row in rows
+        )
+
+    def first_run_turn(
+        self,
+        scope: ArtifactScope,
+        run_id: UUID,
+    ) -> RunTurnRecord | None:
+        """Return the Run's pinned selection turn, or None before any turn.
+
+        The pin is the `seq = 1` row by definition; `None` is a real answer,
+        not an error: a Run with no completed turn has no pinned selection.
+        """
+        with self._lock:
+            try:
+                row = _fetch_one(
+                    self._connection.execute(
+                        RUN_TURN_FIRST_JSON,
+                        (str(scope.org_id), str(scope.project_id), str(run_id)),
+                    )
+                )
+            except sqlite3.Error as error:
+                raise ArtifactStoreError from error
+        if row is None:
+            return None
+        return RunTurnRecord.model_validate_json(TEXT.validate_python(row[0]))
+
     @staticmethod
     def pinned_input_digest(
         scope: ArtifactScope,
@@ -2699,6 +2911,80 @@ class LocalArtifactStore:
         )
         return StoreOutcome.CREATED
 
+    def _record_turn_locked(
+        self,
+        scope: ArtifactScope,
+        turn: RunTurnDraft,
+        record: Callable[[RunTurnRecord], None],
+    ) -> StoreOutcome:
+        """Assign the next position and insert one turn, in one lock hold.
+
+        The position is read and consumed under the same `BEGIN IMMEDIATE`
+        as the insert, so concurrent completed turns serialize instead of
+        one being billed by its provider and then discarded. Deliberately
+        not blocked by Project archival, exactly as `finish_run` is not: a
+        turn is recorded only after the provider call completed, and
+        refusing to record it would destroy the selection evidence of a
+        Run whose Project was archived mid-conversation.
+        """
+        if turn.org_id != scope.org_id or turn.project_id != scope.project_id:
+            return StoreOutcome.NOT_FOUND
+        if self._run_locked(scope, turn.run_id) is None:
+            return StoreOutcome.NOT_FOUND
+        seq = self._turn_head(scope, turn.run_id) + 1
+        stored = RunTurnRecord(
+            org_id=turn.org_id,
+            project_id=turn.project_id,
+            run_id=turn.run_id,
+            turn_id=turn.turn_id,
+            seq=seq,
+            provider_id=turn.provider_id,
+            model_id=turn.model_id,
+            model_name=turn.model_name,
+            adapter=turn.adapter,
+            connection=turn.connection,
+            request_count=turn.request_count,
+            response_bytes=turn.response_bytes,
+            text_characters=turn.text_characters,
+            stop_reason=turn.stop_reason,
+            input_tokens=turn.input_tokens,
+            output_tokens=turn.output_tokens,
+            prompt_sha256=turn.prompt_sha256,
+            response_sha256=turn.response_sha256,
+            created_at=turn.created_at,
+        )
+        _ = self._connection.execute(
+            "INSERT INTO run_turns (org_id, project_id, run_id, turn_id, seq, "
+            "provider_id, model_id, model_name, adapter, connection, "
+            "request_count, response_bytes, text_characters, stop_reason, "
+            "input_tokens, output_tokens, prompt_sha256, response_sha256, "
+            "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
+            "?, ?, ?, ?, ?)",
+            (
+                str(scope.org_id),
+                str(scope.project_id),
+                str(stored.run_id),
+                str(stored.turn_id),
+                stored.seq,
+                stored.provider_id,
+                stored.model_id,
+                stored.model_name,
+                stored.adapter,
+                stored.connection,
+                stored.request_count,
+                stored.response_bytes,
+                stored.text_characters,
+                stored.stop_reason,
+                stored.input_tokens,
+                stored.output_tokens,
+                stored.prompt_sha256,
+                stored.response_sha256,
+                stored.created_at.isoformat(),
+            ),
+        )
+        record(stored)
+        return StoreOutcome.CREATED
+
     def _finish_run_locked(
         self,
         scope: ArtifactScope,
@@ -3231,6 +3517,19 @@ class LocalArtifactStore:
         row = _fetch_one(
             self._connection.execute(
                 "SELECT COALESCE(MAX(sequence), 0) FROM run_outputs "
+                "WHERE org_id = ? AND project_id = ? AND run_id = ?",
+                (str(scope.org_id), str(scope.project_id), str(run_id)),
+            )
+        )
+        if row is None:
+            return 0
+        return INTEGER.validate_python(row[0])
+
+    def _turn_head(self, scope: ArtifactScope, run_id: UUID) -> int:
+        """Return the highest recorded turn position, or zero before any turn."""
+        row = _fetch_one(
+            self._connection.execute(
+                "SELECT COALESCE(MAX(seq), 0) FROM run_turns "
                 "WHERE org_id = ? AND project_id = ? AND run_id = ?",
                 (str(scope.org_id), str(scope.project_id), str(run_id)),
             )

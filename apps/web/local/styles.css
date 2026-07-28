@@ -604,6 +604,20 @@ tbody tr:last-child td { border-bottom: 0; }
   font-weight: 700;
 }
 
+/* ------------------------------------------------------------------- turns */
+.turn-transcript { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.turn-message {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--surface-1);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-micro);
+}
+.turn-message[data-role="assistant"] { background: var(--surface-2); }
+.turn-message__role { color: var(--text-faint); font-size: 13px; font-weight: 600; }
+.turn-message__text { color: var(--text); font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 /* ------------------------------------------------------------------- review */
 
 /*

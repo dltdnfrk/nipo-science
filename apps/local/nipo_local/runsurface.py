@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         LocalArtifactStore,
         RunOutputRecord,
         RunRecord,
+        RunTurnRecord,
     )
 
 __all__ = ["StoreRunSurface", "run_projection"]
@@ -55,8 +56,9 @@ def run_projection(
     run: RunRecord,
     execution: ExecutionRecord | None,
     outputs: Sequence[RunOutputRecord],
+    turns: Sequence[RunTurnRecord] = (),
 ) -> dict[str, object]:
-    """Project one Run, its execution, and its outputs onto the wire.
+    """Project one Run, its execution, its outputs, and its turns onto the wire.
 
     Every provenance digest is read from the `executions` row rather than
     recomputed, because this is a read path: recomputing here would report
@@ -67,6 +69,12 @@ def run_projection(
     `committed_outputs` is projected in the `sequence` the store recorded, so
     a truncated chain reads as the prefix it is instead of as a complete one
     in a different order.
+
+    `pinned_provider_id` and `pinned_model_id` are read from the first
+    completed turn (`seq = 1`), which IS the Run's pinned selection by
+    definition; both are `None` before any turn completes. `turns` carries
+    only non-secret fields -- never the assistant text, which is returned in
+    the turn response and stored nowhere.
     """
     return {
         "run_id": str(run.id),
@@ -97,6 +105,19 @@ def run_projection(
             }
             for output in outputs
         ],
+        "pinned_provider_id": None if not turns else turns[0].provider_id,
+        "pinned_model_id": None if not turns else turns[0].model_id,
+        "turns": [
+            {
+                "seq": turn.seq,
+                "provider_id": turn.provider_id,
+                "model_id": turn.model_id,
+                "request_count": turn.request_count,
+                "stop_reason": turn.stop_reason,
+                "created_at": turn.created_at.isoformat(),
+            }
+            for turn in turns
+        ],
         "failure": (
             None
             if run.error_type is None
@@ -110,10 +131,11 @@ class StoreRunSurface:
     """Answer the API's Run questions from the durable tables.
 
     Structurally read-only: the only store methods reachable from here are
-    `runs`, `run`, `run_outputs`, `execution_for_run`, and `execution`, all of
-    which are `SELECT` projections. There is no path from this object to
-    `create_run`, `start_run`, `finish_run`, or `commit_version`, so binding
-    the Run surface cannot turn a read of a Run into a write of one.
+    `runs`, `run`, `run_outputs`, `run_turns`, `execution_for_run`, and
+    `execution`, all of which are `SELECT` projections. There is no path from
+    this object to `create_run`, `start_run`, `finish_run`, `record_run_turn`,
+    or `commit_version`, so binding the Run surface cannot turn a read of a
+    Run into a write of one.
     """
 
     __slots__ = ("_store",)
@@ -134,6 +156,7 @@ class StoreRunSurface:
                 run,
                 self._store.execution_for_run(scope, run.id),
                 self._store.run_outputs(scope, run.id),
+                self._store.run_turns(scope, run.id),
             )
             for run in self._store.runs(scope)
         )
@@ -151,6 +174,7 @@ class StoreRunSurface:
             run,
             self._store.execution_for_run(scope, run_id),
             self._store.run_outputs(scope, run_id),
+            self._store.run_turns(scope, run_id),
         )
 
     def execution_isolation(

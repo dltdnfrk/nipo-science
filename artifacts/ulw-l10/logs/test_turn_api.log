@@ -1,0 +1,36 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0 -- /Users/hyunjun/nipo-gjc/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/hyunjun/nipo-gjc
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collecting ... collected 26 items
+
+apps/local/tests/test_turn_api.py::test_turn_uses_exactly_the_selected_model_id PASSED [  3%]
+apps/local/tests/test_turn_api.py::test_turn_persists_selection_on_the_run_projection PASSED [  7%]
+apps/local/tests/test_turn_api.py::test_quota_failure_is_provider_neutral_and_contacts_no_fallback PASSED [ 11%]
+apps/local/tests/test_turn_api.py::test_authentication_failure_does_not_try_another_provider_or_env_key_slot PASSED [ 15%]
+apps/local/tests/test_turn_api.py::test_terminal_turn_failure_leaves_artifact_versions_unchanged PASSED [ 19%]
+apps/local/tests/test_turn_api.py::test_turn_error_bodies_and_run_turns_rows_carry_no_canary_key PASSED [ 23%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[authentication-route0-502] PASSED [ 26%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[rate_limit-route1-502] PASSED [ 30%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[quota-route2-502] PASSED [ 34%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[model_unavailable-route3-502] PASSED [ 38%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[provider_unavailable-route4-502] PASSED [ 42%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[invalid_request-route5-502] PASSED [ 46%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[timeout-route6-504] PASSED [ 50%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[transport-route7-502] PASSED [ 53%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[malformed_response-route8-502] PASSED [ 57%]
+apps/local/tests/test_turn_api.py::test_every_model_call_failure_token_maps_to_turn_failed_wire[unclassified-route9-502] PASSED [ 61%]
+apps/local/tests/test_turn_api.py::test_response_too_large_token_maps_to_turn_failed_wire PASSED [ 65%]
+apps/local/tests/test_turn_api.py::test_failed_turn_persists_no_row_and_no_pin PASSED [ 69%]
+apps/local/tests/test_turn_api.py::test_second_turn_with_different_model_is_refused_pre_egress PASSED [ 73%]
+apps/local/tests/test_turn_api.py::test_turn_refused_when_provider_key_is_not_configured PASSED [ 76%]
+apps/local/tests/test_turn_api.py::test_malformed_model_id_is_refused_422 PASSED [ 80%]
+apps/local/tests/test_turn_api.py::test_unknown_provider_is_refused_404 PASSED [ 84%]
+apps/local/tests/test_turn_api.py::test_model_not_enabled_is_refused_409 PASSED [ 88%]
+apps/local/tests/test_turn_api.py::test_unknown_run_is_404 PASSED        [ 92%]
+apps/local/tests/test_turn_api.py::test_unknown_project_is_404 PASSED    [ 96%]
+apps/local/tests/test_turn_api.py::test_archived_project_refuses_turn_409 PASSED [100%]
+
+============================= 26 passed in 15.29s ==============================

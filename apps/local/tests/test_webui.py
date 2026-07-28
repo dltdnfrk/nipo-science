@@ -410,3 +410,137 @@ def test_guided_first_run_copy_is_present_and_discloses_isolation() -> None:
     )
 
     assert ".first-run-guide" in styles
+
+
+def _turn_panel_slice(source: str) -> str:
+    start = source.index("function turnSection")
+    end = source.index(
+        "// ---------------------------------------------------------------- export --",
+        start,
+    )
+    return source[start:end]
+
+
+def test_the_run_detail_screen_has_a_turn_panel() -> None:
+    # L10 binds a model turn to the Run: a composer-enabled model picker, a
+    # prompt, one synchronous send, and the pinned selection plus recorded
+    # turns read back from the run detail projection.
+    source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+
+    assert "function turnSection" in source
+    assert "turnSection(projectId, runId, run, picker)" in source
+    assert '"data-turn-panel": "run"' in source
+
+    # The picker is fed by the composer endpoint (enabled models only).
+    assert "picker = await api.composer()" in source
+    assert "createTurn" in source
+    assert "/runs/${rid}/turns" in source
+
+    # Pinned selection display from GET run, with the 고정 badge.
+    assert "pinned_provider_id" in source
+    assert "pinned_model_id" in source
+    assert "모델 고정" in source
+    assert "고정된 모델" in source
+
+    # Recorded turns read back from the run detail projection.
+    assert "run.turns" in source
+    assert '"data-turn-history": "run"' in source
+
+    # Prompt, send, and the synchronous response rendering.
+    panel = _turn_panel_slice(source)
+    assert '"data-turn-form": "composer"' in panel
+    assert '"data-action": "send-turn"' in panel
+    assert "전송" in panel
+    assert "turn-model" in panel
+    assert "turn-prompt" in panel
+    assert "max_output_tokens" in panel
+    assert "TURN_MAX_OUTPUT_TOKENS" in panel
+    assert 'role: "user"' in panel
+    assert '"data-turn-transcript": "memory"' in panel
+    assert '"data-turn-summary": "last"' in panel
+    assert "request_count" in panel
+
+    # Once pinned, the picker shows ONLY the pinned selection, disabled.
+    assert "if (panel.pinned) return [{ value: panel.pinned" in panel
+    assert 'disabled: panel.busy || panel.pinned !== ""' in panel
+
+    # Conversation text stays in screen memory; nothing touches web storage.
+    assert "localStorage" not in panel
+    assert "sessionStorage" not in panel
+
+
+def test_the_turn_panel_has_no_automatic_fallback_affordance() -> None:
+    # AC-L10: a failed turn is reported, never rerouted. The panel offers no
+    # second-model quick-retry marker and never substitutes a default model
+    # for the researcher's explicit choice.
+    source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+    panel = _turn_panel_slice(source)
+
+    assert "data-turn-retry" not in source
+    assert "retry" not in panel
+    assert "fallback" not in panel.lower()
+    assert "다른 모델" not in panel
+    assert "다른 제공자" not in panel
+    assert "default_model" not in panel
+    # Model choice stays explicit: an empty first option, no preselection.
+    assert 'el("option", { value: "", text: "선택해 주세요" })' in panel
+
+
+def test_the_turn_failure_copy_covers_every_closed_token() -> None:
+    # The wire speaks closed codes only: `turn_failed` carries one of the
+    # eleven ModelCallFailure reason tokens, and the three new codes get
+    # their own sentences. An unknown token must fall back to a generic
+    # sentence, never to raw provider prose.
+    source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+
+    start = source.index("const TURN_FAILURE_TEXT")
+    end = source.index("};", start)
+    failure_map = source[start:end]
+    for token in (
+        "authentication",
+        "rate_limit",
+        "quota",
+        "model_unavailable",
+        "provider_unavailable",
+        "invalid_request",
+        "timeout",
+        "transport",
+        "malformed_response",
+        "response_too_large",
+        "unclassified",
+    ):
+        assert f"{token}:" in failure_map
+
+    assert "turn_failed" in source
+    assert "provider_not_configured" in source
+    assert "model_selection_locked" in source
+    assert "모델 호출이 실패했습니다" in source
+    assert "설정에서 키를 등록하세요" in source
+    assert "이 실행은 고정된 모델만 사용합니다" in source
+
+    # Failure rendering goes through the map and lands as textContent only;
+    # the turn-failure path itself never interpolates a raw reason token.
+    assert "describeTurnFailure" in source
+    assert "TURN_CODE_TEXT" in source
+    assert '"data-turn-failure": "closed"' in source
+    describer_start = source.index("function describeTurnFailure")
+    describer_end = source.index(
+        "}",
+        source.index("return TURN_CODE_TEXT", describer_start),
+    )
+    assert "error.reason}" not in source[describer_start:describer_end]
+    assert "text: panel.failure" in _turn_panel_slice(source)
+
+
+def test_the_turn_panel_adds_no_inline_styles() -> None:
+    # `style-src 'self'` refuses every inline style attribute, so the panel
+    # must be class-styled end to end.
+    source = (SHIPPED_ROOT / "app.js").read_text(encoding="utf-8")
+    styles = (SHIPPED_ROOT / "styles.css").read_text(encoding="utf-8")
+    panel = _turn_panel_slice(source)
+
+    assert "style:" not in panel
+    assert "style=" not in panel
+    assert ".style." not in panel
+    assert ".turn-transcript" in styles
+    assert ".turn-message" in styles

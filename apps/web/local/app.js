@@ -22,6 +22,12 @@
 
   const API = "/api/v1";
   const TOKEN_HEADER = "X-Nipo-Token";
+  /*
+   * The turn wire requires an explicit output budget. The panel does not ask
+   * the researcher to size one; a fixed, named budget keeps every turn
+   * request shaped identically.
+   */
+  const TURN_MAX_OUTPUT_TOKENS = 4096;
 
   // ------------------------------------------------------------ credential --
 
@@ -137,6 +143,42 @@
     invalid_base64: "측정 데이터 인코딩이 올바르지 않습니다.",
     unsafe_filename: "파일 이름을 사용할 수 없습니다.",
   };
+
+  /*
+   * L10 turn failures arrive as closed codes. `turn_failed` carries one of
+   * the eleven provider-neutral ModelCallFailure tokens as its reason, and
+   * the pre-egress refusals carry their own codes. These maps are the only
+   * place those tokens become sentences: an unknown token falls back to a
+   * generic sentence, never to the raw token or to provider prose.
+   */
+  const TURN_FAILURE_TEXT = {
+    authentication: "인증에 실패했습니다. 설정에서 이 제공자의 API 키를 확인해 주세요.",
+    rate_limit: "요청 한도를 초과했습니다. 잠시 뒤 같은 모델로 다시 보내 주세요.",
+    quota: "제공자 계정의 할당량을 모두 사용했습니다.",
+    model_unavailable: "선택한 모델을 지금 사용할 수 없습니다.",
+    provider_unavailable: "제공자 서비스에 지금 연결할 수 없습니다.",
+    invalid_request: "제공자가 요청 형식을 거부했습니다.",
+    timeout: "제공자 응답이 제한 시간 안에 도착하지 않았습니다.",
+    transport: "제공자와의 연결이 끊겼습니다.",
+    malformed_response: "제공자 응답 형식이 올바르지 않습니다.",
+    response_too_large: "응답이 너무 커서 받지 못했습니다.",
+    unclassified: "제공자 호출이 알 수 없는 이유로 실패했습니다.",
+  };
+
+  const TURN_CODE_TEXT = {
+    provider_not_configured: "이 제공자의 API 키가 등록되어 있지 않습니다. 설정에서 키를 등록하세요.",
+    model_selection_locked: "이 실행은 고정된 모델만 사용합니다.",
+    model_not_enabled: "작성기에서 사용하도록 설정된 모델만 고를 수 있습니다.",
+  };
+
+  function describeTurnFailure(error) {
+    if (!(error instanceof LocalApiError)) return describeError(error);
+    if (error.code === "turn_failed") {
+      const detail = TURN_FAILURE_TEXT[error.reason] || "제공자 호출이 실패했습니다.";
+      return `모델 호출이 실패했습니다. ${detail}`;
+    }
+    return TURN_CODE_TEXT[error.code] || describeError(error);
+  }
 
   const NAME_REASON_TEXT = {
     empty: "이름이 비어 있습니다.",
@@ -273,6 +315,7 @@
       request("GET", `/projects/${pid}/artifacts/${aid}/versions/${vid}/provenance`),
     runs: (pid) => request("GET", `/projects/${pid}/runs`),
     run: (pid, rid) => request("GET", `/projects/${pid}/runs/${rid}`),
+    createTurn: (pid, rid, body) => request("POST", `/projects/${pid}/runs/${rid}/turns`, body),
     review: (pid, rid) => request("GET", `/projects/${pid}/runs/${rid}/review`),
     openReview: (pid, rid) => request("POST", `/projects/${pid}/runs/${rid}/review`),
     exportPlan: (pid, rid) => request("GET", `/projects/${pid}/runs/${rid}/export`),
@@ -2634,12 +2677,24 @@
       return;
     }
 
+    // The composer picker feeds the turn panel. Its failure must not take the
+    // run record down with it; the panel says the list is unavailable instead.
+    let picker = null;
+    try {
+      picker = await api.composer();
+    } catch {
+      picker = null;
+    }
+
     const outputs = Array.isArray(run.committed_outputs) ? run.committed_outputs : [];
     const nodes = [
       ...head,
       pageHeader("실행", "실행 상세", "이 실행이 남긴 순서 있는 결과물과 고정된 다이제스트입니다."),
       el("div", { class: "panel", "data-run-id": String(run.run_id ?? runId) }, [
-        el("div", { class: "actions actions--spaced-below" }, [runStateBadge(run.state)]),
+        el("div", { class: "actions actions--spaced-below" }, [
+          runStateBadge(run.state),
+          run.pinned_model_id ? badge("info", "모델 고정", ICONS.check) : null,
+        ]),
         keyValues(
           [
             ["실행 ID", String(run.run_id ?? runId), true],
@@ -2651,6 +2706,8 @@
             ["입력 SHA-256", String(run.input_sha256 ?? "기록 없음"), true],
             ["코드 SHA-256", String(run.code_sha256 ?? "기록 없음"), true],
             ["환경 SHA-256", String(run.environment_sha256 ?? "기록 없음"), true],
+            run.pinned_provider_id ? ["고정된 제공자", String(run.pinned_provider_id), true] : null,
+            run.pinned_model_id ? ["고정된 모델", String(run.pinned_model_id), true] : null,
           ].filter(Boolean),
         ),
       ]),
@@ -2678,6 +2735,7 @@
           ? emptyState("아직 커밋된 결과물이 없습니다", "실행이 결과물을 커밋하면 순서대로 나타납니다.")
           : runOutputs(projectId, outputs),
       ]),
+      turnSection(projectId, runId, run, picker),
       el("section", { class: "section", "aria-labelledby": "isolation-heading" }, [
         el("h2", { id: "isolation-heading", text: "실행 격리 고지" }),
         isolationDisclosure(run.execution_isolation ?? null),
@@ -2724,6 +2782,233 @@
     );
     render(nodes);
     announceScreen("실행 상세를 표시했습니다.");
+  }
+
+  /*
+   * L10 turn panel.
+   *
+   * A model turn is bound to this Run. The researcher picks one of the
+   * composer-enabled models and sends a prompt; the first successful turn
+   * pins that selection on the Run, and from then on the picker offers only
+   * the pinned model. A failure surfaces as closed-code Korean copy and is
+   * never rerouted to another provider, model, or credential -- the
+   * researcher corrects the cause and sends again with the same selection.
+   *
+   * Conversation text lives only in this screen's memory: the server returns
+   * assistant text in the turn response and never persists it, so a reload
+   * starts an empty transcript while the Run keeps its non-secret turn
+   * records.
+   */
+  function turnSection(projectId, runId, run, picker) {
+    const pinnedFromRun = typeof run.pinned_model_id === "string" ? run.pinned_model_id : "";
+    const panel = {
+      pinned: pinnedFromRun,
+      modelId: pinnedFromRun,
+      prompt: "",
+      busy: false,
+      failure: "",
+      summary: null,
+      messages: [],
+    };
+    const section = el("section", {
+      class: "section",
+      "aria-labelledby": "turn-heading",
+      "data-turn-panel": "run",
+    });
+
+    function modelOptions() {
+      if (panel.pinned) return [{ value: panel.pinned, label: `${panel.pinned} (고정)` }];
+      const models = picker && Array.isArray(picker.models) ? picker.models : [];
+      return models.map((entry) => ({
+        value: String(entry.model_id),
+        label: `${entry.model_id} — ${entry.display_name}`,
+      }));
+    }
+
+    function refreshSendButton() {
+      const button = section.querySelector('[data-action="send-turn"]');
+      if (button) button.disabled = panel.busy || panel.modelId === "" || panel.prompt.trim() === "";
+    }
+
+    function pickerField(options) {
+      const control = el(
+        "select",
+        {
+          id: "turn-model",
+          name: "turn-model",
+          disabled: panel.busy || panel.pinned !== "",
+          on: {
+            change: (event) => {
+              panel.modelId = event.currentTarget.value;
+              refreshSendButton();
+            },
+          },
+        },
+        [
+          panel.pinned ? null : el("option", { value: "", text: "선택해 주세요" }),
+          ...options.map((option) =>
+            el("option", {
+              value: option.value,
+              text: option.label,
+              selected: option.value === panel.modelId ? true : null,
+            }),
+          ),
+        ],
+      );
+      // Same re-render caveat as selectField: apply the value after the
+      // options exist, the attribute alone is not reliable.
+      control.value = panel.modelId;
+      return el("div", { class: "field" }, [
+        el("label", { class: "field__label", for: "turn-model", text: "모델" }),
+        control,
+        el("p", {
+          class: "field__help",
+          text: panel.pinned
+            ? "이 실행에 고정된 모델입니다."
+            : "작성기에서 사용하도록 설정한 모델만 고를 수 있습니다.",
+        }),
+      ]);
+    }
+
+    async function onSend() {
+      if (panel.busy || panel.modelId === "" || panel.prompt.trim() === "") return;
+      panel.busy = true;
+      panel.failure = "";
+      const requestMessages = [...panel.messages, { role: "user", content: panel.prompt }];
+      paint();
+      try {
+        const result = await api.createTurn(projectId, runId, {
+          model_id: panel.modelId,
+          messages: requestMessages,
+          max_output_tokens: TURN_MAX_OUTPUT_TOKENS,
+        });
+        panel.messages = [...requestMessages, { role: "assistant", content: String(result?.text ?? "") }];
+        panel.prompt = "";
+        // The first successful turn pins the Run server-side; the picker
+        // narrows to exactly that selection from here on.
+        panel.pinned = String(result?.model_id ?? panel.modelId);
+        panel.summary = {
+          provider: String(result?.provider_id ?? ""),
+          model: String(result?.model_id ?? ""),
+          requests: Number(result?.request_count ?? 0),
+        };
+        announce("모델 응답을 받았습니다.");
+      } catch (error) {
+        panel.failure = describeTurnFailure(error);
+      }
+      panel.busy = false;
+      paint();
+    }
+
+    function paint() {
+      const options = modelOptions();
+      const children = [
+        el("div", { class: "section__head" }, [
+          el("h2", { id: "turn-heading", text: "모델 대화" }),
+          el("p", {
+            class: "section__hint",
+            text: panel.pinned
+              ? "첫 성공적인 호출이 고정한 모델만 이 실행에서 사용할 수 있습니다."
+              : "이 실행에 묶인 모델 호출입니다. 첫 성공적인 호출이 모델을 고정하며, 실패를 다른 곳으로 넘기지 않습니다.",
+          }),
+        ]),
+      ];
+
+      const history = Array.isArray(run.turns) ? run.turns : [];
+      if (history.length > 0) {
+        children.push(
+          el(
+            "ul",
+            { class: "plain-list", "data-turn-history": "run" },
+            history.map((turn) =>
+              el("li", {
+                text: `#${turn.seq} ${turn.model_id} · 요청 ${turn.request_count}회 · 종료 ${turn.stop_reason ?? "기록 없음"} · ${formatMoment(turn.created_at)}`,
+              }),
+            ),
+          ),
+        );
+      }
+
+      if (panel.messages.length > 0) {
+        children.push(
+          el(
+            "ol",
+            { class: "turn-transcript", "data-turn-transcript": "memory" },
+            panel.messages.map((message) =>
+              el("li", { class: "turn-message", dataset: { role: message.role } }, [
+                el("p", { class: "turn-message__role", text: message.role === "user" ? "연구자" : "모델" }),
+                el("p", { class: "turn-message__text", text: message.content }),
+              ]),
+            ),
+          ),
+        );
+      }
+
+      if (panel.summary) {
+        children.push(
+          el("p", {
+            class: "meta",
+            "data-turn-summary": "last",
+            text: `제공자 ${panel.summary.provider} · 모델 ${panel.summary.model} · 요청 ${panel.summary.requests}회`,
+          }),
+        );
+      }
+
+      if (panel.failure) {
+        children.push(
+          el("p", { class: "inline-error", role: "alert", "data-turn-failure": "closed", text: panel.failure }),
+        );
+      }
+
+      if (picker === null) {
+        children.push(
+          el("p", { class: "inline-note", text: "모델 목록을 불러오지 못해 대화를 보낼 수 없습니다." }),
+        );
+      } else if (options.length === 0) {
+        children.push(
+          el("p", { class: "inline-note", text: "사용하도록 설정된 모델이 없습니다. 설정 화면에서 모델을 먼저 골라 주세요." }),
+        );
+      } else {
+        const prompt = el("textarea", {
+          id: "turn-prompt",
+          name: "turn-prompt",
+          rows: "4",
+          disabled: panel.busy,
+          on: {
+            input: (event) => {
+              panel.prompt = event.currentTarget.value;
+              refreshSendButton();
+            },
+          },
+        });
+        prompt.value = panel.prompt;
+        children.push(
+          el("div", { class: "panel panel--raised", "data-turn-form": "composer" }, [
+            pickerField(options),
+            el("div", { class: "field" }, [
+              el("label", { class: "field__label", for: "turn-prompt", text: "프롬프트" }),
+              prompt,
+            ]),
+            el("div", { class: "actions actions--spaced-above" }, [
+              el("button", {
+                class: "button button--primary",
+                type: "button",
+                "data-action": "send-turn",
+                disabled: panel.busy || panel.modelId === "" || panel.prompt.trim() === "",
+                text: panel.busy ? "보내는 중…" : "전송",
+                on: { click: onSend },
+              }),
+            ]),
+          ]),
+        );
+      }
+
+      section.textContent = "";
+      section.append(...children);
+    }
+
+    paint();
+    return section;
   }
 
   // ---------------------------------------------------------------- export --
