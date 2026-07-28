@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import socket
 import sqlite3
 import threading
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ import pytest
 from services.api.artifacts.runtime import Uuid7Factory
 from test_input_api import PROJECTS, Call, Harness, Reply, as_dict, as_list
 from test_modelcall import (
+    ANTHROPIC_CHUNKS,
     ANTHROPIC_PATH,
     CANARY_KEY,
     GOOGLE_PATH,
@@ -40,9 +42,15 @@ from test_modelcall import (
 
 from nipo_local.api import LocalApiDeps, start_local_api
 from nipo_local.apiquery import LocalReadModel
+from nipo_local.apiserver import MAX_BODY_BYTES
 from nipo_local.config import resolve_paths
 from nipo_local.modelcall import CallLimits, ModelCallClient, ModelCallFailure
-from nipo_local.providers import InMemoryCredentialBackend, ProviderRegistry
+from nipo_local.providers import (
+    CredentialBackend,
+    CredentialBackendUnavailableError,
+    InMemoryCredentialBackend,
+    ProviderRegistry,
+)
 from nipo_local.runsurface import StoreRunSurface
 from nipo_local.store import LocalArtifactStore
 
@@ -64,19 +72,32 @@ DEFAULT_KEYS: Final = {
 }
 DEFAULT_ROUTES: Final = {
     OPENAI_PATH: Route(chunks=OPENAI_CHUNKS),
-    ANTHROPIC_PATH: Route(
-        chunks=sse(
-            [
-                json.dumps({"choices": [{"delta": {"content": "fallback"}}]}),
-                "[DONE]",
-            ]
-        )
-    ),
+    ANTHROPIC_PATH: Route(chunks=ANTHROPIC_CHUNKS),
     GOOGLE_PATH: Route(chunks=()),
     OLLAMA_PATH: Route(chunks=OLLAMA_CHUNKS),
 }
 ENV_KEY_SLOT: Final = "NIPO_OPENAI_API_KEY"
 ENV_CANARY: Final = "sk-env-canaryslot-" + "Qy4wE" * 20 + "-TAIL"
+
+
+@final
+class UnavailableCredentialBackend:
+    """A configured backend whose status lookup fails before provider egress."""
+
+    def available(self) -> bool:
+        return True
+
+    def has(self, account: str) -> bool:
+        raise CredentialBackendUnavailableError(account)
+
+    def read(self, account: str) -> str | None:
+        raise CredentialBackendUnavailableError(account)
+
+    def write(self, account: str, secret: str) -> None:
+        _ = account, secret
+
+    def remove(self, account: str) -> None:
+        _ = account
 
 
 @final
@@ -169,13 +190,14 @@ def turn_rows(rig: Rig) -> list[dict[str, object]]:
         connection.close()
 
 
-def _build(
+def _build(  # noqa: PLR0913 - explicit test seams keep failure paths selectable
     root: Path,
     routes: Mapping[str, Route],
     *,
     keys: Mapping[str, str] | None = None,
     env: Mapping[str, str] | None = None,
     limits: CallLimits | None = None,
+    backend: CredentialBackend | None = None,
 ) -> Rig:
     """Start the API wired to one fake-provider server and a real store."""
     server = WireServer(routes)
@@ -185,7 +207,7 @@ def _build(
         store = LocalArtifactStore(paths)
         registry = ProviderRegistry(
             paths,
-            InMemoryCredentialBackend(),
+            backend or InMemoryCredentialBackend(),
             dict(env or {}),
         )
         for provider_id, key in (keys if keys is not None else DEFAULT_KEYS).items():
@@ -506,7 +528,7 @@ def test_response_too_large_token_maps_to_turn_failed_wire(tmp_path: Path) -> No
     assert rows == []
 
 
-def test_failed_turn_persists_no_row_and_no_pin(tmp_path: Path) -> None:
+def test_failed_turn_persists_no_row_and_releases_selection(tmp_path: Path) -> None:
     routes = dict(DEFAULT_ROUTES)
     routes[OPENAI_PATH] = Route(
         status=500,
@@ -517,15 +539,24 @@ def test_failed_turn_persists_no_row_and_no_pin(tmp_path: Path) -> None:
     try:
         project_id, run_id = make_run(rig)
         reply = turn(rig, project_id, run_id)
-        projection = run_projection(rig, project_id, run_id)
-        rows = turn_rows(rig)
+        failed_projection = run_projection(rig, project_id, run_id)
+        failed_rows = turn_rows(rig)
+        retry = turn(rig, project_id, run_id, ANTHROPIC_MODEL)
+        retry_projection = run_projection(rig, project_id, run_id)
+        retry_rows = turn_rows(rig)
+        wire_paths = [request.path for request in rig.wire_log]
     finally:
         rig.close()
     assert reply.status == 502
-    assert rows == []
-    assert projection["pinned_provider_id"] is None
-    assert projection["pinned_model_id"] is None
-    assert projection["turns"] == []
+    assert failed_rows == []
+    assert failed_projection["pinned_provider_id"] is None
+    assert failed_projection["pinned_model_id"] is None
+    assert failed_projection["turns"] == []
+    assert retry.status == 201
+    assert retry_projection["pinned_model_id"] == ANTHROPIC_MODEL
+    assert len(retry_rows) == 1
+    assert retry_rows[0]["model_id"] == ANTHROPIC_MODEL
+    assert wire_paths == [OPENAI_PATH, ANTHROPIC_PATH]
 
 
 def test_second_turn_with_different_model_is_refused_pre_egress(
@@ -584,6 +615,128 @@ def test_concurrent_turns_both_record_and_lose_no_completed_turn(local: Rig) -> 
     assert len(cast("list[object]", turns)) == 2
 
 
+def test_concurrent_different_models_lock_before_provider_egress(local: Rig) -> None:
+    """One API runtime serializes different selections before provider egress."""
+    project_id, run_id = make_run(local)
+    barrier = threading.Barrier(2)
+    replies: list[Reply] = []
+    lock = threading.Lock()
+
+    def worker(model_id: str) -> None:
+        _ = barrier.wait(timeout=10)
+        reply = turn(local, project_id, run_id, model_id)
+        with lock:
+            replies.append(reply)
+
+    threads = [
+        threading.Thread(target=worker, args=(OPENAI_MODEL,)),
+        threading.Thread(target=worker, args=(ANTHROPIC_MODEL,)),
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=60)
+
+    assert sorted(reply.status for reply in replies) == [201, 409]
+    assert {reply.error() for reply in replies if reply.status == 409} == {
+        "model_selection_locked"
+    }
+    assert len(local.wire_log) == 1
+    rows = turn_rows(local)
+    assert len(rows) == 1
+    assert rows[0]["seq"] == 1
+    assert rows[0]["provider_id"] in {"openai", "anthropic"}
+    assert rows[0]["model_id"] in {OPENAI_MODEL, ANTHROPIC_MODEL}
+    projection = run_projection(local, project_id, run_id)
+    assert projection["pinned_model_id"] == rows[0]["model_id"]
+
+
+def test_reopened_api_reads_seq_one_pin_without_a_durable_reservation(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "root"
+    first = _build(root, DEFAULT_ROUTES)
+    try:
+        project_id, run_id = make_run(first)
+        created = turn(first, project_id, run_id)
+        assert created.status == 201, created.body
+    finally:
+        first.close()
+
+    reopened = _build(root, DEFAULT_ROUTES)
+    try:
+        refused = turn(reopened, project_id, run_id, ANTHROPIC_MODEL)
+        rows = turn_rows(reopened)
+        database = resolve_paths(root).database
+        connection = sqlite3.connect(database)
+        try:
+            reservation = cast(
+                "tuple[object] | None",
+                connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' "
+                    "AND name = 'run_turn_reservations'",
+                ).fetchone(),
+            )
+        finally:
+            connection.close()
+    finally:
+        reopened.close()
+
+    assert refused.status == 409
+    assert refused.error() == "model_selection_locked"
+    assert len(reopened.wire_log) == 0
+    assert len(rows) == 1
+    assert rows[0]["seq"] == 1
+    assert rows[0]["model_id"] == OPENAI_MODEL
+    assert reservation is None
+
+
+def test_separate_api_runtimes_reject_mixed_selection_at_record_time(
+    tmp_path: Path,
+) -> None:
+    """Independent API locks do not promise pre-egress serialization."""
+    root = tmp_path / "root"
+    routes = dict(DEFAULT_ROUTES)
+    routes[OPENAI_PATH] = Route(chunks=OPENAI_CHUNKS, chunk_delay=0.1)
+    routes[ANTHROPIC_PATH] = Route(chunks=ANTHROPIC_CHUNKS, chunk_delay=0.1)
+    first = _build(root, routes)
+    second = _build(root, routes)
+    try:
+        project_id, run_id = make_run(first)
+        barrier = threading.Barrier(2)
+        replies: list[Reply] = []
+        lock = threading.Lock()
+
+        def worker(rig: Rig, model_id: str) -> None:
+            _ = barrier.wait(timeout=10)
+            reply = turn(rig, project_id, run_id, model_id)
+            with lock:
+                replies.append(reply)
+
+        threads = [
+            threading.Thread(target=worker, args=(first, OPENAI_MODEL)),
+            threading.Thread(target=worker, args=(second, ANTHROPIC_MODEL)),
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=60)
+        rows = turn_rows(first)
+        wire_count = len(first.wire_log) + len(second.wire_log)
+    finally:
+        first.close()
+        second.close()
+
+    assert sorted(reply.status for reply in replies) == [201, 409]
+    assert {reply.payload()["reason"] for reply in replies if reply.status == 409} == {
+        "turn_conflict"
+    }
+    assert wire_count == 2
+    assert len(rows) == 1
+    assert rows[0]["seq"] == 1
+    assert rows[0]["model_id"] in {OPENAI_MODEL, ANTHROPIC_MODEL}
+
+
 def test_pinned_run_locks_before_availability_of_the_other_model(local: Rig) -> None:
     """The pin answers model_selection_locked even for a disabled other model.
 
@@ -620,6 +773,59 @@ def test_turn_refused_when_provider_key_is_not_configured(tmp_path: Path) -> Non
     assert reply.status == 409
     assert reply.error() == "provider_not_configured"
     assert log == ()
+
+
+def test_credential_backend_unavailable_has_zero_wire_and_rows(tmp_path: Path) -> None:
+    rig = _build(
+        tmp_path / "root",
+        DEFAULT_ROUTES,
+        backend=UnavailableCredentialBackend(),
+    )
+    try:
+        project_id, run_id = make_run(rig)
+        reply = turn(rig, project_id, run_id)
+        log = rig.wire_log
+        rows = turn_rows(rig)
+    finally:
+        rig.close()
+    assert reply.status == 503
+    assert reply.error() == "credential_backend_unavailable"
+    assert log == ()
+    assert rows == []
+
+
+def test_turn_payload_too_large_has_zero_wire_and_rows(local: Rig) -> None:
+    project_id, run_id = make_run(local)
+    request = (
+        b"POST /api/v1/projects/%s/runs/%s/turns HTTP/1.1\r\n"
+        b"Host: 127.0.0.1:%d\r\n"
+        b"Content-Length: %d\r\n"
+        b"X-Nipo-Token: %s\r\n"
+        b"Content-Type: application/json\r\n"
+        b"Origin: http://127.0.0.1:%d\r\n"
+        b"Sec-Fetch-Site: same-origin\r\n"
+        b"\r\n"
+    ) % (
+        project_id.encode(),
+        run_id.encode(),
+        local.harness.port,
+        MAX_BODY_BYTES + 1,
+        local.harness.token.encode(),
+        local.harness.port,
+    )
+    sock = socket.create_connection(
+        ("127.0.0.1", local.harness.port),
+        timeout=10,
+    )
+    try:
+        sock.sendall(request)
+        reply = sock.recv(4096)
+    finally:
+        sock.close()
+    assert reply.startswith(b"HTTP/1.1 413 ")
+    assert b"payload_too_large" in reply
+    assert local.wire_log == ()
+    assert turn_rows(local) == []
 
 
 def test_malformed_model_id_is_refused_422(local: Rig) -> None:

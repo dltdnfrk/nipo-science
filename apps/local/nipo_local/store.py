@@ -2206,12 +2206,11 @@ class LocalArtifactStore:
     ) -> tuple[StoreOutcome, RunTurnRecord | None]:
         """Assign the next per-Run position and record one completed turn.
 
-        The position is computed *inside* the claiming transaction: two
-        turns that complete their provider calls concurrently serialize
-        into consecutive positions, and neither completed turn is lost.
-        Every rejecting outcome rolls back and writes nothing, which is the
-        durable half of "a failed turn persists no row". Returns the stored
-        record with its assigned position on success.
+        Same-selection turns that complete concurrently serialize into
+        consecutive positions. A different completed selection is rejected
+        after a seq-1 pin exists, and every rejecting outcome rolls back and
+        writes nothing. Returns the stored record with its assigned position
+        on success.
         """
         stored: list[RunTurnRecord] = []
         outcome = self._transact(
@@ -2939,18 +2938,29 @@ class LocalArtifactStore:
     ) -> StoreOutcome:
         """Assign the next position and insert one turn, in one lock hold.
 
-        The position is read and consumed under the same `BEGIN IMMEDIATE`
-        as the insert, so concurrent completed turns serialize instead of
-        one being billed by its provider and then discarded. Deliberately
-        not blocked by Project archival, exactly as `finish_run` is not: a
-        turn is recorded only after the provider call completed, and
-        refusing to record it would destroy the selection evidence of a
-        Run whose Project was archived mid-conversation.
+        The canonical seq-1 selection and next position are read under the
+        same `BEGIN IMMEDIATE` as the insert, so same-selection completed
+        turns serialize and a different selection is rejected durably. It is
+        deliberately not blocked by Project archival, exactly as `finish_run`
+        is not: a turn is recorded only after the provider call completed, and
+        refusing to record it would destroy the selection evidence of a Run
+        whose Project was archived mid-conversation.
         """
         if turn.org_id != scope.org_id or turn.project_id != scope.project_id:
             return StoreOutcome.NOT_FOUND
         if self._run_locked(scope, turn.run_id) is None:
             return StoreOutcome.NOT_FOUND
+        pinned = _fetch_one(
+            self._connection.execute(
+                "SELECT provider_id, model_id FROM run_turns "
+                "WHERE org_id = ? AND project_id = ? AND run_id = ? AND seq = 1",
+                (str(scope.org_id), str(scope.project_id), str(turn.run_id)),
+            )
+        )
+        if pinned is not None and (
+            str(pinned[0]) != turn.provider_id or str(pinned[1]) != turn.model_id
+        ):
+            return StoreOutcome.ASSOCIATION_EXISTS
         seq = self._turn_head(scope, turn.run_id) + 1
         stored = RunTurnRecord(
             org_id=turn.org_id,

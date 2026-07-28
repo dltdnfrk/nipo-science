@@ -84,9 +84,10 @@ import shutil
 import stat
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from http import HTTPStatus
 from pathlib import Path
+from threading import Lock
 from typing import Final, Protocol, cast, final, override
 from uuid import UUID
 
@@ -538,6 +539,20 @@ class RunSurface(Protocol):
 
 @final
 @dataclass(frozen=True, slots=True)
+class _RunLockOwner:
+    """Bounded API-runtime serialization for turns of the same Run."""
+
+    locks: tuple[Lock, ...] = field(
+        default_factory=lambda: tuple(Lock() for _ in range(64)),
+    )
+
+    def for_run(self, run_id: UUID) -> Lock:
+        """Return the fixed stripe that serializes one Run's turn request."""
+        return self.locks[hash(run_id) % len(self.locks)]
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class LocalApiDeps:
     """Everything the routers read, injected rather than constructed.
 
@@ -565,6 +580,7 @@ class LocalApiDeps:
     turn ever leaves this machine. The client never chooses a provider --
     the route hands it exactly the requested `provider:model` id.
     """
+    turn_locks: _RunLockOwner = field(default_factory=_RunLockOwner)
 
 
 def _ticket_refusal(code: ApiErrorCode) -> Callable[[], LocalApiError]:
@@ -2248,36 +2264,46 @@ def _turn_draft(  # noqa: PLR0913 - one parameter per wire field keeps the call 
     )
 
 
-def _create_turn(  # noqa: C901 - the refusal matrix IS the contract; splitting it would hide it
+def _pinned_turn_selection(
+    deps: LocalApiDeps,
+    scope: ArtifactScope,
+    run_id: UUID,
+) -> tuple[str, str] | None:
+    """Read the canonical completed seq-1 selection, if the Run has one."""
+    turn = deps.store.first_run_turn(scope, run_id)
+    if turn is None:
+        return None
+    return turn.provider_id, turn.model_id
+
+
+def _create_turn(
     deps: LocalApiDeps,
     project_id: UUID,
     run_id: UUID,
     body: CreateTurnRequest,
 ) -> TurnBody | Response:
-    """Run one synchronous turn against exactly the requested selection.
-
-    The first completed turn pins (provider_id, model_id) for the Run; a
-    later turn naming anything else is refused `model_selection_locked`
-    before any availability check or provider contact, so the lock's answer
-    never depends on whether the other model is enabled. A row exists in
-    `run_turns` iff the provider call completed and the response was fully
-    aggregated; every other outcome persists nothing, consumes nothing, and
-    never retries or reselects a provider, model, or credential. The
-    assistant text is returned in this response and stored nowhere.
-    """
+    """Serialize one Run's turn through its canonical completed selection."""
     scope = _live_project(deps, project_id)
-    run = deps.store.run(scope, run_id)
-    if run is None:
+    if deps.store.run(scope, run_id) is None:
         raise LocalApiError(HTTPStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND)
     provider_id = _parse_turn_model(body.model_id)
-    pinned = deps.store.first_run_turn(scope, run_id)
-    if pinned is not None and (
-        pinned.provider_id != provider_id or pinned.model_id != body.model_id
-    ):
-        raise LocalApiError(
-            HTTPStatus.CONFLICT,
-            ApiErrorCode.MODEL_SELECTION_LOCKED,
-        )
+    with deps.turn_locks.for_run(run_id):
+        pinned = _pinned_turn_selection(deps, scope, run_id)
+        if pinned is not None and pinned != (provider_id, body.model_id):
+            raise LocalApiError(
+                HTTPStatus.CONFLICT,
+                ApiErrorCode.MODEL_SELECTION_LOCKED,
+            )
+        return _create_turn_locked(deps, scope, run_id, body)
+
+
+def _create_turn_locked(
+    deps: LocalApiDeps,
+    scope: ArtifactScope,
+    run_id: UUID,
+    body: CreateTurnRequest,
+) -> TurnBody | Response:
+    """Call and record one turn while the API-runtime Run lock is held."""
     _ = _turn_selection(deps, body.model_id)
     client = deps.turn_client
     if client is None:
