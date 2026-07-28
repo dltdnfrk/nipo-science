@@ -1213,9 +1213,10 @@ def _project_router(deps: LocalApiDeps) -> APIRouter:
         return _project_body(_read_project(deps, project_id))
 
     def archive_project(project_id: UUID) -> Response:
-        """Archive one Project, blocking further writes and downloads."""
-        _ = _read_project(deps, project_id)
-        store.archive_project(_scope_for(deps, project_id))
+        """Archive one live Project, blocking further writes and downloads."""
+        outcome = store.archive_registered_project(_scope_for(deps, project_id))
+        if outcome is not StoreOutcome.CREATED:
+            raise _outcome_error(outcome)
         return _no_content()
 
     router.add_api_route(

@@ -1741,6 +1741,14 @@ class LocalArtifactStore:
                 self._rollback()
                 raise ArtifactStoreError from error
 
+    def archive_registered_project(self, scope: ArtifactScope) -> StoreOutcome:
+        """Atomically archive one registered live Project."""
+        return self._transact(
+            lambda: self._archive_project_locked(scope),
+            StoreOutcome.CREATED,
+            StoreOutcome.NOT_FOUND,
+        )
+
     def create_project(
         self,
         scope: ArtifactScope,
@@ -2499,6 +2507,18 @@ class LocalArtifactStore:
                 self._rollback()
                 raise ArtifactStoreError from error
             return outcome
+
+    def _archive_project_locked(self, scope: ArtifactScope) -> StoreOutcome:
+        """Archive one registered live Project inside its write transaction."""
+        if not self._project_registered(scope):
+            return StoreOutcome.NOT_FOUND
+        if self._archived(scope):
+            return StoreOutcome.ARCHIVED
+        _ = self._connection.execute(
+            "UPDATE projects SET archived = 1 WHERE org_id = ? AND id = ?",
+            (str(scope.org_id), str(scope.project_id)),
+        )
+        return StoreOutcome.CREATED
 
     def _create_project_locked(
         self,

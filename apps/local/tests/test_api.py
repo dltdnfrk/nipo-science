@@ -25,6 +25,7 @@ import os
 import socket
 import sqlite3
 import stat
+import threading
 import tracemalloc
 import zipfile
 from collections.abc import Iterator, Mapping, MutableMapping, Sequence
@@ -1187,6 +1188,14 @@ def test_an_unregistered_project_is_not_found(local: Harness) -> None:
     reply = local.send(Call(path=f"{PROJECTS}/01900000-0000-7000-8000-0000000000ff"))
     assert reply.status == 404
     assert reply.error() == "not_found"
+    archive = local.same_origin(
+        "POST",
+        f"{PROJECTS}/01900000-0000-7000-8000-0000000000ff/archive",
+    )
+    assert archive.status == 404
+    assert archive.error() == "not_found"
+    assert local.project_count() == 0
+    assert _count_rows(local, "projects") == 0
 
 
 def test_a_non_uuid7_project_identifier_is_not_found(local: Harness) -> None:
@@ -1294,6 +1303,239 @@ def test_an_unknown_session_is_not_found(local: Harness) -> None:
     project = local.make_project("Spectra")
     path = f"{PROJECTS}/{project}/sessions/01900000-0000-7000-8000-0000000000ee"
     assert local.send(Call(path=path)).status == 404
+
+
+# --------------------------------------------------------------------------
+# AC-L02: restart survival, resume ordering, and archival refusals
+# --------------------------------------------------------------------------
+
+
+def _count_rows(harness: Harness, table: str) -> int:
+    """Count the rows of one store table through a fresh connection."""
+    statements = {
+        "action_plans": "SELECT COUNT(*) FROM action_plans",
+        "runs": "SELECT COUNT(*) FROM runs",
+        "session_links": "SELECT COUNT(*) FROM session_links",
+        "projects": "SELECT COUNT(*) FROM projects",
+        "sessions": "SELECT COUNT(*) FROM sessions",
+    }
+    connection = sqlite3.connect(resolve_paths(harness.root).database)
+    try:
+        row = cast(
+            "tuple[object, ...]",
+            connection.execute(statements[table]).fetchone(),
+        )
+        return int(str(row[0]))
+    finally:
+        connection.close()
+
+
+def _intent_body() -> dict[str, object]:
+    """Return the wire shape of the chain ResearchIntent."""
+    return dict(CHAIN_INTENT.to_dict())
+
+
+def _probe_body() -> dict[str, object]:
+    """Return the wire shape of the chain ProbeInput."""
+    return cast("dict[str, object]", json.loads(_chain_probe().model_dump_json()))
+
+
+def test_ac_l02_project_and_session_survive_store_reopen_via_http_create(
+    tmp_path: Path,
+) -> None:
+    """AC-L02: an HTTP-created Project and Session survive a full restart.
+
+    The API holds its store open, so the restart is the whole Harness: it is
+    closed and a new one is started over the same data root, mirroring how
+    test_store reopens LocalArtifactStore against the same paths.
+    """
+    root = tmp_path / "root"
+    first = _build(root)
+    try:
+        project = first.make_project("Spectra")
+        sessions = f"{PROJECTS}/{project}/sessions"
+        created = first.same_origin("POST", sessions, {"title": "Baseline"})
+        assert created.status == 201
+        session_id = str(created.payload()["id"])
+    finally:
+        first.close()
+
+    reopened = _build(root)
+    try:
+        listed = reopened.send(Call(path=PROJECTS))
+        assert listed.status == 200
+        assert [str(item["id"]) for item in listed.rows("projects")] == [project]
+
+        resumed = reopened.same_origin("POST", f"{sessions}/{session_id}/resume")
+        assert resumed.status == 200
+        assert resumed.payload()["id"] == session_id
+        assert resumed.payload()["title"] == "Baseline"
+        assert resumed.payload()["archived"] is False
+
+        ordered = reopened.send(Call(path=sessions)).rows("sessions")
+        assert [str(item["id"]) for item in ordered] == [session_id]
+    finally:
+        reopened.close()
+
+
+def test_ac_l02_sessions_list_ordered_by_resume_history(local: Harness) -> None:
+    project = local.make_project("Spectra")
+    base = f"{PROJECTS}/{project}/sessions"
+    created: list[str] = []
+    for title in ("Alpha", "Beta", "Gamma"):
+        reply = local.same_origin("POST", base, {"title": title})
+        assert reply.status == 201
+        created.append(str(reply.payload()["id"]))
+
+    listed = local.send(Call(path=base)).rows("sessions")
+    assert [str(item["id"]) for item in listed] == [
+        created[2],
+        created[1],
+        created[0],
+    ]
+
+    resumed = local.same_origin("POST", f"{base}/{created[0]}/resume")
+    assert resumed.status == 200
+    reordered = local.send(Call(path=base)).rows("sessions")
+    assert [str(item["id"]) for item in reordered] == [
+        created[0],
+        created[2],
+        created[1],
+    ]
+    last_active = [str(item["last_active_at"]) for item in reordered]
+    assert last_active == sorted(last_active, reverse=True)
+
+
+def test_ac_l02_archive_project_blocks_session_create_and_run_start(
+    local: Harness,
+) -> None:
+    project = local.make_project("Spectra")
+    base = f"{PROJECTS}/{project}/sessions"
+    created = local.same_origin("POST", base, {"title": "Baseline"})
+    assert created.status == 201
+    assert _count_rows(local, "sessions") == 1
+
+    archived = local.same_origin("POST", f"{PROJECTS}/{project}/archive")
+    assert archived.status == 204
+
+    refused_session = local.same_origin("POST", base, {"title": "After"})
+    assert refused_session.status == 409
+    assert refused_session.error() == "project_archived"
+
+    refused_run = local.same_origin(
+        "POST",
+        f"{PROJECTS}/{project}/runs",
+        {
+            "session_id": str(created.payload()["id"]),
+            "approval_id": "01900000-0000-7000-8000-0000000000aa",
+            "research_intent": _intent_body(),
+            "scientific_input": _probe_body(),
+        },
+    )
+    assert refused_run.status == 409
+    assert refused_run.error() == "project_archived"
+
+    assert _count_rows(local, "sessions") == 1
+    assert _count_rows(local, "action_plans") == 0
+    assert _count_rows(local, "runs") == 0
+
+
+def test_ac_l02_archive_session_blocks_resume_and_plan_create(local: Harness) -> None:
+    project = local.make_project("Spectra")
+    base = f"{PROJECTS}/{project}/sessions"
+    created = local.same_origin("POST", base, {"title": "Baseline"})
+    assert created.status == 201
+    session_id = str(created.payload()["id"])
+
+    archived = local.same_origin("POST", f"{base}/{session_id}/archive")
+    assert archived.status == 204
+
+    resumed = local.same_origin("POST", f"{base}/{session_id}/resume")
+    assert resumed.status == 409
+    assert resumed.error() == "session_archived"
+
+    plan = local.same_origin(
+        "POST",
+        f"{PROJECTS}/{project}/action-plans",
+        {"session_id": session_id, "research_intent": _intent_body()},
+    )
+    assert plan.status == 409
+    assert plan.error() == "session_archived"
+
+    assert _count_rows(local, "action_plans") == 0
+    assert _count_rows(local, "runs") == 0
+
+
+def test_ac_l02_session_link_refuses_unknown_session(local: Harness) -> None:
+    """AC-L02: the unknown-Session link refusal is store-level by design.
+
+    No HTTP route exposes Session links: the workbench attaches them through
+    `LocalArtifactStore.attach_session` only, and
+    test_store.test_attach_session_rejects_an_unknown_session keeps that
+    NOT_FOUND refusal green at the store seam. What the product path must
+    prove is that no route exists to attach a link around the store, so the
+    plausible link endpoints answer 404 and the link table stays empty.
+    """
+    project = local.make_project("Spectra")
+    base = f"{PROJECTS}/{project}/sessions"
+    created = local.same_origin("POST", base, {"title": "Baseline"})
+    assert created.status == 201
+    session_id = str(created.payload()["id"])
+    unknown = "01900000-0000-7000-8000-0000000000ee"
+
+    for path in (f"{base}/{session_id}/links", f"{base}/{unknown}/links"):
+        reply = local.same_origin("POST", path, {"version_id": unknown})
+        assert reply.status == 404
+
+    assert _count_rows(local, "session_links") == 0
+
+
+def test_ac_l02_duplicate_archive_is_conflict_not_silent_success(
+    local: Harness,
+) -> None:
+    project = local.make_project("Spectra")
+    base = f"{PROJECTS}/{project}/sessions"
+    created = local.same_origin("POST", base, {"title": "Baseline"})
+    assert created.status == 201
+    session_id = str(created.payload()["id"])
+
+    assert local.same_origin("POST", f"{base}/{session_id}/archive").status == 204
+    session_again = local.same_origin("POST", f"{base}/{session_id}/archive")
+    assert session_again.status == 409
+    assert session_again.error() == "session_archived"
+
+    assert local.same_origin("POST", f"{PROJECTS}/{project}/archive").status == 204
+    project_again = local.same_origin("POST", f"{PROJECTS}/{project}/archive")
+    assert project_again.status == 409
+    assert project_again.error() == "project_archived"
+    concurrent_project = local.make_project("Atomic")
+    archive_path = f"{PROJECTS}/{concurrent_project}/archive"
+    barrier = threading.Barrier(2)
+    replies: list[Reply] = []
+    lock = threading.Lock()
+
+    def worker() -> None:
+        _ = barrier.wait(timeout=10)
+        reply = local.same_origin("POST", archive_path)
+        with lock:
+            replies.append(reply)
+
+    threads = [threading.Thread(target=worker) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=60)
+
+    assert len(replies) == 2
+    assert sorted(reply.status for reply in replies) == [204, 409]
+    conflict = next(reply for reply in replies if reply.status == 409)
+    assert conflict.error() == "project_archived"
+    read = local.send(Call(path=f"{PROJECTS}/{concurrent_project}"))
+    assert read.status == 200
+    assert read.payload()["archived"] is True
+    assert local.project_count() == 2
+    assert _count_rows(local, "projects") == 2
+    assert _count_rows(local, "sessions") == 1
 
 
 # --------------------------------------------------------------------------

@@ -315,19 +315,19 @@
     "export_pins_versions": true
   },
   "conformance": {
-    "implemented_and_verified": ["L03", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11", "L12"],
+    "implemented_and_verified": ["L02", "L03", "L04", "L05", "L06", "L07", "L08", "L09", "L10", "L11", "L12"],
     "partially_implemented": {
       "L01": "installation_first_run_and_loopback_interface_present_first_run_packaging_installer_out_of_scope"
     },
-    "not_implemented": ["L02"],
+    "not_implemented": [],
     "contracts_present_but_unreachable_from_the_local_app": [],
     "disclosed_divergences": [
       "execution_isolation_is_in_process",
       "skill_content_hashes_empty_by_construction",
-      "session_links_carry_no_execution_reference_so_execution_ownership_is_unchecked",
       "the_download_signing_key_is_stored_plaintext_at_mode_0600_in_the_data_root"
     ],
     "closed_divergences": {
+      "session_links_carry_no_execution_reference_so_execution_ownership_is_unchecked": "the session_links table records producing_execution_id; test_attach_session_records_the_execution_that_produced_the_version proves the ownership chain is checked",
       "environment_digest_does_not_cover_every_byte_shaping_dependency": "workbench.environment_facts pins pillow, pydantic and pydantic-core alongside the interpreter",
       "the_producer_path_only_ever_commits_version_1_so_correction_to_version_2_has_no_producer": "workbench.correct_analysis commits the next Version by compare-and-swap and leaves the corrected Version byte-identical",
       "executions_have_no_table_so_producing_execution_id_is_fenced_only_by_a_file": "the executions table exists and fences the produced-execution id inside the claiming transaction"
